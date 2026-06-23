@@ -28,6 +28,9 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import React, { TouchEvent, useEffect, useRef, useState } from 'react';
 import './Index.less';
+import eventBus from '@/utils/eventBus';
+import { externalImageProps, HOT_RANK_AD_ENABLED } from '@/constants';
+import { useModel } from '@umijs/max';
 
 const STORAGE_KEY = 'selected_source_ids';
 const TAB_VISIBLE_KEY = 'tab_visible';
@@ -43,14 +46,21 @@ const isSmallScreen = () => {
 };
 
 const Index: React.FC = () => {
+  // @ts-ignore
+  const { isDarkMode } = useModel('theme');
+
+  // 主题相关颜色
+  const textColor = isDarkMode ? 'rgba(255,255,255,0.85)' : '#495060';
+  const subTextColor = isDarkMode ? 'rgba(255,255,255,0.45)' : 'gray';
+  const cardBg = isDarkMode ? '#1e1e1e' : '#fff';
+  const tabBarBg = isDarkMode ? '#121212' : '#fff';
+  const tabBarBorder = isDarkMode ? '#2a2a2a' : '#f0f0f0';
+  const mobileItemBg = isDarkMode ? '#1e1e1e' : '#fff';
+
   const [hostPostVoList, setHostPostVoList] = useState<API.HotPostVO[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<string>('');
   const [categories, setCategories] = useState<string[]>([]);
-  const [isMusicOpen, setIsMusicOpen] = useState(false);
-  const [currentMusic, setCurrentMusic] = useState(
-    '//music.163.com/outchain/player?type=2&id=2674443509&auto=0&height=66',
-  );
   const [selectedSourceIds, setSelectedSourceIds] = useState<number[]>([]);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [tempSelectedSourceIds, setTempSelectedSourceIds] = useState<number[]>([]);
@@ -66,6 +76,9 @@ const Index: React.FC = () => {
   const [touchEndXY, setTouchEndXY] = useState({ x: 0, y: 0 });
   // 内容区域的引用，用于滚动控制
   const contentRef = useRef<HTMLDivElement>(null);
+  const [showUndercoverRoom, setShowUndercoverRoom] = useState(false);
+  const AD_CLOSED_KEY = 'ad_permanently_closed';
+  const [adClosed, setAdClosed] = useState(() => localStorage.getItem(AD_CLOSED_KEY) === 'true');
 
   // 添加窗口大小变化监听
   useEffect(() => {
@@ -250,25 +263,22 @@ const Index: React.FC = () => {
     // 否则认为是点击，不做切换
   };
 
+  // 在组件中添加对eventBus事件的监听
+  useEffect(() => {
+    // 监听显示谁是卧底房间事件
+    const handleShowUndercoverRoom = () => {
+      setShowUndercoverRoom(true);
+    };
+
+    eventBus.on('show_undercover_room', handleShowUndercoverRoom);
+
+    return () => {
+      eventBus.off('show_undercover_room', handleShowUndercoverRoom);
+    };
+  }, []);
+
   return (
     <>
-      <Modal
-        title="🎵"
-        footer={null}
-        open={isMusicOpen}
-        onCancel={() => {
-          setCurrentMusic('about:blank');
-          setTimeout(() => {
-            setIsMusicOpen(false);
-            setCurrentMusic('');
-          }, 100);
-        }}
-        bodyStyle={{ padding: 0 }}
-        width={350}
-      >
-        <iframe key={currentMusic} frameBorder="no" width={300} height={86} src={currentMusic} />
-      </Modal>
-
       <Modal
         title="数据源设置"
         open={isSettingsOpen}
@@ -315,6 +325,7 @@ const Index: React.FC = () => {
             paddingBottom: '50px', // 为底部 tab-bar 留出空间
           }}
         >
+          {/* 广告已移至悬浮右下角 */}
           {loading ? (
             <Skeleton active />
           ) : currentSource ? (
@@ -331,36 +342,79 @@ const Index: React.FC = () => {
             >
               <div
                 style={{
-                  background: '#fff',
+                  background: mobileItemBg,
                   borderRadius: '16px',
                   boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
                   padding: '20px 12px',
                   margin: '10px 0',
                 }}
               >
-                <div style={{ marginBottom: 12, color: '#888', fontSize: 13 }}>
+                <div style={{ marginBottom: 12, color: subTextColor, fontSize: 13 }}>
                   上次更新时间：
                   {currentSource.updateTime ? dayjs(currentSource.updateTime).fromNow() : '--'}
                 </div>
                 <List
-                  dataSource={currentSource.data}
-                  renderItem={(data, index) => (
+                  dataSource={(() => {
+                    if (!HOT_RANK_AD_ENABLED || adClosed) return [...(currentSource.data ?? [])];
+                    const data = [...(currentSource.data ?? [])];
+                    data.splice(5, 0, { isAd: true } as any);
+                    return data;
+                  })()}
+                  renderItem={(data, index) => {
+                    if ((data as any).isAd) {
+                      return (
+                        <div
+                          style={{
+                            margin: '16px 0',
+                            padding: '12px',
+                            background: '#f9f9f9',
+                            borderRadius: '8px',
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                            <span style={{ fontSize: '12px', color: '#bbb' }}>广告</span>
+                            <Button
+                              type="text"
+                              size="small"
+                              onClick={() => {
+                                Modal.confirm({
+                                  title: '关闭广告',
+                                  content: '确定要永久关闭广告吗？关闭后将不再显示，可清除浏览器缓存恢复。',
+                                  okText: '永久关闭',
+                                  cancelText: '暂时关闭',
+                                  onOk: () => {
+                                    localStorage.setItem(AD_CLOSED_KEY, 'true');
+                                    setAdClosed(true);
+                                  },
+                                  onCancel: () => {
+                                    setAdClosed(true);
+                                  },
+                                });
+                              }}
+                              style={{ color: '#bbb', fontSize: '12px', padding: '0 4px', height: 'auto' }}
+                            >
+                              关闭
+                            </Button>
+                          </div>
+                          <div
+                            data-placeholder="none"
+                            className="adwork-net adwork-auto"
+                            data-id="1075"
+                            style={{ width: '100%', minHeight: '108px' }}
+                          />
+                        </div>
+                      );
+                    }
+                    return (
                     <List.Item>
                       <Tooltip title={data.title} mouseEnterDelay={0.2}>
                         <Typography.Link
                           target="_blank"
-                          onClick={(e) => {
-                            if (currentSource.category === 4) {
-                              e.preventDefault();
-                              setCurrentMusic(data.url as any);
-                              setIsMusicOpen(true);
-                            }
-                          }}
                           href={data.url}
                           style={{
                             display: 'flex',
                             width: '100%',
-                            color: 'black',
+                            color: textColor,
                             justifyContent: 'space-between',
                           }}
                         >
@@ -410,7 +464,8 @@ const Index: React.FC = () => {
                         </Typography.Link>
                       </Tooltip>
                     </List.Item>
-                  )}
+                    );
+                  }}
                 />
               </div>
             </div>
@@ -428,8 +483,8 @@ const Index: React.FC = () => {
               left: 0,
               right: 0,
               height: '50px',
-              backgroundColor: '#fff',
-              borderTop: '1px solid #f0f0f0',
+              backgroundColor: tabBarBg,
+              borderTop: `1px solid ${tabBarBorder}`,
               display: 'flex',
               justifyContent: 'space-around',
               alignItems: 'center',
@@ -456,6 +511,7 @@ const Index: React.FC = () => {
                   }}
                 >
                   <Image
+                    {...externalImageProps}
                     src={item.iconUrl}
                     preview={false}
                     style={{
@@ -506,141 +562,194 @@ const Index: React.FC = () => {
               设置
             </Button>
           </div>
-          <Row gutter={[16, 16]}>
-            {loading
-              ? Array.from({ length: 6 }).map((_, index) => (
-                  <Col xs={24} sm={24} md={12} lg={isSmallScreenView ? 12 : 8} key={index}>
-                    <Card>
-                      <Skeleton active>
-                        <List.Item>
-                          <List.Item.Meta
-                            title={<Skeleton.Input style={{ width: 200 }} active />}
-                            description={<Skeleton.Input style={{ width: 300 }} active />}
-                          />
-                        </List.Item>
-                      </Skeleton>
-                    </Card>
-                  </Col>
-                ))
-              : filteredList.map((item, index) => (
-                  <Col xs={24} sm={24} md={12} lg={isSmallScreenView ? 12 : 8} key={index}>
-                    <Badge.Ribbon text={item.typeName}>
-                      <Card
-                        title={
-                          <div style={{ display: 'flex', alignItems: 'center' }}>
-                            <Image
-                              src={item.iconUrl}
-                              preview={false}
-                              style={{ width: 20, height: 20, marginRight: 8 }}
-                            />
-                            <Typography.Text
-                              style={{ fontSize: '14px', color: '#495060', fontWeight: 400 }}
+          {/* PC 端主体：内容 + 右侧广告 */}
+          <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+            {/* 内容区 */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <Row gutter={[16, 16]}>
+                {loading
+                  ? Array.from({ length: 6 }).map((_, index) => (
+                      <Col xs={24} sm={24} md={12} lg={isSmallScreenView ? 12 : 8} key={index}>
+                        <Card>
+                          <Skeleton active>
+                            <List.Item>
+                              <List.Item.Meta
+                                title={<Skeleton.Input style={{ width: 200 }} active />}
+                                description={<Skeleton.Input style={{ width: 300 }} active />}
+                              />
+                            </List.Item>
+                          </Skeleton>
+                        </Card>
+                      </Col>
+                    ))
+                  : (() => {
+                      const handleCloseAd = () => {
+                        Modal.confirm({
+                          title: '关闭广告',
+                          content: '确定要永久关闭广告吗？关闭后将不再显示，可清除浏览器缓存恢复。',
+                          okText: '永久关闭',
+                          cancelText: '暂时关闭',
+                          onOk: () => {
+                            localStorage.setItem(AD_CLOSED_KEY, 'true');
+                            setAdClosed(true);
+                          },
+                          onCancel: () => {
+                            setAdClosed(true);
+                          },
+                        });
+                      };
+                      const adCol = (
+                        <Col xs={24} sm={24} md={12} lg={isSmallScreenView ? 12 : 8} key="ad-card">
+                          <Card
+                            styles={{ body: { padding: '12px' } }}
+                            title={
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <Typography.Text style={{ fontSize: '13px', color: '#bbb', fontWeight: 400 }}>广告</Typography.Text>
+                                <Button
+                                  type="text"
+                                  size="small"
+                                  onClick={handleCloseAd}
+                                  style={{ color: '#bbb', fontSize: '12px', padding: '0 4px', height: 'auto' }}
+                                >
+                                  关闭
+                                </Button>
+                              </div>
+                            }
+                          >
+                            <div
+                              style={{
+                                height: 400,
+                                overflow: 'hidden',
+                              }}
                             >
-                              {item.name}
-                            </Typography.Text>
-                            <Typography.Text
-                              style={{ marginLeft: '10px', color: 'gray', fontSize: '12px' }}
+                              <div
+                                data-placeholder="none"
+                                className="adwork-net adwork-auto"
+                                data-id="1075"
+                                style={{ width: '100%', height: '100%' }}
+                              />
+                            </div>
+                          </Card>
+                        </Col>
+                      );
+                      const cols = filteredList.map((item, index) => (
+                        <Col xs={24} sm={24} md={12} lg={isSmallScreenView ? 12 : 8} key={index}>
+                          <Badge.Ribbon text={item.typeName}>
+                          <Card
+                            title={
+                              <div style={{ display: 'flex', alignItems: 'center' }}>
+                                <Image
+                                  {...externalImageProps}
+                                  src={item.iconUrl}
+                                  preview={false}
+                                  style={{ width: 20, height: 20, marginRight: 8 }}
+                                />
+                                <Typography.Text
+                                  style={{ fontSize: '14px', color: textColor, fontWeight: 400 }}
+                                >
+                                  {item.name}
+                                </Typography.Text>
+                                <Typography.Text
+                                  style={{ marginLeft: '10px', color: subTextColor, fontSize: '12px' }}
+                                >
+                                  (更新时间：{dayjs(item.updateTime).fromNow()})
+                                </Typography.Text>
+                              </div>
+                            }
+                            styles={{ body: { padding: '12px' } }}
+                          >
+                            <div
+                              id="scrollableDiv"
+                              style={{
+                                height: 400,
+                                overflow: 'auto',
+                                scrollbarWidth: 'thin',
+                                scrollbarColor: 'rgba(0, 0, 0, 0.2) transparent',
+                              }}
+                              className="custom-scrollbar"
                             >
-                              (更新时间：{dayjs(item.updateTime).fromNow()})
-                            </Typography.Text>
-                          </div>
-                        }
-                        bodyStyle={{ padding: '12px' }}
-                      >
-                        <div
-                          id="scrollableDiv"
-                          style={{
-                            height: 400,
-                            overflow: 'auto',
-                            scrollbarWidth: 'thin',
-                            scrollbarColor: 'rgba(0, 0, 0, 0.2) transparent',
-                          }}
-                          className="custom-scrollbar"
-                        >
-                          <List
-                            dataSource={item.data}
-                            renderItem={(data, index) => (
-                              <List.Item style={{ padding: '8px 0' }}>
-                                <Tooltip title={data.title} mouseEnterDelay={0.2}>
-                                  <Typography.Link
-                                    target="_blank"
-                                    onClick={(e) => {
-                                      if (item.category === 4) {
-                                        e.preventDefault();
-                                        setCurrentMusic(data.url as any);
-                                        setIsMusicOpen(true);
-                                      }
-                                    }}
-                                    href={data.url}
-                                    style={{
-                                      display: 'flex',
-                                      width: '100%',
-                                      color: '#495060',
-                                      justifyContent: 'space-between',
-                                      fontSize: '14px',
-                                      fontWeight: 400,
-                                    }}
-                                  >
-                                    <span
-                                      style={{
-                                        flexGrow: 1,
-                                        textOverflow: 'ellipsis',
-                                        whiteSpace: 'nowrap',
-                                        overflow: 'hidden',
-                                      }}
-                                    >
-                                      <span
+                              <List
+                                dataSource={item.data}
+                                renderItem={(data, index) => (
+                                  <List.Item style={{ padding: '8px 0' }}>
+                                    <Tooltip title={data.title} mouseEnterDelay={0.2}>
+                                      <Typography.Link
+                                        target="_blank"
+                                        href={data.url}
                                         style={{
-                                          display: 'inline-block',
-                                          width: '18px',
-                                          height: '18px',
-                                          textAlign: 'center',
-                                          lineHeight: '18px',
-                                          marginRight: '6px',
-                                          color: '#fff',
-                                          backgroundColor:
-                                            index < 3
-                                              ? index === 0
-                                                ? '#ff4d4f'
-                                                : index === 1
-                                                ? '#fa8c16'
-                                                : '#faad14'
-                                              : 'rgba(124, 124, 124, 0.3)',
-                                          borderRadius: '3px',
-                                          fontSize: '12px',
+                                          display: 'flex',
+                                          width: '100%',
+                                          color: textColor,
+                                          justifyContent: 'space-between',
+                                          fontSize: '14px',
+                                          fontWeight: 400,
                                         }}
                                       >
-                                        {index + 1}
-                                      </span>
-                                      {data?.title?.length && data?.title?.length > 25
-                                        ? data.title.slice(0, 25) + '...'
-                                        : data.title}
-                                    </span>
-                                    <span
-                                      style={{
-                                        flexShrink: 0,
-                                        marginRight: '10px',
-                                        fontSize: '12px',
-                                      }}
-                                    >
-                                      🔥{' '}
-                                      {data.followerCount && data.followerCount >= 10000
-                                        ? (data.followerCount / 10000).toFixed(1) + '万'
-                                        : data.followerCount === 0
-                                        ? '置顶🔝'
-                                        : data.followerCount}
-                                    </span>
-                                  </Typography.Link>
-                                </Tooltip>
-                              </List.Item>
-                            )}
-                          />
-                        </div>
-                      </Card>
-                    </Badge.Ribbon>
-                  </Col>
-                ))}
-          </Row>
+                                        <span
+                                          style={{
+                                            flexGrow: 1,
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap',
+                                            overflow: 'hidden',
+                                          }}
+                                        >
+                                          <span
+                                            style={{
+                                              display: 'inline-block',
+                                              width: '18px',
+                                              height: '18px',
+                                              textAlign: 'center',
+                                              lineHeight: '18px',
+                                              marginRight: '6px',
+                                              color: '#fff',
+                                              backgroundColor:
+                                                index < 3
+                                                  ? index === 0
+                                                    ? '#ff4d4f'
+                                                    : index === 1
+                                                    ? '#fa8c16'
+                                                    : '#faad14'
+                                                  : 'rgba(124, 124, 124, 0.3)',
+                                              borderRadius: '3px',
+                                              fontSize: '12px',
+                                            }}
+                                          >
+                                            {index + 1}
+                                          </span>
+                                          {data?.title?.length && data?.title?.length > 25
+                                            ? data.title.slice(0, 25) + '...'
+                                            : data.title}
+                                        </span>
+                                        <span
+                                          style={{
+                                            flexShrink: 0,
+                                            marginRight: '10px',
+                                            fontSize: '12px',
+                                          }}
+                                        >
+                                          🔥{' '}
+                                          {data.followerCount && data.followerCount >= 10000
+                                            ? (data.followerCount / 10000).toFixed(1) + '万'
+                                            : data.followerCount === 0
+                                            ? '置顶🔝'
+                                            : data.followerCount}
+                                        </span>
+                                      </Typography.Link>
+                                    </Tooltip>
+                                  </List.Item>
+                                )}
+                              />
+                            </div>
+                          </Card>
+                        </Badge.Ribbon>
+                        </Col>
+                      ));
+                      if (HOT_RANK_AD_ENABLED && !adClosed) cols.splice(2, 0, adCol);
+                      return cols;                    })()}
+              </Row>
+            </div>
+            {/* 右侧广告已移至信息流 */}
+          </div>
         </>
       )}
     </>

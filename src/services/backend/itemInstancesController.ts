@@ -1,0 +1,131 @@
+// @ts-ignore
+/* eslint-disable */
+import { request } from '@umijs/max';
+
+/** 批量分解蓝绿装备 POST /api/itemInstances/batchDecomposeBlueGreen */
+export async function batchDecomposeBlueGreenEquipmentsUsingPost(options?: { [key: string]: any }) {
+  return request<API.BaseResponseLong_>('/api/itemInstances/batchDecomposeBlueGreen', {
+    method: 'POST',
+    ...(options || {}),
+  });
+}
+
+/** 分解物品 POST /api/itemInstances/decompose */
+export async function decomposeItemInstanceUsingPost(
+  body: API.ItemInstanceDecomposeRequest,
+  options?: { [key: string]: any },
+) {
+  return request<API.BaseResponseLong_>('/api/itemInstances/decompose', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    data: body,
+    ...(options || {}),
+  });
+}
+
+/** 编辑物品实例信息（管理员） POST /api/itemInstances/edit */
+export async function editItemInstanceUsingPost(
+  body: API.ItemInstanceEditRequest,
+  options?: { [key: string]: any },
+) {
+  return request<API.BaseResponseItemInstanceVO_>('/api/itemInstances/edit', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    data: body,
+    ...(options || {}),
+  });
+}
+
+/** 穿戴装备 POST /api/itemInstances/equip */
+export async function equipItemUsingPost(
+  body: API.ItemEquipRequest,
+  options?: { [key: string]: any },
+) {
+  return request<API.BaseResponseBoolean_>('/api/itemInstances/equip', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    data: body,
+    ...(options || {}),
+  });
+}
+
+/** 根据 id 获取物品实例） GET /api/itemInstances/get */
+export async function getItemInstanceByIdUsingGet(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: API.getItemInstanceByIdUsingGETParams,
+  options?: { [key: string]: any },
+) {
+  return request<API.BaseResponseItemInstances_>('/api/itemInstances/get', {
+    method: 'GET',
+    params: {
+      ...params,
+    },
+    ...(options || {}),
+  });
+}
+
+/** 分页获取物品列表 POST /api/itemInstances/list/page */
+export async function listItemInstancesByPageUsingPost(
+  body: API.ItemInstanceQueryRequest,
+  options?: { [key: string]: any },
+) {
+  return request<API.BaseResponsePageItemInstances_>('/api/itemInstances/list/page', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    data: body,
+    ...(options || {}),
+  });
+}
+
+/** 分页获取物品列表（封装类） POST /api/itemInstances/list/page/vo */
+export async function listItemInstancesVoByPageUsingPost(
+  body: API.ItemInstanceQueryRequest,
+  options?: { [key: string]: any },
+) {
+  return request<API.BaseResponsePageItemInstanceVO_>('/api/itemInstances/list/page/vo', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    data: body,
+    ...(options || {}),
+  });
+}
+
+/** 分页获取当前用户的物品列表（封装类） POST /api/itemInstances/my/list/page/vo */
+export async function listMyItemInstancesByPageUsingPost(
+  body: API.ItemInstanceQueryRequest,
+  options?: { [key: string]: any },
+) {
+  return request<API.BaseResponsePageItemInstanceVO_>('/api/itemInstances/my/list/page/vo', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    data: body,
+    ...(options || {}),
+  });
+}
+
+/** 卸下装备 POST /api/itemInstances/unequip */
+export async function unequipItemUsingPost(
+  body: API.ItemUnequipRequest,
+  options?: { [key: string]: any },
+) {
+  return request<API.BaseResponseBoolean_>('/api/itemInstances/unequip', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    data: body,
+    ...(options || {}),
+  });
+}

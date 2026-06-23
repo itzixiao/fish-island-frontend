@@ -2,24 +2,58 @@ export default [
   {
     path: '/user', layout: false, requireAuth: false, routes: [
       {path: '/user/login', component: './User/Login', requireAuth: false},
+      {path: '/user/login/linuxdo', component: './User/Login/LinuxDo', requireAuth: false},
       {path: '/user/register', component: './User/Register', requireAuth: false}
     ]
   },
   {path: '/index', icon: 'BarsOutlined', component: './Index', name: '最新', requireAuth: false},
   {path: '/home', layout: false, icon: 'smile', component: './Home', name: '浏览器页面', requireAuth: false},
-  {path: '/todo', icon: 'CalendarOutlined', component: './TODO', name: '每日待办', requireAuth: true},
-  {path: '/chat', icon: 'MessageOutlined', component: './Chat', name: '摸鱼室', requireAuth: true},
-  {path: '/reader', icon: 'BookOutlined', component: './Reader', name: '摸鱼阅读', requireAuth: true},
-  // { path: '/draw', icon: 'MessageOutlined', component: './Draw', name: '你画我猜', requireAuth: true },
+  {path: '/chat', icon: 'MessageOutlined', component: './Chat', name: '鱼窝', requireAuth: true},
+  {path: '/chat/mini', layout: false, component: './Chat/Mini', requireAuth: true},
+  {
+    path: '/moments',
+    icon: 'TeamOutlined',
+    name: '鱼圈',
+    requireAuth: true,
+    routes: [
+      {path: '/moments', redirect: '/moments/post', requireAuth: true},
+      {path: '/moments/post', icon: 'InstagramOutlined', component: './Post', name: '摸鱼论坛', requireAuth: true},
+      {path: '/moments/fish-circle', icon: 'CameraOutlined', component: './FishCircle', name: '鱼小圈', requireAuth: true},
+    ]
+  },
+  {path: '/post/create', layout: false, icon: 'EditOutlined', component: './Post/Create', requireAuth: true},
+  {path: '/post/edit/:id', layout: false, component: './Post/Edit', requireAuth: true},
+  {path: '/post/:id',component: './Post/Detail', requireAuth: true},
+  {path: '/reader', icon: 'BookOutlined', component: './Reader', name: '阅读', requireAuth: true},
+  {path: '/pet', icon: 'HeartOutlined', component: './Pet', name: '宠物', requireAuth: true},
+  {path: '/pet/fight', icon: 'HeartOutlined', component: './Pet/Fight',requireAuth: true},
+  {path: '/pet/battle', icon: 'ThunderboltOutlined', component: './Pet/Fight', requireAuth: true},
+  {path: '/tower/fight', icon: 'RocketOutlined', component: './Pet/Fight', requireAuth: true},
+
+  {
+    path: '/point',
+    icon: 'DollarOutlined',
+    name: '玩法',
+    requireAuth: true,
+    routes: [
+      {path: '/point', redirect: '/point/stock', requireAuth: true},
+      {icon: 'LineChartOutlined', path: '/point/stock', component: './Game/StockMarket', name: '摸鱼股市', requireAuth: true},
+      {icon: 'EnvironmentOutlined', path: '/point/farm', component: './Game/Farm', name: '摸鱼农场', requireAuth: true},
+      {icon: 'TrophyOutlined', path: '/point/tournament', component: './Game/Tournament', name: '武道大会', requireAuth: true},
+      {icon: 'RocketOutlined', path: '/point/tower', component: './Game/TowerClimb', name: '无尽爬塔', requireAuth: true}
+    ]
+  },
+  {path: '/todo', icon: 'CalendarOutlined', component: './TODO', name: '待办', requireAuth: true},
   {
     path: '/game',
     icon: 'DesktopOutlined',
-    name: '小游戏',
+    name: '游戏',
     requireAuth: true,
     routes: [
       {path: '/game', redirect: '/game/piece', requireAuth: true},
       {icon: 'DesktopOutlined', path: '/game/piece', component: './Game/Piece', name: '五子棋', requireAuth: true},
-      // {icon: 'DesktopOutlined', path: '/game/draw', component: './Game/Draw', name: '你画我猜', requireAuth: true},
+      {icon: 'FundViewOutlined', path: '/game/draw', component: './Draw', name: '你画我猜', requireAuth: true},
+      {path: '/game/draw/:id', component: './Draw/Detail', requireAuth: true},
       {
         icon: 'DesktopOutlined',
         path: '/game/chineseChess',
@@ -28,10 +62,34 @@ export default [
         requireAuth: true
       },
       {icon: 'DesktopOutlined', path: '/game/2048', component: './Game/2048', name: '2048', requireAuth: false},
-      {icon: 'DesktopOutlined', path: '/game/guessHero', component: './Game/GuessHero', name: '英雄猜猜乐', requireAuth: false},
-      {icon: 'DesktopOutlined', path: '/game/chicken', component: './Game/Chicken', name: '🐔鸡了个鸡🐔', requireAuth: false},
-      {icon: 'DesktopOutlined', path: '/game/life', component: './Game/Life', name: ' 人生重开模拟器', requireAuth: false},
-      {icon: 'DesktopOutlined', path: '/game/darkRoom', component: './Game/DarkRoom', name: ' 小黑屋模拟器', requireAuth: false},
+      {
+        icon: 'DesktopOutlined',
+        path: '/game/guessHero',
+        component: './Game/GuessHero',
+        name: '英雄猜猜乐',
+        requireAuth: false
+      },
+      {
+        icon: 'DesktopOutlined',
+        path: '/game/chicken',
+        component: './Game/Chicken',
+        name: '🐔鸡了个鸡🐔',
+        requireAuth: false
+      },
+      {
+        icon: 'DesktopOutlined',
+        path: '/game/life',
+        component: './Game/Life',
+        name: ' 人生重开模拟器',
+        requireAuth: false
+      },
+      {
+        icon: 'DesktopOutlined',
+        path: '/game/darkRoom',
+        component: './Game/DarkRoom',
+        name: ' 小黑屋模拟器',
+        requireAuth: false
+      },
       {icon: 'DesktopOutlined', path: '/game/car', component: './Game/Car', name: '模拟赛车', requireAuth: false},
       {icon: 'DesktopOutlined', path: '/game/jump', component: './Game/Jump', name: '跳一跳   ', requireAuth: false},
       {
@@ -46,10 +104,17 @@ export default [
   {
     path: '/utils',
     icon: 'CodeSandboxOutlined',
-    name: ' 工具箱',
+    name: ' 工具',
     requireAuth: true,
     routes: [
       {path: '/utils', redirect: '/utils/json', requireAuth: false},
+      {
+        icon: 'SmileOutlined',
+        path: '/utils/meme-generator',
+        component: './Utils/MemeGenerator',
+        name: '表情包生成器',
+        requireAuth: false
+      },
       {
         icon: 'DesktopOutlined',
         path: '/utils/json',
@@ -92,21 +157,29 @@ export default [
         name: 'AI周报助手',
         requireAuth: false
       },
+      {
+        icon: 'FundOutlined',
+        path: '/utils/fund-hub',
+        component: './Utils/FundHub',
+        name: '基金估值',
+        requireAuth: true
+      },
     ],
   },
   {
-    icon: 'PictureOutlined',
+    icon: 'AccountBookOutlined',
     path: '/avatarFrames',
     component: './Utils/AvatarFrames',
-    name: '头像框兑换',
+    name: '商店',
     requireAuth: true
   },
   {
     path: '/rank',
     icon: 'github',
-    name: '关于网站',
+    name: '关于',
     routes: [
       {icon: 'DesktopOutlined', path: '/rank/reward', component: './Rank/Reward', name: '打赏榜 👑', requireAuth: false},
+      {icon: 'DesktopOutlined', path: '/rank/welfare', component: './Welfare', name: '外卖福利🎁', requireAuth: false},
       {icon: 'DesktopOutlined', path: '/rank/about', component: './About', name: '共建与反馈 🚀', requireAuth: false},
       {icon: 'DesktopOutlined', path: '/rank/other', component: './Other', name: '其他产品 🔥', requireAuth: false},
       {path: 'https://github.com/lhccong/fish-island-backend', name: '狠狠点个 star 🌟'},
@@ -121,10 +194,16 @@ export default [
     requireAuth: true,
     routes: [
       {path: '/admin', redirect: '/admin/user', requireAuth: true},
-      {icon: 'table', path: '/admin/user', component: './Admin/User', name: '用户管理', requireAuth: true},
       {icon: 'LineChartOutlined', path: '/admin/data', component: './Admin/Data', name: '数据分析', requireAuth: true},
+      {icon: 'table', path: '/admin/user', component: './Admin/User', name: '用户管理', requireAuth: true},
+      {icon: 'BulbOutlined', path: '/admin/title', component: './Admin/User/Title', name: '称号管理', requireAuth: true},
+      {icon: 'TagsOutlined', path: '/admin/tags', component: './Admin/Tags', name: '标签管理', requireAuth: true},
+      {icon: 'BookOutlined', path: '/admin/word/library', component: './Admin/Word/Library', name: '词库管理', requireAuth: true},
+      {icon: 'ToolOutlined', path: '/admin/game/itemTemplates', component: './Admin/ItemTemplates', name: '装备管理', requireAuth: true},
+      {icon: 'AlertOutlined', path: '/admin/report', component: './Admin/Report', name: '举报管理', requireAuth: true},
     ],
   },
+  {path: '/oauth2/authorize', layout: false, component: './OAuth2/Authorize', requireAuth: false},
   {path: '/', redirect: '/index', requireAuth: true},
   {path: '*', layout: false, component: './404', requireAuth: false},
 ];

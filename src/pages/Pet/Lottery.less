@@ -1,0 +1,676 @@
+.lotteryContainer {
+  padding: 8px;
+  background: #fff;
+  min-height: auto;
+  border-radius: 6px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+// 转盘Tab切换
+.turntableTabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.turntableTab {
+  padding: 4px 12px;
+  background: #f5f5f5;
+  border-radius: 12px;
+  font-size: 12px;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  &:hover {
+    background: #ffe8d6;
+    color: #ff7043;
+  }
+}
+
+.turntableTabIcon {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  object-fit: cover;
+}
+
+.turntableTabActive {
+  background: linear-gradient(135deg, #ff9a56 0%, #ff7b35 100%);
+  color: #fff;
+  font-weight: 500;
+
+  &:hover {
+    background: linear-gradient(135deg, #ff9a56 0%, #ff7b35 100%);
+    color: #fff;
+  }
+}
+
+// 顶部货币显示
+.currencyBar {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 8px;
+}
+
+.currencyItem {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(91, 124, 255, 0.1);
+  padding: 4px 10px;
+  border-radius: 12px;
+}
+
+.currencyIcon {
+  font-size: 14px;
+}
+
+.currencyValue {
+  font-size: 13px;
+  font-weight: bold;
+  color: #5b7cff;
+}
+
+// 主要内容区
+.lotteryContent {
+  display: flex;
+  gap: 8px;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
+// 左侧区域
+.leftSection {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+// 右侧区域
+.rightSection {
+  flex: 0 0 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  @media (max-width: 768px) {
+    flex: 1;
+  }
+}
+
+// 区域标题
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  font-weight: bold;
+  color: #ff7043;
+
+  .titleIcon {
+    font-size: 16px;
+  }
+}
+
+.signStatus {
+  background: #f0f0f0;
+  color: #999;
+  padding: 2px 6px;
+  border-radius: 8px;
+  font-size: 11px;
+}
+
+// 9宫格容器
+.gridContainer {
+  background: linear-gradient(135deg, #ff9a56 0%, #ff7b35 100%);
+  padding: 8px;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+// 9宫格
+.prizeGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+// 奖品格子
+.prizeItem {
+  height: 170px;
+  background: #fff;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 4px;
+  transition: all 0.15s ease;
+  cursor: pointer;
+  border: 2px solid transparent;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  }
+
+  &.active {
+    border-color: #ffeb3b;
+    background: linear-gradient(135deg, #fff9c4 0%, #ffeb3b 100%);
+    animation: pulse 0.2s ease;
+  }
+
+  &.locked {
+    background: rgba(255, 255, 255, 0.7);
+    color: #999;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+}
+
+.prizeIcon {
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.prizeIconImg {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.prizeIconShine {
+  animation: iconShine 2s ease-in-out infinite;
+  filter: drop-shadow(0 0 4px rgba(255, 183, 77, 0.8));
+}
+
+@keyframes iconShine {
+  0%, 100% {
+    filter: drop-shadow(0 0 4px rgba(255, 183, 77, 0.8)) brightness(1);
+    transform: scale(1);
+  }
+  50% {
+    filter: drop-shadow(0 0 12px rgba(255, 183, 77, 1)) brightness(1.15);
+    transform: scale(1.05);
+  }
+}
+
+.prizeName {
+  font-size: 10px;
+  color: #333;
+  text-align: center;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.prizeQuality {
+  font-size: 8px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: rgba(255, 112, 67, 0.1);
+  color: #ff7043;
+}
+
+// 中间格子抽奖时的脉冲发光特效
+.centerSpin {
+  animation: centerPulse 0.6s ease-in-out infinite;
+  border-color: #ff9800 !important;
+  box-shadow: 0 0 12px rgba(255, 152, 0, 0.5), inset 0 0 8px rgba(255, 152, 0, 0.15);
+}
+
+@keyframes centerPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 8px rgba(255, 152, 0, 0.4), inset 0 0 6px rgba(255, 152, 0, 0.1);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(255, 152, 0, 0.8), inset 0 0 12px rgba(255, 152, 0, 0.3);
+  }
+}
+
+.lockIcon {
+  font-size: 16px;
+  color: #bbb;
+}
+
+.unlockText {
+  font-size: 9px;
+  color: #bbb;
+}
+
+// 稀有度样式
+.rarityCommon {
+  background: #fff;
+}
+
+.rarityRare {
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+  border-color: #64b5f6;
+}
+
+.rarityEpic {
+  background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%);
+  border-color: #ba68c8;
+}
+
+.rarityLegendary {
+  background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+  border-color: #ffb74d;
+  animation: legendaryGlow 2s ease-in-out infinite;
+}
+
+@keyframes legendaryGlow {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(255, 183, 77, 0.6), 0 0 16px rgba(255, 183, 77, 0.3);
+    border-color: #ffb74d;
+  }
+  50% {
+    box-shadow: 0 0 16px rgba(255, 183, 77, 0.9), 0 0 32px rgba(255, 152, 0, 0.5);
+    border-color: #ff9800;
+  }
+}
+
+// 抽奖按钮容器（在9宫格下方）
+.drawButtonsContainer {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.singleDrawBtn,
+.tenDrawBtn {
+  flex: 1;
+  height: auto !important;
+  padding: 6px 10px !important;
+  border-radius: 16px !important;
+  border: none !important;
+  font-size: 12px;
+  font-weight: bold;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  transition: all 0.15s ease;
+  box-shadow: none !important;
+
+  &:hover {
+    opacity: 0.9;
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
+.singleDrawBtn {
+  background: linear-gradient(135deg, #ffcc80 0%, #ffb74d 100%);
+  color: #333;
+}
+
+.tenDrawBtn {
+  background: linear-gradient(135deg, #ff8a65 0%, #ff7043 100%);
+  color: #fff;
+}
+
+.btnCost {
+  font-size: 10px;
+  opacity: 0.9;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.freeTag {
+  color: #52c41a;
+  font-weight: bold;
+}
+
+// 幸运值
+.luckyBar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #f5f5f5;
+  padding: 6px 10px;
+  border-radius: 16px;
+}
+
+.luckyLabel {
+  color: #666;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.luckyProgress {
+  flex: 1;
+
+  :global(.ant-progress-inner) {
+    background-color: #e0e0e0;
+    border-radius: 4px;
+    height: 6px !important;
+  }
+
+  :global(.ant-progress-bg) {
+    border-radius: 4px;
+    height: 6px !important;
+  }
+}
+
+.luckyValue {
+  color: #ff7043;
+  font-size: 11px;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.luckyTip {
+  color: #bbb;
+  font-size: 9px;
+  text-align: center;
+}
+
+// 围观大奖卡片
+.winnersCard {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 10px;
+  border: none;
+
+  :global(.ant-card-body) {
+    padding: 10px;
+  }
+}
+
+.winnersTitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: bold;
+  color: #ff7043;
+  margin-bottom: 8px;
+
+  .winnersIcon {
+    font-size: 16px;
+  }
+}
+
+.winnersList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 550px;
+  overflow-y: auto;
+  padding-right: 4px;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: #f0f0f0;
+    border-radius: 2px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 2px;
+
+    &:hover {
+      background: #aaa;
+    }
+  }
+}
+
+.winnerItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: #f5f5f5;
+  border-radius: 8px;
+}
+
+.winnerIcon {
+  font-size: 24px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.winnerIconImg {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.winnerInfo {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+}
+
+.winnerLabel {
+  color: #666;
+}
+
+.winnerName {
+  color: #5b7cff;
+  font-weight: 500;
+}
+
+.winnerPrize {
+  color: #ff7043;
+  font-weight: 500;
+}
+
+// 分页
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.pageArrow {
+  color: #999;
+  cursor: pointer;
+  padding: 2px 6px;
+  font-size: 12px;
+
+  &:hover {
+    color: #5b7cff;
+  }
+}
+
+.pageNum {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 11px;
+  color: #666;
+  cursor: pointer;
+
+  &:hover {
+    background: #f0f0f0;
+  }
+
+  &.pageActive {
+    background: #5b7cff;
+    color: #fff;
+  }
+}
+
+// 中奖播报卡片
+.recordsCard {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 10px;
+  border: none;
+  flex: 1;
+  max-height: 200px;
+
+  :global(.ant-card-body) {
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+}
+
+.recordsTitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: bold;
+  color: #ff7043;
+  margin-bottom: 8px;
+
+  .recordsIcon {
+    font-size: 16px;
+  }
+}
+
+.recordsList {
+  flex: 1;
+  overflow: hidden;
+}
+
+.emptyRecords {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.recordsContent {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.recordItem {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  background: #f5f5f5;
+  border-radius: 6px;
+  font-size: 11px;
+  flex-wrap: wrap;
+}
+
+.recordLabel {
+  color: #666;
+}
+
+.recordUser {
+  color: #5b7cff;
+  font-weight: 500;
+}
+
+.recordPrize {
+  color: #ff7043;
+  font-weight: 500;
+  flex: 1;
+}
+
+.recordTime {
+  color: #999;
+  font-size: 10px;
+}
+
+// 弹窗样式
+.tenDrawModal {
+  :global(.ant-modal-header) {
+    background: linear-gradient(135deg, #ff9a56 0%, #ff7b35 100%);
+    border-bottom: none;
+  }
+
+  :global(.ant-modal-title) {
+    color: #fff;
+  }
+}
+
+.modalTitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 16px;
+  font-weight: bold;
+  color: #fff;
+}
+
+.modalTitleIcon {
+  font-size: 18px;
+}
+
+.tenDrawResults {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+  padding: 16px 0;
+
+  @media (max-width: 768px) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  @media (max-width: 480px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.resultItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px;
+  background: linear-gradient(135deg, #fff8f0 0%, #ffe8d6 100%);
+  border-radius: 8px;
+  border: 2px solid #ffa768;
+}
+
+.resultIcon {
+  font-size: 28px;
+}
+
+.resultName {
+  font-size: 11px;
+  color: #333;
+  text-align: center;
+  font-weight: 500;
+}

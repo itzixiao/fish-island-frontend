@@ -1,4 +1,4 @@
-import { Button, Form, message, Modal, Tabs } from 'antd';
+import { Button, Form, message, Modal, Tabs, Input, Select } from 'antd';
 import { LockOutlined, MailOutlined, QqCircleFilled, UserOutlined } from '@ant-design/icons';
 import { LoginForm, ProFormText } from '@ant-design/pro-components';
 import { useEmotionCss } from '@ant-design/use-emotion-css';
@@ -15,6 +15,7 @@ import {
   userEmailLoginUsingPost,
   userEmailSendUsingPost,
   userEmailRegisterUsingPost,
+  getLinuxDoAuthUrlUsingGet,
 } from '@/services/backend/userController';
 
 interface UserLoginRequest {
@@ -55,11 +56,36 @@ const LoginRegister: React.FC<LoginRegisterProps> = ({ isModalOpen, onCancel, on
   const ref = useRef();
   const [countdown, setCountdown] = useState(0);
   const [email, setEmail] = useState('');
+  const [emailPrefix, setEmailPrefix] = useState('');
+  const [emailSuffix, setEmailSuffix] = useState('qq.com');
   const { initialState, setInitialState } = useModel('@@initialState');
   const [showCaptcha, setShowCaptcha] = useState(false);
   const [registerValues, setRegisterValues] = useState<any>(null);
-  const [loginValues, setLoginValues] = useState<any>(null);
-  const [showLoginCaptcha, setShowLoginCaptcha] = useState(false);
+
+  // 邮箱域名选项
+  const emailDomains = [
+    'qq.com',
+    '163.com',
+    'gmail.com',
+    '126.com',
+    'outlook.com',
+    'foxmail.com',
+    'sina.com',
+    'vip.qq.com',
+    '139.com',
+    '88.com',
+    'icloud.com'
+  ];
+
+  // 处理邮箱输入变化
+  const handleEmailChange = (prefix: string, suffix: string) => {
+    const fullEmail = prefix && suffix ? `${prefix}@${suffix}` : '';
+    setEmailPrefix(prefix);
+    setEmailSuffix(suffix);
+    setEmail(fullEmail);
+    // 更新表单字段值
+    form.setFieldsValue({ email: fullEmail });
+  };
 
   const containerClassName = useEmotionCss(() => {
     return {
@@ -137,17 +163,6 @@ const LoginRegister: React.FC<LoginRegisterProps> = ({ isModalOpen, onCancel, on
       }
     }, 100);
   };
-  const validateAndShowLoginCaptcha = async (values: any) => {
-    setLoginValues(values);
-    setShowLoginCaptcha(true);
-    setTimeout(() => {
-      const current = ref.current as any;
-      if (current) {
-        current.verify();
-      }
-    }, 100);
-  };
-
 // 修改原来的 handleSubmit 为实际登录逻辑
   const handleLoginSubmit = async (values: UserLoginRequest) => {
     try {
@@ -184,6 +199,21 @@ const LoginRegister: React.FC<LoginRegisterProps> = ({ isModalOpen, onCancel, on
       message.error(defaultLoginFailureMessage);
     }
   };
+
+  // LinuxDo 第三方登录
+  const handleLinuxDoLogin = async () => {
+    try {
+      const res = await getLinuxDoAuthUrlUsingGet();
+      if (res.code === 0 && res.data) {
+        // 跳转到 LinuxDo 授权页面
+        window.location.href = res.data;
+      } else {
+        message.error('获取 LinuxDo 授权链接失败');
+      }
+    } catch (error: any) {
+      message.error(`LinuxDo 登录失败：${error.message}`);
+    }
+  };
   return (
     <Modal footer={null} open={isModalOpen} onCancel={onCancel}>
       <div className={containerClassName}>
@@ -198,7 +228,7 @@ const LoginRegister: React.FC<LoginRegisterProps> = ({ isModalOpen, onCancel, on
               maxWidth: '75vw',
             }}
             logo={<img alt="logo" style={{ height: '100%' }}
-                      src="https://api.oss.cqbo.com/moyu/moyu.png" />}
+                      src="https://oss.cqbo.com/moyu/moyu.png" />}
             title="摸鱼岛"
             subTitle={'加入摸鱼岛一起来摸吧'}
             initialValues={{
@@ -206,16 +236,12 @@ const LoginRegister: React.FC<LoginRegisterProps> = ({ isModalOpen, onCancel, on
             }}
             onFinish={async (values) => {
               if (type === 'login') {
-                await validateAndShowLoginCaptcha(values);
+                await handleLoginSubmit(values);
               } else if (type === 'register') {
                 await validateAndShowCaptcha(values);
               }
             }}
-            submitter={{
-              searchConfig: {
-                submitText: type === 'register' ? '注册' : '登录',
-              }
-            }}
+            submitter={false}
           >
             <Tabs
               activeKey={type}
@@ -274,6 +300,70 @@ const LoginRegister: React.FC<LoginRegisterProps> = ({ isModalOpen, onCancel, on
                     忘记密码？
                   </Button>
                 </div>
+
+                {/* 登录按钮 */}
+                <Button
+                  type="primary"
+                  block
+                  size="large"
+                  htmlType="submit"
+                  style={{
+                    marginBottom: '16px',
+                    height: '44px',
+                    fontWeight: 500,
+                  }}
+                >
+                  登录
+                </Button>
+
+                {/* 第三方登录分割线 */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  margin: '16px 0',
+                  color: '#999',
+                  fontSize: '14px'
+                }}>
+                  <div style={{ flex: 1, height: '1px', background: '#e8e8e8' }}></div>
+                  <span style={{ padding: '0 16px' }}>或</span>
+                  <div style={{ flex: 1, height: '1px', background: '#e8e8e8' }}></div>
+                </div>
+
+                {/* LinuxDo 第三方登录按钮 */}
+                <Button
+                  block
+                  size="large"
+                  onClick={handleLinuxDoLogin}
+                  style={{
+                    marginBottom: '16px',
+                    background: '#ff6b35',
+                    borderColor: '#ff6b35',
+                    color: 'white',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    height: '44px',
+                    fontWeight: 500,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = '#e55a2b';
+                    e.currentTarget.style.borderColor = '#e55a2b';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = '#ff6b35';
+                    e.currentTarget.style.borderColor = '#ff6b35';
+                  }}
+                >
+                  <img
+                    src="/img/logo-new-5.png"
+                    alt="Linux Do"
+                    width="20"
+                    height="20"
+                    style={{ objectFit: 'contain' }}
+                  />
+                  使用 Linux Do 登录
+                </Button>
               </>
             )}
             {type === 'register' && (
@@ -324,14 +414,8 @@ const LoginRegister: React.FC<LoginRegisterProps> = ({ isModalOpen, onCancel, on
                     },
                   ]}
                 />
-                <ProFormText
+                <Form.Item
                   name="email"
-                  fieldProps={{
-                    size: 'large',
-                    prefix: <QqCircleFilled className={styles.prefixIcon} />,
-                    onChange: (e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value),
-                  }}
-                  placeholder="请输入邮箱"
                   rules={[
                     {
                       required: true,
@@ -342,7 +426,54 @@ const LoginRegister: React.FC<LoginRegisterProps> = ({ isModalOpen, onCancel, on
                       message: '请输入正确的邮箱地址！',
                     },
                   ]}
-                />
+                >
+                  <Input.Group compact style={{ display: 'flex' }}>
+                    <Input
+                      size="large"
+                      prefix={<QqCircleFilled className={styles.prefixIcon} />}
+                      placeholder="请输入邮箱前缀"
+                      value={emailPrefix}
+                      onChange={(e) => handleEmailChange(e.target.value, emailSuffix)}
+                      style={{ flex: 1 }}
+                    />
+                    <Input
+                      size="large"
+                      style={{
+                        width: '40px',
+                        minWidth: '40px',
+                        borderLeft: 0,
+                        borderRight: 0,
+                        pointerEvents: 'none',
+                        textAlign: 'center',
+                        backgroundColor: '#fafafa',
+                        color: '#000',
+                        fontWeight: 'bold',
+                        fontSize: '16px',
+                        padding: '0',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                      value="@"
+                      disabled
+                    />
+                    <Select
+                      size="large"
+                      placeholder="qq.com"
+                      value={emailSuffix}
+                      onChange={(value) => handleEmailChange(emailPrefix, value)}
+                      style={{ width: '140px' }}
+                      showSearch
+                      filterOption={(input, option) =>
+                        (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                      }
+                      options={emailDomains.map(domain => ({
+                        value: domain,
+                        label: domain
+                      }))}
+                    />
+                  </Input.Group>
+                </Form.Item>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <ProFormText
                     name="code"
@@ -367,6 +498,23 @@ const LoginRegister: React.FC<LoginRegisterProps> = ({ isModalOpen, onCancel, on
                     {countdown > 0 ? `${countdown}秒后重试` : '获取验证码'}
                   </Button>
                 </div>
+
+                {/* 注册按钮 */}
+                <Button
+                  type="primary"
+                  block
+                  size="large"
+                  htmlType="submit"
+                  style={{
+                    marginTop: '16px',
+                    marginBottom: '16px',
+                    height: '44px',
+                    fontWeight: 500,
+                  }}
+                >
+                  注册
+                </Button>
+
                 <Captcha
                   onSuccess={async (data) => {
                     setValueData({
@@ -400,22 +548,7 @@ const LoginRegister: React.FC<LoginRegisterProps> = ({ isModalOpen, onCancel, on
                 ref={ref}
               />
             )}
-            {showLoginCaptcha && (
-              <Captcha
-                onSuccess={async (data) => {
-                  if (loginValues) {
-                    const loginData: UserLoginRequest = {
-                      ...loginValues,
-                      captchaVerification: data.captchaVerification,
-                    };
-                    await handleLoginSubmit(loginData);
-                  }
-                }}
-                path={BACKEND_HOST_CODE}
-                type="auto"
-                ref={ref}
-              />
-            )}
+
           </LoginForm>
         </div>
         <Footer />

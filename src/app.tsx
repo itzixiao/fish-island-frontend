@@ -6,15 +6,16 @@ import {AvatarDropdown} from './components/RightContent/AvatarDropdown';
 import {requestConfig} from './requestConfig';
 import {getLoginUserUsingGet} from "@/services/backend/userController";
 import {useEffect, useState} from "react";
-import AnnouncementModal from '@/components/AnnouncementModal';
+import {ConfigProvider, theme as antdTheme} from 'antd';
 import BossKeySettings from '@/components/BossKeySettings';
 import SideAnnouncement from '@/components/SideAnnouncement';
 import GlobalReader from '@/components/GlobalFloatingReader';
+import FloatingChat from '@/components/FloatingChat';
 import routes from '../config/routes';
 import GlobalTitle from '@/components/GlobalTitle';
+import SiteTour from '@/components/SiteTour';
 import {Board, Player, Position, Move, WinningLine} from '@/game';
 import {unregisterServiceWorker} from './utils/unregisterServiceWorker';
-import {setNotificationEnabled} from './utils/notification';
 
 const loginPath = '/user/login';
 
@@ -22,27 +23,26 @@ const loginPath = '/user/login';
 const getSiteName = () => {
   const savedSiteConfig = localStorage.getItem('siteConfig');
   if (savedSiteConfig) {
-    const {siteName} = JSON.parse(savedSiteConfig);
-    return siteName;
+    const { siteName } = JSON.parse(savedSiteConfig);
+    return siteName || defaultSettings.title;
   }
-  return '摸鱼岛 - 有趣的在线交流平台';
+  return defaultSettings.title;
 };
 
 // 监听路由变化
 const listenRouteChange = () => {
-  history.listen(({location}) => {
-    // 设置网站标题
+  history.listen(({ location }) => {
+    // 设置网站标题 - 优先使用用户设置的网站名称，否则使用defaultSettings中的标题
     const pathname = location.pathname;
     let title = getSiteName();
 
-    document.title = title;
 
     // 更新 meta 描述
     let description = '摸鱼岛 - 一个有趣的在线游戏平台，提供多种休闲游戏和社交功能';
     if (pathname.startsWith('/game')) {
       description = '摸鱼岛游戏中心 - 提供五子棋、2048、模拟赛车等多种休闲游戏';
     } else if (pathname === '/chat') {
-      description = '摸鱼室 - 与好友聊天、分享生活趣事的社交空间';
+      description = '鱼窝 - 与好友聊天、分享生活趣事的社交空间';
     }
 
     // 更新 meta 描述
@@ -149,7 +149,7 @@ export async function getInitialState(): Promise<InitialState> {
   // 应用网站设置
   const savedSiteConfig = localStorage.getItem('siteConfig');
   if (savedSiteConfig) {
-    const {siteName, siteIcon, notificationEnabled} = JSON.parse(savedSiteConfig);
+    const {siteName, siteIcon} = JSON.parse(savedSiteConfig);
     // 更新所有图标相关的标签
     const iconTypes = ['icon', 'shortcut icon', 'apple-touch-icon'];
     iconTypes.forEach(type => {
@@ -164,15 +164,11 @@ export async function getInitialState(): Promise<InitialState> {
       document.head.appendChild(newLink);
     });
 
-    // 更新网站标题
-    document.title = siteName;
-    // 更新默认设置中的标题
-    defaultSettings.title = siteName;
-
-    // 更新通知设置
-    if (notificationEnabled !== undefined) {
-      setNotificationEnabled(notificationEnabled);
-    }
+    // 使用getSiteName获取标题，优先使用用户设置的网站名称
+    document.title = getSiteName();
+  } else {
+    // 如果没有自定义设置，使用defaultSettings中的标题
+    document.title = defaultSettings.title;
   }
 
   // 检查当前路由是否需要登录验证
@@ -190,15 +186,69 @@ export async function getInitialState(): Promise<InitialState> {
   return initialState;
 }
 
+// 获取布局模式
+const getLayoutMode = (): 'side' | 'top' | 'mix' => {
+  const savedSiteConfig = localStorage.getItem('siteConfig');
+  if (savedSiteConfig) {
+    const { layoutMode } = JSON.parse(savedSiteConfig);
+    if (layoutMode === 'side' || layoutMode === 'top' || layoutMode === 'mix') {
+      return layoutMode;
+    }
+  }
+  return defaultSettings.layout as 'side' | 'top' | 'mix' || 'top';
+};
+
+// sider 模式下的菜单名称映射
+const SIDER_MENU_NAME_MAP: Record<string, string> = {
+  '鱼窝': '摸鱼室',
+  '鱼圈': '摸鱼圈',
+  '阅读': '摸鱼阅读',
+  '宠物': '摸鱼宠物',
+  '玩法': '积分玩法',
+  '游戏': '小游戏',
+  ' 工具': '工具箱',
+  '商店': '摸鱼商店',
+  '关于': '关于网站',
+};
+
+// 递归替换菜单名称
+const remapMenuNames = (menuData: any[]): any[] => {
+  return menuData.map((item) => {
+    const newName = SIDER_MENU_NAME_MAP[item.name] ?? item.name;
+    return {
+      ...item,
+      name: newName,
+      children: item.children ? remapMenuNames(item.children) : undefined,
+      routes: item.routes ? remapMenuNames(item.routes) : undefined,
+    };
+  });
+};
+
 // ProLayout 支持的api https://procomponents.ant.design/components/layout
 // @ts-ignore
 export const layout: RunTimeLayoutConfig = ({initialState}) => {
   const {isBossMode, showSettings, setShowSettings, config, setConfig} = useBossKey();
   // eslint-disable-next-line react-hooks/rules-of-hooks
+  const [layoutMode, setLayoutMode] = useState<'side' | 'top' | 'mix'>(getLayoutMode);
+
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useEffect(() => {
+    const handleSiteConfigChange = () => {
+      setLayoutMode(getLayoutMode());
+    };
+    window.addEventListener('siteConfigChange', handleSiteConfigChange);
+    return () => {
+      window.removeEventListener('siteConfigChange', handleSiteConfigChange);
+    };
+  }, []);
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   const [showAnnouncement, setShowAnnouncement] = useState(true);
   // 使用全局状态
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const { isReaderVisible, hideReader } = useModel('globalReader');
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  // @ts-ignore
+  const { isDarkMode } = useModel('theme');
 
   // 注册 Service Worker
   const registerServiceWorker = () => {
@@ -219,6 +269,56 @@ export const layout: RunTimeLayoutConfig = ({initialState}) => {
   useEffect(() => {
     listenRouteChange();
     registerServiceWorker();
+
+    // 添加百度统计代码
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?3f2490c2a69874f9cb3c05f22a48e6b9";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+
+    // 使用标志位防止死循环的MutationObserver
+    let isSettingTitle = false;
+
+    const observer = new MutationObserver((mutations) => {
+      // 如果正在设置标题，跳过
+      if (isSettingTitle) return;
+
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'childList') {
+          // 动态获取当前期望的标题
+          const expectedTitle = getSiteName();
+          // 检查当前标题是否与期望的标题不同
+          if (document.title !== expectedTitle) {
+            isSettingTitle = true;
+            document.title = expectedTitle;
+            // 使用setTimeout确保DOM更新完成后再重置标志位
+            setTimeout(() => {
+              isSettingTitle = false;
+            }, 0);
+          }
+        }
+      });
+    });
+
+    // 监听document.head的变化
+    observer.observe(document.head, {
+      childList: true,
+      subtree: true,
+    });
+
+    // 设置初始标题
+    isSettingTitle = true;
+    document.title = getSiteName();
+    setTimeout(() => {
+      isSettingTitle = false;
+    }, 0);
+
+    return () => {
+      observer.disconnect();
+    };
   }, []);
 
   if (isBossMode) {
@@ -318,14 +418,39 @@ export const layout: RunTimeLayoutConfig = ({initialState}) => {
     waterMarkProps: {
       content: initialState?.currentUser?.userName,
     },
-    footerRender: () => <Footer/>,
+    footerRender: () => {
+      const path =
+        typeof window !== 'undefined' ? window.location.pathname : '';
+      if (path.startsWith('/point/farm')) {
+        return null;
+      }
+      return <Footer />;
+    },
     menuHeaderRender: undefined,
     // 自定义 403 页面
     // unAccessible: <div>unAccessible</div>,
     ...defaultSettings,
+    layout: layoutMode,
+    navTheme: isDarkMode ? 'realDark' : 'light',
+    menuDataRender: (layoutMode === 'side' || layoutMode === 'mix')
+      ? (menuData: any[]) => remapMenuNames(menuData)
+      : undefined,
     childrenRender: (children) => {
       return (
-        <>
+        <ConfigProvider
+          theme={{
+            algorithm: isDarkMode ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
+            token: {
+              colorPrimary: '#FFA768',
+              ...(isDarkMode ? {
+                colorBgBase: '#121212',
+                colorBgContainer: '#1e1e1e',
+                colorBgElevated: '#1e1e1e',
+                colorBgLayout: '#121212',
+              } : {}),
+            },
+          }}
+        >
           <GlobalTitle/>
           {children}
           <SideAnnouncement/>
@@ -338,7 +463,9 @@ export const layout: RunTimeLayoutConfig = ({initialState}) => {
             visible={isReaderVisible}
             onClose={hideReader}
           />
-        </>
+          <FloatingChat />
+          <SiteTour />
+        </ConfigProvider>
       );
     },
   };

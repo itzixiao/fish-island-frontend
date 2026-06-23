@@ -14,19 +14,19 @@ const Settings: ProLayoutProps & {
   navTheme: 'light',
   // 拂晓蓝
   colorPrimary: '#FFA768',
-  layout: 'side',
+  layout: 'top',
   // splitMenus: true, // 将一级菜单拆分到顶部
   contentWidth: 'Fluid',
-  fixedHeader: false,
+  fixedHeader: true,
   fixSiderbar: true,
   colorWeak: false,
   title: userSiteName || '摸鱼岛',
-  logo: 'https://api.oss.cqbo.com/moyu/moyu.png',
+  logo: 'https://oss.cqbo.com/moyu/moyu.png',
   pwa: true,
-  // iconfontUrl: 'https://api.oss.cqbo.com/moyu/moyu.png',
+  // iconfontUrl: 'https://oss.cqbo.com/moyu/moyu.png',
   token: {
     header: {
-      heightLayoutHeader: 78,
+      heightLayoutHeader: 52,
       colorTextMenuSelected: '#FFA768',
 
     },

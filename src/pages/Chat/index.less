@@ -1,8 +1,23 @@
-.chatRoom {
-  max-width: 1200px;
+@import '../../components/titles.less';
+
+.chatPageWrapper {
+  display: flex;
+  gap: 12px;
   width: 98%;
-  height: calc(100vh - 85px);
+  max-width: 1532px; // 1200px chatRoom + 12px gap + 320px sidebar
   margin: 0 auto;
+  align-items: flex-start;
+}
+
+.chatPageWrapperCentered {
+  max-width: 1200px;
+}
+
+.chatRoom {
+  flex: 1;
+  min-width: 0;
+  max-width: 1200px;
+  height: calc(100vh - var(--chat-height-offset, 85px));
   display: grid;
   grid-template-columns: 1fr 220px;
   grid-template-rows: auto 1fr auto;
@@ -21,6 +36,10 @@
     0 8px 32px rgba(0, 0, 0, 0.1),
     0 0 0 1px rgba(255, 255, 255, 0.1) inset,
     0 0 0 1px rgba(255, 255, 255, 0.2) inset;
+
+  &.userListCollapsed {
+    grid-template-columns: 1fr 0px;
+  }
 
   .announcement {
     grid-area: announcement;
@@ -44,121 +63,6 @@
     }
   }
 
-  // 添加漂浮的摸鱼元素
-  .floating-fish {
-    position: absolute;
-    font-size: 24px;
-    pointer-events: none;
-    z-index: 1;
-    opacity: 0.8;
-    animation: float 8s ease-in-out infinite;
-
-    &.fish1 {
-      top: 10%;
-      left: -40px;
-      animation: swimLeft 15s ease-in-out infinite;
-      animation-delay: 0s;
-    }
-
-    &.fish2 {
-      top: 30%;
-      right: -40px;
-      animation: swimRight 18s ease-in-out infinite;
-      animation-delay: 3s;
-    }
-
-    &.fish3 {
-      bottom: 20%;
-      left: -40px;
-      animation: swimLeft 20s ease-in-out infinite;
-      animation-delay: 6s;
-    }
-
-    &.bubble1 {
-      top: 15%;
-      right: -30px;
-      font-size: 16px;
-      animation: floatUp 6s ease-in-out infinite;
-      animation-delay: 1s;
-    }
-
-    &.bubble2 {
-      bottom: 25%;
-      right: -30px;
-      font-size: 20px;
-      animation: floatUp 7s ease-in-out infinite;
-      animation-delay: 3s;
-    }
-  }
-
-  @keyframes swimLeft {
-    0% {
-      transform: translate(0, 0) rotate(0deg);
-      opacity: 0.8;
-    }
-    25% {
-      transform: translate(50px, -20px) rotate(10deg);
-      opacity: 0.9;
-    }
-    50% {
-      transform: translate(100px, 0) rotate(0deg);
-      opacity: 0.8;
-    }
-    75% {
-      transform: translate(50px, 20px) rotate(-10deg);
-      opacity: 0.9;
-    }
-    100% {
-      transform: translate(0, 0) rotate(0deg);
-      opacity: 0.8;
-    }
-  }
-
-  @keyframes swimRight {
-    0% {
-      transform: translate(0, 0) rotate(0deg);
-      opacity: 0.8;
-    }
-    25% {
-      transform: translate(-50px, -20px) rotate(-10deg);
-      opacity: 0.9;
-    }
-    50% {
-      transform: translate(-100px, 0) rotate(0deg);
-      opacity: 0.8;
-    }
-    75% {
-      transform: translate(-50px, 20px) rotate(10deg);
-      opacity: 0.9;
-    }
-    100% {
-      transform: translate(0, 0) rotate(0deg);
-      opacity: 0.8;
-    }
-  }
-
-  @keyframes floatUp {
-    0% {
-      transform: translate(0, 0) scale(1);
-      opacity: 0.8;
-    }
-    25% {
-      transform: translate(-20px, -20px) scale(1.1);
-      opacity: 0.9;
-    }
-    50% {
-      transform: translate(-40px, -40px) scale(1);
-      opacity: 0.8;
-    }
-    75% {
-      transform: translate(-20px, -60px) scale(0.9);
-      opacity: 0.9;
-    }
-    100% {
-      transform: translate(0, 0) scale(1);
-      opacity: 0.8;
-    }
-  }
 
   &::before {
     content: '';
@@ -188,6 +92,7 @@
 
   @media screen and (max-width: 768px) {
     width: 100%;
+    max-width: 100%;
     height: calc(100vh - 48px);
     margin: 0;
     border-radius: 0;
@@ -213,16 +118,14 @@
       display: none !important;
     }
 
-    // 在移动端隐藏漂浮元素
-    .floating-fish {
-      display: none;
-    }
+
   }
 
   .messageContainer {
     grid-area: messages;
     padding: 20px;
     overflow-y: auto;
+    overflow-x: hidden;
     padding-bottom: 20px;
     display: flex;
     flex-direction: column;
@@ -319,8 +222,8 @@
 
         .messageContent {
           margin-top: 4px;
-          background: linear-gradient(135deg, #ffa768 0%, #ffcba4 100%);
-          color: white;
+          background: #F8F8F8;
+          color: #1a1c1e;
           border-radius: 12px 4px 12px 12px;
           box-shadow: 0 2px 8px rgba(255, 167, 104, 0.15);
           margin-right: 0;
@@ -339,6 +242,11 @@
         .messageFooter {
           margin-right: 0;
           justify-content: flex-end;
+        }
+
+        .repeatUsers {
+          margin-left: 0;
+          align-self: flex-end;
         }
       }
 
@@ -519,6 +427,73 @@
     flex-direction: column;
     height: calc(100% - 24px);
 
+    &.userListHidden {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      width: auto;
+      min-width: auto;
+      padding: 0;
+      background: transparent;
+      border: none;
+      box-shadow: none;
+      z-index: 1000;
+      height: auto;
+      margin: 0;
+      
+      .userListHeader {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+        justify-content: center;
+        position: relative;
+        background: transparent;
+        
+        span {
+          display: none;
+        }
+        
+        .toggleButton {
+          margin: 0;
+          width: 36px;
+          height: 36px;
+          position: static;
+          transform: none;
+          background: rgba(255, 255, 255, 0.9) !important;
+          border: 1px solid rgba(0, 0, 0, 0.1) !important;
+          border-radius: 12px !important;
+          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12) !important;
+          backdrop-filter: blur(12px);
+          color: #595959 !important;
+          -webkit-background-clip: unset !important;
+          background-clip: unset !important;
+          transition: all 0.2s ease !important;
+
+          .anticon {
+            color: #595959 !important;
+            -webkit-background-clip: unset !important;
+            background-clip: unset !important;
+          }
+
+          &:hover {
+            background: #fff !important;
+            border-color: rgba(22, 119, 255, 0.4) !important;
+            color: #1677ff !important;
+            transform: scale(1.06) !important;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15) !important;
+
+            .anticon {
+              color: #1677ff !important;
+            }
+          }
+
+          &:active {
+            transform: scale(0.95) !important;
+          }
+        }
+      }
+    }
+
     @media screen and (max-width: 768px) {
       display: none !important;
     }
@@ -527,18 +502,61 @@
       display: flex;
     }
 
-    .userListHeader {
-      font-weight: 600;
-      font-size: 13px;
-      margin-bottom: 10px;
-      padding-bottom: 6px;
-      border-bottom: 1px solid rgba(238, 238, 238, 0.5);
-      background: linear-gradient(45deg, #1677ff, #36cfc9);
-      -webkit-background-clip: text;
-      color: transparent;
-      text-align: center;
-      flex-shrink: 0;
+  .userListHeader {
+    font-weight: 600;
+    font-size: 13px;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(238, 238, 238, 0.5);
+    background: linear-gradient(45deg, #1677ff, #36cfc9);
+    -webkit-background-clip: text;
+    color: transparent;
+    text-align: center;
+    flex-shrink: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+
+    .toggleButton {
+      background: rgba(22, 119, 255, 0.08);
+      border: none;
+      padding: 6px;
+      border-radius: 6px;
+      transition: all 0.3s ease;
+      color: #1677ff !important;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      min-width: 24px;
+      height: 24px;
+      box-shadow: 0 1px 3px rgba(22, 119, 255, 0.2);
+      position: absolute;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+
+      .anticon {
+        color: #1677ff !important;
+      }
+      
+      &:hover {
+        background: rgba(22, 119, 255, 0.15);
+        color: #096dd9 !important;
+        transform: translateY(-50%) scale(1.1);
+        box-shadow: 0 2px 6px rgba(22, 119, 255, 0.3);
+
+        .anticon {
+          color: #096dd9 !important;
+        }
+      }
+      
+      &:active {
+        transform: translateY(-50%) scale(0.95);
+      }
     }
+  }
 
     .userListContent {
       overflow-y: hidden;
@@ -884,13 +902,37 @@
         text-decoration: underline;
       }
     }
+
+    .repeatText {
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      color: #52c41a;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+
+    .reportText {
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      color: #fa8c16;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
   }
 
   .messageItem {
     &:hover {
       .messageFooter {
         .revokeText,
-        .quoteText {
+        .quoteText,
+        .repeatText,
+        .reportText {
           opacity: 1;
         }
       }
@@ -1060,6 +1102,55 @@
       }
     }
   }
+
+  .moreOptionsButton {
+    margin-right: 8px;
+    transition: all 0.3s;
+    flex-shrink: 0;
+
+    &:hover {
+      color: #1890ff;
+      background-color: #f0f5ff;
+    }
+
+    @media screen and (max-width: 768px) {
+      display: flex !important;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      min-width: 36px;
+      padding: 0;
+      margin-right: 4px;
+      background: rgba(255, 255, 255, 0.8) !important;
+      color: #595959 !important;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+      border: 1px solid rgba(0, 0, 0, 0.06) !important;
+      border-radius: 18px;
+
+      &:hover,
+      &:active {
+        color: #1890ff !important;
+        background: #f0f5ff !important;
+        transform: none;
+      }
+
+      .anticon {
+        font-size: 18px;
+        margin: 0;
+      }
+    }
+  }
+
+  .roomInfoButton {
+    margin-right: 8px;
+    transition: all 0.3s;
+
+    &:hover {
+      color: #1890ff;
+      background-color: #f0f5ff;
+    }
+  }
 }
 
 .emojiPicker {
@@ -1135,215 +1226,81 @@
   }
 }
 
-.adminTag {
+// Title styles now moved to src/components/titles.less
+
+// slideInFromLeft and shine animations moved to src/components/titles.less
+
+// Title-related animations moved to src/components/titles.less
+
+.vipBadge {
   display: inline-flex;
   align-items: center;
-  border-radius: 6px;
-  padding: 1px 6px;
-  margin-left: 6px;
-  font-size: 11px;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  background: linear-gradient(135deg, #ffd700, #ff8c00);
   color: #fff;
-  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.15);
-  animation: slideInFromLeft 0.5s ease-out;
-  transform-origin: left center;
-  transform: scale(0.85);
+  border-radius: 50%;
+  font-size: 9px;
+  font-weight: bold;
+  margin-left: 1px;
+  box-shadow: 0 2px 4px rgba(255, 183, 0, 0.5);
   position: relative;
-  overflow: hidden;
-
-  // 摸鱼官的默认样式
-  background: linear-gradient(135deg, #ff4757 0%, #ff6b81 100%);
-  box-shadow: 0 2px 4px rgba(255, 71, 87, 0.3);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
+  animation: goldShine 2s ease-in-out infinite;
+  transform: translateY(-0.5px) translateX(-2px);
+  z-index: 1;
 
   &::before {
     content: '';
     position: absolute;
     top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(
-      90deg,
-      transparent,
-      rgba(255, 255, 255, 0.3),
-      transparent
-    );
-    animation: shine 2s infinite;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0) 60%);
+    border-radius: 50%;
+    opacity: 0.8;
   }
 
-  .adminText {
-    margin-left: 2px;
-    font-weight: 500;
-    letter-spacing: 0.3px;
-  }
-
-  // 为不同等级的标签添加不同的渐变色
-  &.levelTagMaster {
-    background: linear-gradient(135deg, #ffd700 0%, #ffa500 100%);
-    box-shadow: 0 2px 4px rgba(255, 215, 0, 0.3);
-  }
-
-  &.levelTagExpert {
-    background: linear-gradient(135deg,
-      #ff9a9e 0%,
-      #fad0c4 20%,
-      #fad0c4 40%,
-      #a1c4fd 60%,
-      #c2e9fb 80%,
-      #d4fc79 100%
-    );
-    box-shadow: 0 2px 4px rgba(0, 191, 255, 0.3);
-  }
-
-  &.levelTagPro {
-    background: linear-gradient(135deg, #9370db 0%, #8a2be2 100%);
-    box-shadow: 0 2px 4px rgba(147, 112, 219, 0.3);
-  }
-
-  &.levelTagBeginner {
-    background: linear-gradient(135deg, #98fb98 0%, #3cb371 100%);
-    box-shadow: 0 2px 4px rgba(152, 251, 152, 0.3);
-  }
-
-  &.levelTagNewbie {
-    background: linear-gradient(135deg, #87ceeb 0%, #b0e0e6 100%);
-    box-shadow: 0 2px 4px rgba(135, 206, 235, 0.3);
-  }
-
-  // 称号标签的新样式
-  &.titleTagAdmin {
-    background: linear-gradient(135deg, #ff0000 0%, #ff4500 100%);
-    box-shadow: 0 2px 4px rgba(255, 0, 0, 0.3);
-  }
-
-  &.titleTagInvestor {
-    background: linear-gradient(135deg, #ff69b4 0%, #ff1493 100%);
-    box-shadow: 0 2px 4px rgba(255, 105, 180, 0.3);
-  }
-
-  &.titleTagChief {
-    background: linear-gradient(135deg, #f5af19, #f12711, #ff9966, #ff5e62, #f9d423, #f5af19);
-    background-size: 500% 500%;
-    animation: flowingLight 10s ease infinite, glowing 3s ease-in-out infinite;
-    position: relative;
-    overflow: hidden;
-    box-shadow: 0 0 15px rgba(245, 175, 25, 0.6);
-
-    &::after {
-      content: '';
-      position: absolute;
-      top: -50%;
-      left: -50%;
-      width: 200%;
-      height: 200%;
-      background: radial-gradient(circle, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0) 70%);
-      opacity: 0.4;
-      transform: rotate(30deg);
-      animation: rotate 8s linear infinite;
-      pointer-events: none;
-      z-index: 1;
-    }
-
-    &::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: linear-gradient(45deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0) 70%);
-      z-index: 1;
-      animation: pulse 3s ease-in-out infinite alternate;
-    }
-
-    .adminText {
-      position: relative;
-      z-index: 2;
-      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-      color: #fff;
-      font-weight: 600;
-    }
-  }
-
-  &.titleTagPlatinum {
-    background: linear-gradient(135deg, #e6e6fa 0%, #d8bfd8 100%);
-    box-shadow: 0 2px 4px rgba(230, 230, 250, 0.3);
-  }
-
-  &.titleTagGold {
-    background: linear-gradient(135deg, #ffd700 0%, #ffa500 100%);
-    box-shadow: 0 2px 4px rgba(255, 215, 0, 0.3);
-  }
-
-  &.titleTagBuilder {
-    background: linear-gradient(135deg, #fda085 0%, #f6d365 100%);
-    box-shadow: 0 2px 4px rgba(253, 160, 133, 0.3);
+  // 添加光晕效果
+  &::after {
+    content: '';
+    position: absolute;
+    top: -1px;
+    left: -1px;
+    right: -1px;
+    bottom: -1px;
+    background: transparent;
+    border-radius: 50%;
+    box-shadow: 0 0 6px 1px rgba(255, 215, 0, 0.3);
+    animation: pulseGlow 2s ease-in-out infinite alternate;
+    z-index: -1;
   }
 }
 
-@keyframes slideInFromLeft {
+@keyframes pulseGlow {
   0% {
-    opacity: 0;
-    transform: translateX(-10px) scale(0.85);
+    box-shadow: 0 0 6px 1px rgba(255, 215, 0, 0.3);
   }
   100% {
-    opacity: 1;
-    transform: translateX(0) scale(0.85);
+    box-shadow: 0 0 10px 2px rgba(255, 215, 0, 0.6);
   }
 }
 
-@keyframes shine {
+@keyframes goldShine {
   0% {
-    left: -100%;
-  }
-  20% {
-    left: 100%;
-  }
-  100% {
-    left: 100%;
-  }
-}
-
-@keyframes flowingLight {
-  0% {
-    background-position: 0% 50%;
+    box-shadow: 0 0 5px rgba(255, 183, 0, 0.5);
   }
   50% {
-    background-position: 100% 50%;
+    box-shadow: 0 0 12px rgba(255, 183, 0, 0.8), 0 0 20px rgba(255, 183, 0, 0.5);
   }
   100% {
-    background-position: 0% 50%;
+    box-shadow: 0 0 5px rgba(255, 183, 0, 0.5);
   }
 }
 
-@keyframes glowing {
-  0% {
-    box-shadow: 0 0 5px rgba(245, 175, 25, 0.5), 0 0 10px rgba(241, 39, 17, 0.3);
-  }
-  50% {
-    box-shadow: 0 0 15px rgba(255, 94, 98, 0.7), 0 0 25px rgba(249, 212, 35, 0.4);
-  }
-  100% {
-    box-shadow: 0 0 5px rgba(245, 175, 25, 0.5), 0 0 10px rgba(241, 39, 17, 0.3);
-  }
-}
-
-@keyframes pulse {
-  0% {
-    opacity: 0.3;
-  }
-  100% {
-    opacity: 0.7;
-  }
-}
-
-@keyframes rotate {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
-}
+// More title-related animations moved to src/components/titles.less
 
 .avatarWrapper {
   position: relative;
@@ -1368,14 +1325,7 @@
   backdrop-filter: blur(4px);
 }
 
-.adminTagWrapper {
-  position: absolute;
-  top: -8px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 1;
-  white-space: nowrap;
-}
+// Admin tag wrapper styles now moved to src/components/titles.less
 
 .userInfoCard {
   background: rgba(255, 255, 255, 0.95);
@@ -1490,35 +1440,7 @@
         letter-spacing: 0.5px;
       }
 
-      .titlesContainer {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        margin-top: 4px;
-        margin-bottom: 4px;
-        min-height: 24px;
-        flex-wrap: nowrap;
-
-        .adminTag {
-          transform-origin: left center;
-          margin-left: 0;
-        }
-
-        .expandButton {
-          padding: 0 2px;
-          height: 20px;
-          font-size: 12px;
-          color: #999;
-          transition: all 0.3s;
-          margin-left: 2px;
-          display: flex;
-          align-items: center;
-
-          &:hover {
-            color: #1890ff;
-          }
-        }
-      }
+      // Title container styles now moved to src/components/titles.less
     }
   }
 
@@ -1869,7 +1791,7 @@
     align-items: center;
 
     .label {
-      width: 80px;
+      width: 90px;
       text-align: right;
       margin-right: 8px;
     }
@@ -1985,6 +1907,34 @@
   }
 }
 
+.luckyBagModal {
+  :global {
+    .ant-modal-header {
+      padding: 16px 24px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .ant-modal-body {
+      padding: 24px;
+    }
+
+    .ant-modal-footer {
+      padding: 16px 24px;
+      border-top: 1px solid #f0f0f0;
+    }
+
+    .ant-btn-primary {
+      background: #d46b08;
+      border-color: #d46b08;
+
+      &:hover:not(:disabled) {
+        background: #fa8c16;
+        border-color: #fa8c16;
+      }
+    }
+  }
+}
+
 .redPacketModalTitle {
   display: flex;
   align-items: center;
@@ -1995,6 +1945,13 @@
     margin-right: 8px;
     font-size: 20px;
     color: #ff4d4f;
+  }
+
+  .luckyBagModalTitleIcon {
+    width: 28px;
+    height: 28px;
+    margin-right: 8px;
+    object-fit: contain;
   }
 }
 
@@ -2140,30 +2097,7 @@
   }
 }
 
-.titlesPopover {
-  :global {
-    .ant-popover-inner {
-      padding: 8px;
-      background: rgba(255, 255, 255, 0.95);
-      backdrop-filter: blur(10px);
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    }
-  }
-}
-
-.expandedTitles {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  max-height: 200px;
-  overflow-y: auto;
-
-  .expandedTitle {
-    transform: scale(1);
-    transform-origin: left;
-  }
-}
+// Titles popover and expanded titles styles now moved to src/components/titles.less
 
 .hidePlaceholderOnMobile {
   @media screen and (max-width: 768px) {
@@ -2364,157 +2298,447 @@
   }
 }
 
-// 添加用户详情弹窗样式
+// 用户详情弹窗样式
+// 用户详情弹窗 - 横向布局（右侧朋友圈背景图）
 .userDetailModal {
-  padding: 10px;
+  padding: 0;
+  margin: -20px -24px 0;
+  border-radius: 8px;
+  overflow: hidden;
 
-  .userDetailHeader {
+  // 整体横向：左侧信息 + 右侧背景图
+  .userDetailBody {
     display: flex;
-    align-items: center;
-    gap: 15px;
-    margin-bottom: 20px;
-
-    .avatarWrapper {
-      position: relative;
-      display: inline-block;
-      width: 64px;
-      height: 64px;
-
-      .avatarWithFrame {
-        position: relative;
-        width: 64px;
-        height: 64px;
-        display: inline-block;
-
-        .ant-avatar {
-          z-index: 0;
-        }
-
-        .avatarFrame {
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          width: 160%;
-          height: 160%;
-          pointer-events: none;
-          z-index: 1;
-          transition: all 0.3s ease;
-        }
-      }
-    }
-
-    .userDetailInfo {
-      flex: 1;
-
-      .userDetailName {
-        font-size: 18px;
-        font-weight: 500;
-        margin-bottom: 4px;
-        color: #1a1c1e;
-      }
-
-      .userDetailId {
-        font-size: 12px;
-        color: #999;
-        margin-bottom: 8px;
-        font-family: monospace;
-      }
-    }
+    min-height: 260px;
   }
 
-  .userDetailContent {
-    background-color: #f7f8fa;
-    border-radius: 8px;
-    padding: 15px;
+  // 左侧：信息区
+  .userDetailLeft {
+    display: flex;
+    flex-direction: column;
+    flex: 3;
+    padding: 20px 16px 16px;
+    min-width: 0;
 
-    .userDetailItem {
+    // 头像 + 名字行
+    .userDetailTopRow {
       display: flex;
       align-items: center;
-      margin-bottom: 10px;
+      gap: 12px;
+      margin-bottom: 14px;
 
-      &:last-child {
-        margin-bottom: 0;
-      }
-
-      .itemLabel {
-        width: 80px;
-        font-size: 14px;
-        color: #666;
+      .avatarWrapper {
+        position: relative;
+        display: inline-block;
         flex-shrink: 0;
-      }
+        width: 60px;
+        height: 60px;
 
-      .itemValue {
-        font-size: 14px;
-        color: #333;
-        font-weight: 500;
-      }
+        .avatarWithFrame {
+          position: relative;
+          width: 60px;
+          height: 60px;
+          display: inline-block;
 
-      .pointsContainer {
-        display: flex;
-        align-items: center;
-        gap: 8px;
+          :global(.ant-avatar) {
+            z-index: 0;
+            border: 2px solid #fff;
+            box-shadow: 0 3px 12px rgba(0, 0, 0, 0.15);
+            border-radius: 50%;
+          }
 
-        .ant-btn-link {
-          color: #1890ff;
-          font-size: 12px;
-          opacity: 0.8;
-
-          &:hover {
-            opacity: 1;
-            text-decoration: underline;
+          .avatarFrame {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 170%;
+            height: 170%;
+            pointer-events: none;
+            z-index: 1;
+            transition: all 0.3s ease;
           }
         }
       }
 
-      .pointsEditContainer {
-        display: flex;
-        align-items: center;
-        gap: 8px;
+      .userNameBlock {
+        min-width: 0;
 
-        .ant-input-number, .ant-input {
-          border-radius: 4px;
+        .userDetailName {
+          font-size: 16px;
+          font-weight: 700;
+          color: #1a1c1e;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          flex-wrap: wrap;
         }
 
-        .ant-btn {
-          padding: 0 8px;
-          font-size: 12px;
+        .userDetailActions2 {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0;
+          margin-top: 2px;
+
+          :global(.ant-btn-link) {
+            font-size: 12px;
+            color: #667eea;
+            padding: 0 4px 0 0;
+            height: auto;
+
+            &:hover {
+              color: #764ba2;
+            }
+          }
         }
       }
     }
+
+    // 关注数 / 粉丝数统计行
+    .userFollowStats {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      margin: 10px 0 6px;
+      width: 100%;
+
+      .followStatItem {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 0 14px;
+        border-radius: 8px;
+        transition: background 0.2s;
+
+        .followStatNum {
+          font-size: 16px;
+          font-weight: 700;
+          color: #1a1c1e;
+          line-height: 1.2;
+        }
+
+        .followStatLabel {
+          font-size: 11px;
+          color: #aaa;
+          margin-top: 1px;
+        }
+      }
+
+      .followStatClickable {
+        cursor: pointer;
+
+        &:hover {
+          background: #f0f0f0;
+
+          .followStatNum {
+            color: #667eea;
+          }
+        }
+      }
+
+      .followStatDivider {
+        width: 1px;
+        height: 24px;
+        background: #eee;
+      }
+    }
+
+    // 称号标签
+    .userDetailTags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-bottom: 12px;
+    }
+
+    // 信息列表
+    .userDetailContent {
+      flex: 1;
+      background: #f7f8fc;
+      border-radius: 10px;
+      padding: 2px 0;
+      border: 1px solid #eef0f6;
+
+      .userDetailItem {
+        display: flex;
+        align-items: center;
+        padding: 7px 12px;
+        border-bottom: 1px solid #eef0f6;
+
+        &:last-child {
+          border-bottom: none;
+        }
+
+        .itemLabel {
+          width: 60px;
+          font-size: 12px;
+          color: #aaa;
+          flex-shrink: 0;
+        }
+
+        .itemValue {
+          font-size: 13px;
+          color: #222;
+          font-weight: 600;
+        }
+
+        .pointsContainer {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+
+          :global(.ant-btn-link) {
+            color: #667eea;
+            font-size: 12px;
+            padding: 0;
+            height: auto;
+
+            &:hover {
+              color: #764ba2;
+            }
+          }
+        }
+
+        .pointsEditContainer {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+
+          :global(.ant-input-number),
+          :global(.ant-input) {
+            border-radius: 6px;
+          }
+
+          :global(.ant-btn) {
+            padding: 0 8px;
+            font-size: 12px;
+            border-radius: 6px;
+          }
+        }
+      }
+    }
+  }
+
+  // 右侧：朋友圈背景图
+  .userDetailRight {
+    flex: 7;
+    flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+    background: #f5f5f5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    .momentsBg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+      display: block;
+    }
+
+    // 左侧渐变遮罩，让左右过渡自然
+    &::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to right, rgba(255,255,255,0.45) 0%, transparent 35%);
+      z-index: 1;
+      pointer-events: none;
+    }
+  }
+}
+
+// 关注按钮样式
+.followBtnDefault {
+  margin-top: 8px;
+  border-radius: 16px !important;
+  font-weight: 500 !important;
+  background: linear-gradient(135deg, #ff8c00, #ff6b00) !important;
+  border: none !important;
+  color: #fff !important;
+  transition: all 0.25s !important;
+
+  &:hover {
+    opacity: 0.88;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(255, 107, 0, 0.4) !important;
+  }
+}
+
+.followBtnActive {
+  margin-top: 8px;
+  border-radius: 16px !important;
+  font-weight: 500 !important;
+  background: #f5f5f5 !important;
+  border: 1px solid #e0e0e0 !important;
+  color: #888 !important;
+  transition: all 0.25s !important;
+
+  &:hover {
+    background: #fff0f0 !important;
+    border-color: #ffb3b3 !important;
+    color: #ff4d4f !important;
+  }
+}
+
+// 关注/粉丝列表弹窗
+.followListContainer {
+  max-height: 420px;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.followListItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 4px;
+  border-bottom: 1px solid #f5f5f5;
+  transition: background 0.15s;
+  border-radius: 8px;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:hover {
+    background: #fafafa;
+  }
+
+  .followListAvatar {
+    position: relative;
+    flex-shrink: 0;
+    width: 42px;
+    height: 42px;
+
+    .followListAvatarFrame {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 170%;
+      height: 170%;
+      pointer-events: none;
+      z-index: 1;
+    }
+  }
+
+  .followListInfo {
+    flex: 1;
+    min-width: 0;
+
+    .followListName {
+      font-size: 14px;
+      font-weight: 600;
+      color: #1a1c1e;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+
+      .mutualBadge {
+        font-size: 11px;
+        font-weight: 400;
+        color: #667eea;
+        background: rgba(102, 126, 234, 0.1);
+        border-radius: 8px;
+        padding: 1px 6px;
+      }
+    }
+
+    .followListProfile {
+      font-size: 12px;
+      color: #aaa;
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+}
+
+.followListBtnDefault {
+  flex-shrink: 0;
+  border-radius: 14px !important;
+  font-weight: 500 !important;
+  font-size: 12px !important;
+  height: 28px !important;
+  padding: 0 12px !important;
+  background: linear-gradient(135deg, #ff8c00, #ff6b00) !important;
+  border: none !important;
+  color: #fff !important;
+  transition: all 0.25s !important;
+
+  &:hover {
+    opacity: 0.88;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(255, 107, 0, 0.4) !important;
+  }
+}
+
+.followListBtnActive {
+  flex-shrink: 0;
+  border-radius: 14px !important;
+  font-weight: 500 !important;
+  font-size: 12px !important;
+  height: 28px !important;
+  padding: 0 10px !important;
+  background: #f5f5f5 !important;
+  border: 1px solid #e0e0e0 !important;
+  color: #888 !important;
+  transition: all 0.25s !important;
+
+  &:hover {
+    background: #fff0f0 !important;
+    border-color: #ffb3b3 !important;
+    color: #ff4d4f !important;
   }
 }
 
 .userDetailActions {
   display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 10px;
+  justify-content: center;
+  gap: 10px;
+  padding: 4px 0 2px;
   flex-wrap: wrap;
 
   @media screen and (max-width: 768px) {
     justify-content: center;
   }
 
-  .ant-btn {
-    transition: all 0.3s;
+  :global(.ant-btn) {
+    border-radius: 20px;
+    min-width: 88px;
+    font-weight: 500;
+    transition: all 0.25s;
 
-    &.ant-btn-dangerous {
-      background: #ff4d4f;
-      border-color: #ff4d4f;
+    &:global(.ant-btn-dangerous) {
+      background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+      border-color: transparent;
+      color: #fff;
 
       &:hover {
-        background: #ff7875;
-        border-color: #ff7875;
-        box-shadow: 0 2px 8px rgba(255, 77, 79, 0.2);
+        background: linear-gradient(135deg, #ff8585, #ff6b35);
+        box-shadow: 0 4px 12px rgba(238, 90, 36, 0.35);
+        transform: translateY(-1px);
       }
     }
 
-    &.ant-btn-default {
+    &:global(.ant-btn-default) {
+      border-color: #d9d9d9;
+      color: #555;
+
       &:hover {
-        color: #40a9ff;
-        border-color: #40a9ff;
-        background: rgba(24, 144, 255, 0.05);
+        color: #667eea;
+        border-color: #667eea;
+        background: rgba(102, 126, 234, 0.06);
       }
     }
   }
@@ -2533,3 +2757,1174 @@
     text-decoration: underline;
   }
 }
+
+// Additional title-related animations moved to src/components/titles.less
+
+// 添加更多选项菜单样式
+.moreOptionsMenu {
+  width: 180px;
+  padding: 8px 0;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.moreOptionsItem {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: all 0.3s;
+  border-radius: 4px;
+  margin: 0 8px;
+
+  &:hover {
+    background-color: #f5f5f5;
+    color: #1890ff;
+  }
+
+  .moreOptionsIcon {
+    margin-right: 12px;
+    font-size: 18px;
+    color: #1890ff;
+  }
+}
+
+.moreOptionsPopover {
+  :global(.ant-popover-inner) {
+    border-radius: 8px;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  }
+
+  :global(.ant-popover-inner-content) {
+    padding: 4px;
+  }
+
+  :global(.ant-popover-arrow) {
+    display: none;
+  }
+}
+
+.moreOptionsButton {
+  margin-right: 8px;
+  transition: all 0.3s;
+  flex-shrink: 0;
+
+  &:hover {
+    color: #1890ff;
+    background-color: #f0f5ff;
+  }
+
+  @media screen and (max-width: 768px) {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    padding: 0;
+    margin-right: 4px;
+    background: rgba(255, 255, 255, 0.8) !important;
+    color: #595959 !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+    border: 1px solid rgba(0, 0, 0, 0.06) !important;
+    border-radius: 18px;
+
+    &:hover,
+    &:active {
+      color: #1890ff !important;
+      background: #f0f5ff !important;
+      transform: none;
+    }
+
+    .anticon {
+      font-size: 18px;
+      margin: 0;
+    }
+  }
+}
+
+.roomInfoButton {
+  color: #1890ff;
+}
+
+.roomInfoBadge {
+  margin-right: 8px;
+}
+
+
+
+// 极速模式下隐藏头像框
+.speedMode {
+  .avatarFrame {
+    display: none !important;
+  }
+
+  // 右侧用户列表不显示头像
+  .userItem {
+    .avatarWrapper {
+      display: none;
+    }
+  }
+}
+
+// 图片按钮
+.imageButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+  background: #f0f2f5;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s;
+  margin: 4px 0;
+  color: #666;
+  font-size: 13px;
+
+  &:hover {
+    background: #e6f7ff;
+    border-color: #1890ff;
+    color: #1890ff;
+  }
+
+  .imageIcon {
+    margin-right: 6px;
+    font-size: 16px;
+  }
+}
+
+// 添加移动端隐藏元素的类
+.hideOnMobile {
+  @media screen and (max-width: 768px) {
+    display: none !important;
+  }
+}
+
+/* All title-related animations have been moved to src/components/titles.less */
+
+.adminTag {
+  // ... existing code ...
+}
+
+// 图片称号特效的动画 - 优化的闪烁和微小缩放效果
+@keyframes titleStarsFloat {
+  0% {
+    opacity: 0.4;
+    transform: scale(0.95);
+  }
+  25% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.05);
+  }
+  75% {
+    opacity: 0.6;
+  }
+  100% {
+    opacity: 0.4;
+    transform: scale(0.95);
+  }
+}
+
+// 修改光效扫过的动画
+@keyframes titleSweepLight {
+  0% {
+    left: -100%;
+    opacity: 0;
+    width: 50%;
+  }
+  10% {
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 1;
+    width: 70%;
+  }
+  90% {
+    opacity: 0.2;
+  }
+  100% {
+    left: 150%;
+    opacity: 0;
+    width: 50%;
+  }
+}
+
+// 添加鱼环绕的动画
+@keyframes fishSwimAround {
+  0% {
+    top: 50%;
+    left: -5px;
+    transform: translateY(-50%);
+  }
+  25% {
+    top: -5px;
+    left: 50%;
+    transform: translateX(-50%) rotate(90deg);
+  }
+  50% {
+    top: 50%;
+    left: calc(100% + 5px);
+    transform: translateY(-50%) rotate(180deg);
+  }
+  75% {
+    top: calc(100% + 5px);
+    left: 50%;
+    transform: translateX(-50%) rotate(270deg);
+  }
+  100% {
+    top: 50%;
+    left: -5px;
+    transform: translateY(-50%) rotate(360deg);
+  }
+}
+
+// 添加称号图片容器样式
+.titleImageContainer {
+  background: transparent;
+  box-shadow: none;
+  position: relative;
+  overflow: hidden;
+  padding: 0;
+  margin: 0;
+  border: none;
+  display: inline-block;
+}
+
+.titleImage {
+  position: relative;
+  z-index: 2;
+  transform: none;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  height: 14px;
+  width: auto;
+  vertical-align: middle;
+  object-fit: contain;
+}
+
+.titleSweepLight {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, 
+    transparent 0%,
+    rgba(255,255,255,0.1) 20%, 
+    rgba(255,255,255,0.9) 50%,
+    rgba(255,255,255,0.1) 80%,
+    transparent 100%
+  );
+  transform: skewX(-30deg);
+  z-index: 3;
+  animation: titleSweepLight 2s infinite ease-in-out;
+  pointer-events: none;
+  box-shadow: 0 0 15px 5px rgba(255,255,255,0.7);
+  border-radius: 50%;
+}
+
+.titleFish {
+  position: absolute;
+  font-size: 8px;
+  color: #4facfe;
+  text-shadow: 0 0 2px rgba(79, 172, 254, 0.8);
+  animation: fishSwimAround 6s infinite linear;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.titleStar1 {
+  position: absolute;
+  top: 0;
+  left: 0;
+  font-size: 7px;
+  color: #FFD700;
+  text-shadow: 0 0 2px #FFD700, 0 0 3px rgba(255, 215, 0, 0.5);
+  animation: titleStarsFloat 4s infinite ease-in-out;
+  z-index: 1;
+  opacity: 0.8;
+  transform: none;
+  line-height: 7px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  pointer-events: none;
+}
+
+.titleStar2 {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  font-size: 7px;
+  color: #FFD700;
+  text-shadow: 0 0 2px #FFD700, 0 0 3px rgba(255, 215, 0, 0.5);
+  animation: titleStarsFloat 4s infinite ease-in-out 2s;
+  z-index: 1;
+  opacity: 0.8;
+  transform: none;
+  line-height: 7px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  pointer-events: none;
+}
+
+.userInfoCardName {
+  font-weight: bold;
+  margin-right: 8px;
+  font-size: 16px;
+}
+
+.originalName {
+  font-size: 12px;
+  color: #999;
+  font-weight: normal;
+  margin-left: 5px;
+}
+
+// ── 复读机功能 ────────────────────────────────────────────
+.repeatUsers {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+  margin-left: 40px; // 与消息内容对齐
+  padding: 4px 8px;
+  background: rgba(255, 167, 104, 0.08);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 167, 104, 0.2);
+  width: fit-content;
+  max-width: 100%;
+
+  .repeatLabel {
+    font-size: 11px;
+    color: #ffa768;
+    font-weight: 500;
+    margin-right: 2px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .repeatAvatar {
+    cursor: pointer;
+    transition: transform 0.15s;
+    flex-shrink: 0;
+
+    &:hover {
+      transform: scale(1.2);
+    }
+
+    :global(.ant-avatar) {
+      border: 1.5px solid rgba(255, 255, 255, 0.8);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+    }
+  }
+}
+
+.voteModalType {
+  margin-left: 12px;
+  color: #8c8c8c;
+  font-size: 14px;
+}
+
+.voteModalContent {
+  color: rgba(0, 0, 0, 0.88);
+}
+
+.voteStatus {
+  margin-bottom: 16px;
+  color: #52c41a;
+  font-weight: 600;
+}
+
+.voteOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.voteOption {
+  padding: 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  background: #f5f5f5;
+  color: rgba(0, 0, 0, 0.88);
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.voteOptionClickable {
+  cursor: pointer;
+
+  &:hover {
+    border-color: #69b1ff;
+    background: #f0f7ff;
+  }
+}
+
+.voteOptionSelected {
+  border-color: #ffa940;
+  background: #fff7e6;
+}
+
+.voteOptionVoted {
+  border-color: #1890ff;
+  background: #e6f7ff;
+}
+
+.voteOptionText {
+  color: inherit;
+  font-weight: normal;
+}
+
+.voteOptionTextActive {
+  color: inherit;
+  font-weight: 700;
+}
+
+.voteChoiceTag {
+  margin-left: 8px;
+  color: #1677ff;
+}
+
+.voteOptionResult {
+  margin-top: 8px;
+}
+
+.voteProgressTrack {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: #e8e8e8;
+}
+
+.voteProgressBar,
+.voteProgressBarVoted {
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.voteProgressBar {
+  background: #91d5ff;
+}
+
+.voteProgressBarVoted {
+  background: #1890ff;
+}
+
+.voteOptionMeta,
+.voteSelectedTip,
+.voteSummary,
+.voteListMeta {
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 12px;
+}
+
+.voteOptionMeta {
+  margin-top: 4px;
+}
+
+.voteSelectedTip {
+  margin-top: 12px;
+  text-align: center;
+}
+
+.voteSummary {
+  margin-top: 16px;
+  text-align: center;
+}
+
+.voteCreateContent,
+.voteListContent {
+  padding: 16px 0;
+}
+
+.voteListItem {
+  margin-bottom: 12px;
+  padding: 12px;
+  cursor: pointer;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  background: #fafafa;
+  color: rgba(0, 0, 0, 0.88);
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    border-color: #91caff;
+    background: #f0f7ff;
+  }
+}
+
+.voteListType {
+  margin-left: 8px;
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 12px;
+}
+
+.voteListMeta {
+  margin-top: 8px;
+}
+
+.voteListVoted {
+  margin-left: 16px;
+  color: #52c41a;
+}
+
+// ── 深色模式覆盖 ──────────────────────────────────────────
+:global([data-theme="dark"]) {
+  // 聊天室主容器
+  .chatRoom {
+    background: rgba(30, 30, 30, 0.95);
+    border-color: rgba(255, 255, 255, 0.06);
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.4),
+      0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+
+    &::before {
+      background: linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.06) 0%,
+        rgba(255, 255, 255, 0.02) 50%,
+        rgba(255, 255, 255, 0.06) 100%
+      );
+    }
+
+    // 公告栏
+    .announcement {
+      :global(.ant-alert) {
+        background: rgba(30, 30, 30, 0.9);
+        border-color: rgba(255, 255, 255, 0.08);
+      }
+    }
+
+    // 消息区域
+    .messageContainer {
+      background: rgba(18, 18, 18, 0.85);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+
+      .loadingWrapper {
+        background: rgba(30, 30, 30, 0.8);
+      }
+
+      // 消息气泡 - 他人
+      .messageItem {
+        .messageContent {
+          background: #2a2a2a;
+          color: rgba(255, 255, 255, 0.85);
+          box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+
+          .quotedMessage {
+            background-color: rgba(255, 255, 255, 0.05);
+            border-left-color: #4facfe;
+
+            .quotedMessageHeader {
+              color: rgba(255, 255, 255, 0.45);
+
+              .quotedMessageSender {
+                color: rgba(255, 255, 255, 0.65);
+              }
+
+              .quotedMessageTime {
+                color: rgba(255, 255, 255, 0.3);
+              }
+            }
+
+            .quotedMessageContent {
+              color: rgba(255, 255, 255, 0.55);
+            }
+          }
+        }
+
+        // 自己的消息气泡
+        &.self {
+          .messageContent {
+            background: #2e2e2e;
+            color: rgba(255, 255, 255, 0.85);
+
+            .quotedMessage {
+              background-color: rgba(255, 255, 255, 0.06);
+              border-left-color: rgba(255, 255, 255, 0.3);
+
+              .quotedMessageHeader {
+                color: rgba(255, 255, 255, 0.45);
+
+                .quotedMessageSender {
+                  color: rgba(255, 255, 255, 0.65);
+                }
+              }
+
+              .quotedMessageContent {
+                color: rgba(255, 255, 255, 0.55);
+              }
+            }
+          }
+        }
+
+        // @提及高亮
+        &.mentioned {
+          background-color: rgba(79, 172, 254, 0.08);
+        }
+
+        .messageHeader {
+          .senderName {
+            color: rgba(255, 255, 255, 0.45);
+          }
+
+          .avatar .levelBadge {
+            background: #2a2a2a;
+            color: rgba(255, 255, 255, 0.35);
+          }
+        }
+
+        .timestamp {
+          color: rgba(255, 255, 255, 0.25);
+        }
+      }
+    }
+
+    // 右侧用户列表
+    .userList {
+      background: rgba(30, 30, 30, 0.9);
+      border-left-color: rgba(255, 255, 255, 0.06);
+      box-shadow: -2px 0 8px rgba(0, 0, 0, 0.3);
+
+      &.userListHidden {
+        background: transparent;
+
+        .userListHeader .toggleButton {
+          background: rgba(30, 30, 30, 0.9) !important;
+          border-color: rgba(255, 255, 255, 0.1) !important;
+          color: rgba(255, 255, 255, 0.65) !important;
+
+          .anticon {
+            color: rgba(255, 255, 255, 0.65) !important;
+          }
+
+          &:hover {
+            background: rgba(40, 40, 40, 0.95) !important;
+            border-color: rgba(22, 119, 255, 0.5) !important;
+            color: #4facfe !important;
+
+            .anticon {
+              color: #4facfe !important;
+            }
+          }
+        }
+      }
+
+      .userListHeader {
+        border-bottom-color: rgba(255, 255, 255, 0.06);
+      }
+
+      .userItem {
+        background: rgba(255, 255, 255, 0.04);
+
+        &:hover {
+          background: rgba(255, 255, 255, 0.08);
+          box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .userInfo {
+          .userName {
+            color: rgba(255, 255, 255, 0.75);
+          }
+
+          .userStatus {
+            color: rgba(255, 255, 255, 0.35);
+          }
+        }
+
+        .levelBadge {
+          background: #2a2a2a;
+          color: rgba(255, 255, 255, 0.35);
+        }
+      }
+    }
+
+    // 输入区域
+    .inputArea {
+      background: rgba(30, 30, 30, 0.9);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+
+      .quotePreview {
+        background-color: #2a2a2a;
+
+        .quotePreviewContent {
+          .quotePreviewSender {
+            color: rgba(255, 255, 255, 0.65);
+          }
+
+          .quotePreviewText {
+            color: rgba(255, 255, 255, 0.4);
+          }
+        }
+      }
+
+      .inputRow {
+        .chatTextArea {
+          background: rgba(255, 255, 255, 0.06);
+          border-color: rgba(255, 255, 255, 0.08);
+          color: rgba(255, 255, 255, 0.85);
+
+          &:hover,
+          &:focus {
+            border-color: #4facfe;
+            box-shadow: 0 0 0 2px rgba(79, 172, 254, 0.15);
+          }
+
+          &::placeholder {
+            color: rgba(255, 255, 255, 0.25);
+          }
+        }
+
+        .inputCounter {
+          color: rgba(255, 255, 255, 0.3);
+        }
+      }
+
+      .mobileToolbar {
+        background-color: #1e1e1e;
+
+        .mobileTool {
+          .mobileToolIcon {
+            background-color: #2a2a2a;
+            color: #4facfe;
+          }
+
+          .mobileToolText {
+            color: rgba(255, 255, 255, 0.55);
+          }
+        }
+      }
+    }
+
+    // 消息底部操作栏
+    .messageFooter {
+      color: rgba(255, 255, 255, 0.3);
+    }
+
+    // 更多选项菜单
+    .moreOptionsMenu {
+      background-color: #2a2a2a;
+
+      .moreOptionsItem {
+        color: rgba(255, 255, 255, 0.75);
+
+        &:hover {
+          background-color: rgba(255, 255, 255, 0.06);
+          color: #4facfe;
+        }
+      }
+    }
+
+    // @提及列表
+    .mentionList {
+      background: rgba(30, 30, 30, 0.98);
+      border-color: rgba(255, 255, 255, 0.08);
+
+      .mentionItem {
+        &:hover {
+          background: rgba(79, 172, 254, 0.12);
+        }
+
+        .mentionName {
+          color: rgba(255, 255, 255, 0.8);
+        }
+      }
+    }
+
+    // 文件预览
+    .filePreview {
+      background-color: #2a2a2a;
+
+      .fileName {
+        color: rgba(255, 255, 255, 0.65);
+      }
+    }
+  }
+
+  // 用户信息卡片（Popover）
+  .userInfoCard {
+    background: rgba(30, 30, 30, 0.98);
+    border-color: rgba(255, 255, 255, 0.08);
+
+    &::before {
+      background: linear-gradient(135deg, rgba(79, 172, 254, 0.08) 0%, rgba(0, 242, 254, 0.08) 100%);
+    }
+
+    .userInfoCardTitle {
+      .userInfoCardNameRow {
+        .userInfoCardName {
+          color: rgba(255, 255, 255, 0.85);
+        }
+      }
+
+      .userShortId {
+        color: rgba(255, 255, 255, 0.3);
+      }
+    }
+
+    .userInfoCardPoints {
+      color: rgba(255, 255, 255, 0.45);
+    }
+
+    .userInfoCardLocation {
+      color: rgba(255, 255, 255, 0.45);
+
+      .locationText {
+        color: rgba(255, 255, 255, 0.45);
+      }
+    }
+  }
+
+  // 用户详情弹窗
+  .userDetailModal {
+    .userDetailLeft {
+      .userNameBlock {
+        .userDetailName {
+          color: rgba(255, 255, 255, 0.85);
+        }
+      }
+
+      .userFollowStats {
+        .followStatItem {
+          .followStatNum {
+            color: rgba(255, 255, 255, 0.85);
+          }
+
+          .followStatLabel {
+            color: rgba(255, 255, 255, 0.35);
+          }
+        }
+
+        .followStatClickable:hover {
+          background: rgba(255, 255, 255, 0.06);
+        }
+
+        .followStatDivider {
+          background: rgba(255, 255, 255, 0.1);
+        }
+      }
+
+      .userDetailContent {
+        background: #1e1e1e;
+        border-color: rgba(255, 255, 255, 0.06);
+
+        .userDetailItem {
+          border-bottom-color: rgba(255, 255, 255, 0.06);
+
+          .itemLabel {
+            color: rgba(255, 255, 255, 0.35);
+          }
+
+          .itemValue {
+            color: rgba(255, 255, 255, 0.85);
+          }
+        }
+      }
+    }
+
+    .userDetailRight {
+      background: #1a1a1a;
+
+      &::before {
+        background: linear-gradient(to right, rgba(18, 18, 18, 0.6) 0%, transparent 35%);
+      }
+    }
+  }
+
+  // 关注列表
+  .followListItem {
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .followListInfo {
+      .followListName {
+        color: rgba(255, 255, 255, 0.85);
+      }
+
+      .followListProfile {
+        color: rgba(255, 255, 255, 0.35);
+      }
+    }
+  }
+
+  // 音乐播放器
+  .musicFloatingPlayer {
+    background: rgba(30, 30, 30, 0.95);
+
+    .musicInfo {
+      .musicArtist {
+        color: rgba(255, 255, 255, 0.4);
+      }
+
+      .progressBar {
+        background: rgba(255, 255, 255, 0.08);
+      }
+
+      .timeInfo {
+        color: rgba(255, 255, 255, 0.4);
+      }
+    }
+  }
+
+  // 音乐消息
+  .musicMessage {
+    background: #2a2a2a;
+
+    .musicInfo {
+      color: rgba(255, 255, 255, 0.8);
+    }
+  }
+
+  .musicPlayer {
+    background: #2a2a2a;
+  }
+
+  // 红包消息
+  .redPacketMessage {
+    .redPacketContent {
+      background: rgba(255, 77, 79, 0.08);
+      border-color: rgba(255, 77, 79, 0.2);
+    }
+  }
+
+  // 红包记录
+  .redPacketRecords {
+    .recordItem {
+      border-bottom-color: rgba(255, 255, 255, 0.06);
+
+      &:hover {
+        background-color: rgba(255, 255, 255, 0.04);
+      }
+
+      .userInfo {
+        .userName {
+          color: rgba(255, 255, 255, 0.8);
+        }
+
+        .grabTime {
+          color: rgba(255, 255, 255, 0.35);
+        }
+      }
+    }
+  }
+
+  // 邀请消息
+  .inviteMessage {
+    background: linear-gradient(135deg, #1e2a3a 0%, #1a2535 100%);
+    border-color: rgba(102, 126, 234, 0.2);
+  }
+
+  .inviteText {
+    color: rgba(255, 255, 255, 0.75);
+  }
+
+  // 投票弹窗
+  .voteModalType {
+    color: rgba(255, 255, 255, 0.45);
+  }
+
+  .voteModalContent {
+    color: rgba(255, 255, 255, 0.85);
+  }
+
+  .voteStatus,
+  .voteListVoted {
+    color: #73d13d;
+  }
+
+  .voteOption {
+    border-color: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.88);
+  }
+
+  .voteOptionClickable:hover {
+    border-color: rgba(79, 172, 254, 0.55);
+    background: rgba(79, 172, 254, 0.12);
+  }
+
+  .voteOptionSelected {
+    border-color: rgba(255, 169, 64, 0.75);
+    background: rgba(255, 169, 64, 0.14);
+  }
+
+  .voteOptionVoted {
+    border-color: rgba(79, 172, 254, 0.8);
+    background: rgba(79, 172, 254, 0.16);
+  }
+
+  .voteChoiceTag {
+    color: #69b1ff;
+  }
+
+  .voteProgressTrack {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .voteProgressBar {
+    background: #4facfe;
+  }
+
+  .voteProgressBarVoted {
+    background: #1677ff;
+  }
+
+  .voteOptionMeta,
+  .voteSelectedTip,
+  .voteSummary,
+  .voteListMeta,
+  .voteListType {
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  .voteListItem {
+    border-color: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.88);
+
+    &:hover {
+      border-color: rgba(79, 172, 254, 0.55);
+      background: rgba(79, 172, 254, 0.12);
+    }
+  }
+
+  // 复读机
+  .repeatUsers {
+    background: rgba(255, 167, 104, 0.08);
+    border-color: rgba(255, 167, 104, 0.15);
+  }
+}
+
+.luckyBagEntry {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 100;
+  cursor: pointer;
+  transition: transform 0.2s;
+
+  &:hover {
+    transform: scale(1.08);
+  }
+}
+
+.luckyBagEntryImage {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.15));
+}
+
+.luckyBagEntryBadge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  background: #ff4d4f;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 18px;
+  text-align: center;
+  border-radius: 9px;
+  box-shadow: 0 1px 4px rgba(255, 77, 79, 0.4);
+}
+
+.luckyBagListContent {
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.luckyBagListItems {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.luckyBagListItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: #fff7e6;
+  border: 1px solid #ffd591;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+
+  &:hover {
+    background: #ffe7ba;
+  }
+}
+
+.luckyBagListImage {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.luckyBagListInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.luckyBagListNameRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.luckyBagListName {
+  font-size: 14px;
+  font-weight: 600;
+  color: #d46b08;
+  min-width: 0;
+}
+
+.luckyBagJoinedTag,
+.luckyBagNotJoinedTag {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.luckyBagJoinedTag {
+  color: #389e0d;
+  background: #f6ffed;
+  border: 1px solid #b7eb8f;
+}
+
+.luckyBagNotJoinedTag {
+  color: #8c8c8c;
+  background: #fafafa;
+  border: 1px solid #d9d9d9;
+}
+
+.luckyBagListMeta {
+  font-size: 12px;
+  color: #8c8c8c;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+

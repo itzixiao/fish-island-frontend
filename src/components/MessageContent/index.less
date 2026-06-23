@@ -1,6 +1,7 @@
 .messageContent {
   word-break: break-word;
   white-space: pre-wrap;
+  position: relative; // 添加相对定位
 
   // Markdown 样式
   h1, h2, h3, h4, h5, h6 {
@@ -158,6 +159,56 @@
   }
 }
 
+// 修改复制按钮样式
+.copyButton {
+  position: absolute;
+  top: 2px;
+  right: -32px; // 微调位置
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 10;
+  transform: translateX(4px); // 初始状态稍微偏右
+  
+  button {
+    background-color: rgba(255, 255, 255, 0.95);
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+    
+    &:hover {
+      background-color: #fff;
+      transform: scale(1.05);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      border-color: rgba(24, 144, 255, 0.2);
+    }
+    
+    .anticon {
+      font-size: 13px;
+      color: rgba(0, 0, 0, 0.4);
+      transition: color 0.2s ease;
+    }
+    
+    &:hover .anticon {
+      color: #1890ff;
+    }
+  }
+}
+
+// 当鼠标悬停在消息内容上时显示复制按钮
+.messageContent:hover {
+  .copyButton {
+    opacity: 1;
+    transform: translateX(0); // 悬停时移回原位
+  }
+}
+
 .linkCard {
   margin: 8px 0;
   max-width: 400px;
@@ -280,6 +331,20 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
+  }
+}
+
+.audioContainer {
+  margin: 8px 0;
+  max-width: 500px;
+  padding: 8px;
+  background: #f5f5f5;
+  border-radius: 8px;
+
+  .audioPlayer {
+    width: 100%;
+    min-width: 260px;
+    height: 36px;
   }
 }
 
@@ -454,5 +519,57 @@
 .hideButton {
   color: #ff4d4f !important;
   background-color: #cfcfcf;
+}
+
+// 谁是卧底邀请卡片样式
+.inviteCard {
+  margin: 8px 0;
+  max-width: 300px;
+  border: 1px solid #b7eb8f;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+  background-color: #f6ffed;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+  }
+}
+
+.inviteContent {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+}
+
+.inviteIcon {
+  font-size: 16px;
+  color: #52c41a;
+}
+
+.inviteInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.inviteTitle {
+  font-weight: 500;
+  color: #333;
+  font-size: 14px;
+}
+
+.inviteDescription {
+  font-size: 12px;
+  color: #666;
+  margin: 2px 0 6px 0;
+}
+
+.joinButton {
+  align-self: flex-start;
+  margin-top: 2px;
 }
 

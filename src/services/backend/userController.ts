@@ -119,6 +119,14 @@ export async function getUserByIdUsingGet(
   });
 }
 
+/** 生成用户年度报告 GET /api/user/get/annualReport */
+export async function generateAnnualReportUsingGet(options?: { [key: string]: any }) {
+  return request<string>('/api/user/get/annualReport', {
+    method: 'GET',
+    ...(options || {}),
+  });
+}
+
 /** 获取当前登录用户 GET /api/user/get/login */
 export async function getLoginUserUsingGet(options?: { [key: string]: any }) {
   return request<API.BaseResponseLoginUserVO_>('/api/user/get/login', {
@@ -225,6 +233,29 @@ export async function userLoginByGithubUsingPost(
   });
 }
 
+/** 获取 Linux Do 授权链接 GET /api/user/login/linuxdo */
+export async function getLinuxDoAuthUrlUsingGet(options?: { [key: string]: any }) {
+  return request<API.BaseResponseString_>('/api/user/login/linuxdo', {
+    method: 'GET',
+    ...(options || {}),
+  });
+}
+
+/** Linux Do 授权回调 GET /api/user/login/linuxdo/callback */
+export async function linuxDoCallbackUsingGet(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: API.linuxDoCallbackUsingGETParams,
+  options?: { [key: string]: any },
+) {
+  return request<API.BaseResponseTokenLoginUserVo_>('/api/user/login/linuxdo/callback', {
+    method: 'GET',
+    params: {
+      ...params,
+    },
+    ...(options || {}),
+  });
+}
+
 /** 用户注销 POST /api/user/logout */
 export async function userLogoutUsingPost(options?: { [key: string]: any }) {
   return request<API.BaseResponseBoolean_>('/api/user/logout', {
@@ -250,7 +281,7 @@ export async function userRegisterUsingPost(
 
 /** 签到 POST /api/user/signIn */
 export async function signInUsingPost(options?: { [key: string]: any }) {
-  return request<API.BaseResponseBoolean_>('/api/user/signIn', {
+  return request<API.BaseResponseSignInVO_>('/api/user/signIn', {
     method: 'POST',
     ...(options || {}),
   });

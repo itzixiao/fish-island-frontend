@@ -72,6 +72,14 @@ export async function recordGuessSuccessUsingPost(
   });
 }
 
+/** getCurrentUserGuessData GET /api/hero/guess/user */
+export async function getCurrentUserGuessDataUsingGet(options?: { [key: string]: any }) {
+  return request<API.BaseResponseHeroRankingVO_>('/api/hero/guess/user', {
+    method: 'GET',
+    ...(options || {}),
+  });
+}
+
 /** listSimpleHero GET /api/hero/list/simple */
 export async function listSimpleHeroUsingGet(options?: { [key: string]: any }) {
   return request<API.BaseResponseListSimpleHeroVO_>('/api/hero/list/simple', {

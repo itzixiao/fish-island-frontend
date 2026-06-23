@@ -1,0 +1,90 @@
+.fund-hub-container {
+  min-height: 100vh;
+  background: #f0f2f5;
+
+  .fund-hub-header {
+    background: #fff;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+
+    .header-left {
+      display: flex;
+      align-items: center;
+
+      .header-icon {
+        font-size: 24px;
+        margin-right: 12px;
+        color: #1890ff;
+      }
+
+      .header-title {
+        margin: 0;
+      }
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+    }
+  }
+
+  .fund-hub-content {
+    padding: 24px;
+
+    .ant-card {
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .ant-statistic-title {
+      font-size: 14px;
+      color: rgba(0, 0, 0, 0.65);
+    }
+
+    .ant-statistic-content {
+      font-size: 24px;
+      font-weight: 600;
+    }
+
+    .ant-table {
+      .ant-table-thead > tr > th {
+        background: #fafafa;
+        font-weight: 600;
+      }
+
+      .ant-table-tbody > tr:hover > td {
+        background: #f5f5f5;
+      }
+    }
+  }
+}
+
+// 响应式设计
+@media (max-width: 768px) {
+  .fund-hub-container {
+    .fund-hub-header {
+      flex-direction: column;
+      padding: 16px;
+      height: auto;
+
+      .header-left {
+        margin-bottom: 12px;
+      }
+
+      .header-right {
+        width: 100%;
+        justify-content: flex-end;
+      }
+    }
+
+    .fund-hub-content {
+      padding: 16px;
+    }
+  }
+}

@@ -1,0 +1,96 @@
+.post-create-container {
+  padding: 24px;
+  
+  .post-create-card {
+    max-width: 1000px;
+    margin: 0 auto;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    
+    .post-create-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 24px;
+      
+      h2 {
+        margin: 0;
+        margin-left: 16px;
+      }
+      
+      .back-button {
+        padding-left: 0;
+      }
+    }
+    
+    .post-form {
+      .ant-form-item-label {
+        font-weight: 500;
+      }
+    }
+    
+    .post-form-buttons {
+      margin-top: 24px;
+      display: flex;
+      justify-content: flex-end;
+    }
+  }
+  
+  .vditor-container {
+    border: 1px solid #d9d9d9;
+    border-radius: 4px;
+    margin-bottom: 16px;
+  }
+  
+  .editor-container {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .editor-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 16px;
+  }
+}
+
+// 覆盖Vditor默认样式
+.vditor {
+  --panel-background-color: #fff;
+  --toolbar-background-color: #f9f9f9;
+  --textarea-background-color: #fff;
+  
+  .vditor-toolbar {
+    border-bottom: 1px solid #e8e8e8;
+  }
+  
+  .vditor-reset {
+    font-size: 16px;
+  }
+}
+
+// 响应式调整
+@media (max-width: 768px) {
+  .post-create-container {
+    padding: 0 12px;
+    
+    .post-create-card {
+      .post-create-header {
+        flex-direction: column;
+        align-items: flex-start;
+        
+        .back-button {
+          margin-bottom: 12px;
+        }
+      }
+    }
+  }
+}
+
+// 模态框样式
+.ant-modal-content {
+  .post-form {
+    max-height: 60vh;
+    overflow-y: auto;
+    padding-right: 8px;
+  }
+}
+

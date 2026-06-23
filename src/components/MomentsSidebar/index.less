@@ -1,0 +1,424 @@
+.sidebar {
+  width: 320px;
+  flex-shrink: 0;
+  height: calc(100vh - var(--chat-height-offset, 85px));
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.1),
+    0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+  backdrop-filter: blur(10px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+// 收起时的悬浮 toggle 按钮
+.toggleBtn {
+  flex-shrink: 0;
+  align-self: center;
+  width: 24px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #bbb;
+  font-size: 11px;
+  transition: color 0.15s, box-shadow 0.15s, transform 0.15s;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+
+  &:hover {
+    color: #ffa768;
+    box-shadow: 0 4px 12px rgba(255, 167, 104, 0.3);
+    transform: scale(1.1);
+  }
+}
+
+// ── 头部 ──────────────────────────────────────────────────
+.header {
+  padding: 12px 12px 10px 16px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a1c1e;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.iconBtn {
+  color: #999 !important;
+  width: 28px !important;
+  height: 28px !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 8px !important;
+
+  &:hover {
+    color: #ffa768 !important;
+    background: rgba(255, 167, 104, 0.08) !important;
+  }
+}
+
+// ── 列表 ──────────────────────────────────────────────────
+.list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 2px;
+  }
+}
+
+.center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 24px 0;
+}
+
+.item {
+  padding: 16px 16px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  transition: background 0.15s;
+  cursor: pointer;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:hover {
+    background: rgba(255, 167, 104, 0.04);
+  }
+
+  &:active {
+    background: rgba(255, 167, 104, 0.08);
+  }
+}
+
+.itemHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.avatar {
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: opacity 0.15s;
+
+  &:hover {
+    opacity: 0.8;
+  }
+}
+
+.meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #576b95;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition: color 0.15s;
+
+  &:hover {
+    color: #1890ff;
+    text-decoration: underline;
+  }
+}
+
+.time {
+  font-size: 11px;
+  color: #999;
+  margin-top: 1px;
+}
+
+.content {
+  font-size: 13px;
+  color: #333;
+  line-height: 1.7;
+  margin-bottom: 10px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-all;
+  white-space: pre-wrap;
+  padding-left: 44px; // 头像(34px) + gap(10px)
+}
+
+.location {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #1890ff;
+  margin-bottom: 8px;
+  padding: 2px 8px;
+  background: rgba(24, 144, 255, 0.08);
+  border-radius: 12px;
+  margin-left: 44px; // 与 content 对齐
+
+  .anticon {
+    font-size: 11px;
+  }
+}
+
+.images {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+  padding-left: 44px;
+
+  :global(.ant-image) {
+    width: 72px;
+    height: 72px;
+  }
+}
+
+.thumb {
+  width: 72px !important;
+  height: 72px !important;
+  object-fit: cover;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.moreImages {
+  width: 72px;
+  height: 72px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-size: 12px;
+  color: #666;
+}
+
+.actions {
+  display: flex;
+  gap: 14px;
+  margin-top: 8px;
+  padding-left: 44px;
+}
+
+.action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #999;
+  cursor: pointer;
+  transition: color 0.15s;
+  user-select: none;
+
+  &:hover {
+    color: #ffa768;
+  }
+
+  &.liked {
+    color: #ff4d4f;
+  }
+}
+
+.noMore {
+  text-align: center;
+  font-size: 12px;
+  color: #ccc;
+  padding: 8px 0 12px;
+}
+
+// ── 响应式 ────────────────────────────────────────────────
+@media screen and (max-width: 768px) {
+  .sidebar {
+    display: none;
+  }
+}
+
+// 左侧放置时的圆角调整（右侧圆角贴近聊天室）
+.sidebarLeft {
+  border-radius: 24px;
+}
+
+// 设置按钮激活态
+.iconBtnActive {
+  color: #1677ff !important;
+  background: rgba(22, 119, 255, 0.08) !important;
+}
+
+// 设置 Popover 内容
+:global(.moments-sidebar-setting-popover) {
+  padding: 4px 2px;
+  min-width: 160px;
+
+  .settingLabel {
+    font-size: 12px;
+    color: #999;
+    margin-bottom: 8px;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+  }
+
+  .settingRadioGroup {
+    display: flex;
+    width: 100%;
+
+    .ant-radio-button-wrapper {
+      flex: 1;
+      text-align: center;
+      font-size: 13px;
+      border-radius: 0;
+
+      &:first-child {
+        border-radius: 6px 0 0 6px;
+      }
+
+      &:last-child {
+        border-radius: 0 6px 6px 0;
+      }
+    }
+  }
+}
+
+// ── 深色模式覆盖 ──────────────────────────────────────────
+:global([data-theme="dark"]) {
+  .sidebar {
+    background: rgba(30, 30, 30, 0.95);
+    border-color: rgba(255, 255, 255, 0.06);
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.4),
+      0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+  }
+
+  .toggleBtn {
+    background: rgba(30, 30, 30, 0.95);
+    border-color: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.3);
+
+    &:hover {
+      color: #ffa768;
+      box-shadow: 0 4px 12px rgba(255, 167, 104, 0.3);
+    }
+  }
+
+  .header {
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+  }
+
+  .title {
+    color: rgba(255, 255, 255, 0.85);
+  }
+
+  .iconBtn {
+    color: rgba(255, 255, 255, 0.35) !important;
+
+    &:hover {
+      color: #ffa768 !important;
+      background: rgba(255, 167, 104, 0.1) !important;
+    }
+  }
+
+  .iconBtnActive {
+    color: #4facfe !important;
+    background: rgba(79, 172, 254, 0.1) !important;
+  }
+
+  .list {
+    scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+
+    &::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.1);
+    }
+  }
+
+  .item {
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+
+    &:hover {
+      background: rgba(255, 167, 104, 0.06);
+    }
+
+    &:active {
+      background: rgba(255, 167, 104, 0.1);
+    }
+  }
+
+  .name {
+    color: #7b9fd4;
+
+    &:hover {
+      color: #4facfe;
+    }
+  }
+
+  .time {
+    color: rgba(255, 255, 255, 0.3);
+  }
+
+  .content {
+    color: rgba(255, 255, 255, 0.75);
+  }
+
+  .location {
+    color: #4facfe;
+    background: rgba(79, 172, 254, 0.1);
+  }
+
+  .moreImages {
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.45);
+  }
+
+  .action {
+    color: rgba(255, 255, 255, 0.3);
+
+    &:hover {
+      color: #ffa768;
+    }
+
+    &.liked {
+      color: #ff4d4f;
+    }
+  }
+
+  .noMore {
+    color: rgba(255, 255, 255, 0.2);
+  }
+}

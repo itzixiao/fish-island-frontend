@@ -1,5 +1,13 @@
 // 保存原始标题
-let originalTitle = document.title;
+// let originalTitle = document.title;
+let originalTitle = '';
+const savedSiteConfig = localStorage.getItem('siteConfig');
+if (savedSiteConfig) {
+  const { siteName } = JSON.parse(savedSiteConfig);
+  originalTitle = siteName;
+} else {
+  originalTitle = document.title;
+}
 let titleInterval: number | null = null;
 let faviconInterval: number | null = null;
 let originalFavicon: string | null = null;

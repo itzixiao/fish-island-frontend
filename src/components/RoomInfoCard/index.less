@@ -1,0 +1,848 @@
+.roomInfoCardContainer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  width: auto; /* 修改为auto以适应聊天窗口 */
+  user-select: none; /* 防止拖动时选中文本 */
+  touch-action: none; /* 防止触摸设备上的默认行为 */
+  will-change: transform; /* 优化渲染性能 */
+  transform-origin: top left; /* 设置变换原点 */
+}
+
+/* 添加卡片布局容器 */
+.cardLayout {
+  display: flex;
+  gap: 12px; /* 增加间隔 */
+}
+
+.roomInfoCard {
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  width: 360px; /* 增加卡片宽度 */
+  
+  :global(.ant-card-head) {
+    padding: 0 16px;
+  }
+  
+  :global(.ant-card-body) {
+    max-height: 550px; /* 增加卡片内容最大高度 */
+    overflow-y: auto; /* 添加垂直滚动条 */
+    padding: 16px; /* 确保内边距合适 */
+    
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+    
+    &::-webkit-scrollbar-track {
+      background: #f5f5f5;
+      border-radius: 4px;
+    }
+    
+    &::-webkit-scrollbar-thumb {
+      background: #d9d9d9;
+      border-radius: 4px;
+    }
+    
+    &::-webkit-scrollbar-thumb:hover {
+      background: #bfbfbf;
+    }
+  }
+}
+
+.roomContent {
+  display: flex;
+  flex-direction: column;
+  gap: 16px; /* 增加元素间距 */
+}
+
+.roomHeader {
+  margin-bottom: 8px;
+}
+
+.roomName {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.creatorInfo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.creatorName {
+  font-size: 14px;
+  color: #333;
+}
+
+.creatorLabel {
+  font-size: 12px;
+  color: #fff;
+  background-color: #1890ff;
+  padding: 2px 6px;
+  border-radius: 10px;
+}
+
+/* 信息区域 */
+.infoSection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  margin-bottom: 4px;
+}
+
+.infoItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.infoIcon {
+  color: #1890ff;
+}
+
+/* 玩家列表容器 */
+.playersListContainer {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 8px;
+}
+
+.playersTitle {
+  margin-bottom: 8px;
+  font-size: 15px;
+  font-weight: 500;
+  color: #333;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.playersList {
+  max-height: 240px; /* 增加玩家列表最大高度 */
+  overflow-y: auto; /* 添加垂直滚动条 */
+  padding-right: 4px; /* 为滚动条预留空间 */
+  margin-bottom: 4px;
+  
+  /* 自定义滚动条样式 */
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: #f5f5f5;
+    border-radius: 4px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: #d9d9d9;
+    border-radius: 4px;
+  }
+  
+  &::-webkit-scrollbar-thumb:hover {
+    background: #bfbfbf;
+  }
+}
+
+/* 聊天窗口样式 */
+.chatContainer {
+  width: 320px; /* 增加聊天窗口宽度 */
+  border-radius: 8px;
+  background-color: #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  height: fit-content; /* 使高度适应内容 */
+  max-height: 550px; /* 增加最大高度 */
+}
+
+.chatHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background-color: #f5f5f5;
+  border-bottom: 1px solid #e8e8e8;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.chatMessages {
+  height: 300px;
+  overflow-y: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background-color: #f9f9f9;
+  position: relative;
+}
+
+.emptyChatMessage {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  width: 100%;
+}
+
+.notJoinedOverlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: rgba(0, 0, 0, 0.03);
+  padding: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-top: 1px solid #e8e8e8;
+}
+
+.chatMessage {
+  max-width: 90%;
+  padding: 8px;
+  border-radius: 8px;
+  background-color: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  align-self: flex-start;
+}
+
+.myMessage {
+  align-self: flex-end;
+  background-color: #e6f7ff;
+}
+
+.messageHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.messageSender {
+  font-size: 12px;
+  color: #666;
+  font-weight: 500;
+}
+
+.messageTime {
+  font-size: 10px;
+  color: #999;
+  margin-left: auto;
+}
+
+.messageContent {
+  font-size: 13px;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+/* 可点击头像样式 */
+.clickableAvatar {
+  cursor: pointer;
+  transition: transform 0.2s;
+  
+  &:hover {
+    transform: scale(1.1);
+  }
+}
+
+/* 用户消息列表样式 */
+.userMessageItem {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+  
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.userMessageTime {
+  font-size: 12px;
+  color: #999;
+}
+
+.userMessageContent {
+  font-size: 14px;
+  background-color: #f9f9f9;
+  padding: 8px;
+  border-radius: 6px;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.chatInputContainer {
+  display: flex;
+  padding: 8px;
+  border-top: 1px solid #e8e8e8;
+  background-color: #fff;
+  gap: 8px;
+  flex-direction: column;
+}
+
+.chatInputRow {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.chatInput {
+  flex: 1;
+}
+
+.notJoinedTip {
+  color: #ff4d4f;
+  font-size: 12px;
+  text-align: center;
+  padding: 4px 0;
+  background-color: #fff2f0;
+  border-radius: 4px;
+  margin-bottom: 4px;
+}
+
+.chatInput {
+  flex: 1;
+}
+
+.emptyChatMessage {
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* 高亮聊天图标 */
+.activeIcon {
+  color: #1890ff;
+}
+
+.pinned {
+  box-shadow: 0 6px 16px rgba(24, 144, 255, 0.3);
+  border: 1px solid rgba(24, 144, 255, 0.3);
+  
+  :global(.ant-card-head) {
+    background-color: rgba(24, 144, 255, 0.05);
+  }
+}
+
+.cardTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: grab;
+  user-select: none;
+  width: 100%;
+  
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.statusBadge {
+  margin-left: auto;
+}
+
+.dragIcon {
+  margin-left: 8px;
+  color: #999;
+  font-size: 14px;
+}
+
+.cardActions {
+  display: flex;
+  align-items: center;
+}
+
+.pinnedIcon {
+  color: #1890ff;
+}
+
+.loadingContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 30px 0;
+}
+
+.roomId {
+  font-size: 12px;
+  color: #888;
+  margin-top: 4px;
+}
+
+.creatorAvatar {
+  margin-right: 4px;
+}
+
+/* 优化操作按钮区域布局 */
+.actionContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.adminActionsSection, .userActionsSection, .creatorActionsSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  border: 1px solid #f0f0f0;
+}
+
+.sectionTitle {
+  font-size: 14px;
+  font-weight: 500;
+  margin: 0 0 8px 0;
+  color: #333;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #eee;
+}
+
+.adminActions, .userActions, .creatorActions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-start;
+  flex-wrap: wrap; /* 允许按钮换行 */
+}
+
+.adminActionsCenter {
+  display: flex;
+  justify-content: center;
+  padding: 16px 0;
+}
+
+.actionButton, .adminButton {
+  margin-bottom: 8px; /* 增加按钮底部间距 */
+}
+
+/* 添加房间类型选择样式 */
+.roomTypeSelector {
+  margin-bottom: 16px;
+  
+  :global(.ant-radio-group) {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
+/* 局部化表单样式 */
+.formContainer {
+  :global(.ant-form-item-label) {
+    font-weight: 500;
+  }
+  
+  :global(.ant-radio-wrapper) {
+    margin-bottom: 8px;
+  }
+}
+
+.playerItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid #f0f0f0;
+  
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.playerInfo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+  
+  &:hover {
+    background-color: #f0f0f0;
+  }
+}
+
+.playerName {
+  font-size: 14px;
+}
+
+.viewMessagesIcon {
+  font-size: 14px;
+  color: #1890ff;
+  margin-left: 4px;
+  opacity: 0.6;
+  
+  &:hover {
+    opacity: 1;
+  }
+}
+
+.playerActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.voteCount {
+  margin-right: 8px;
+}
+
+.eliminatedTag {
+  font-size: 12px;
+  color: #ff4d4f;
+}
+
+// 折叠状态的样式
+.collapsed {
+  width: auto;
+  
+  .roomInfoCard {
+    width: auto;
+  }
+}
+
+// 悬浮效果
+.roomInfoCard:hover {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+/* 静默刷新样式，防止界面闪烁 */
+.silentRefresh {
+  transition: none !important;
+  
+  /* 确保子元素不会闪烁 */
+  * {
+    transition: none !important;
+  }
+}
+
+/* 添加平滑过渡效果，仅适用于非静默刷新状态 */
+.roomInfoCard:not(.silentRefresh) {
+  transition: all 0.3s ease;
+  
+  /* 玩家列表平滑过渡 */
+  .playerItem {
+    transition: background-color 0.2s ease, transform 0.2s ease;
+  }
+  
+  /* 投票数变化平滑过渡 */
+  .voteCount {
+    transition: background-color 0.3s ease;
+  }
+}
+
+.ruleContent {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 0 10px;
+  
+  h3 {
+    text-align: center;
+    margin-bottom: 16px;
+    color: #1890ff;
+  }
+  
+  h4 {
+    margin-top: 16px;
+    margin-bottom: 8px;
+    color: #1890ff;
+  }
+  
+  ol, ul {
+    margin-left: 20px;
+    margin-bottom: 16px;
+  }
+  
+  li {
+    margin-bottom: 8px;
+    line-height: 1.6;
+  }
+  
+  p {
+    margin-bottom: 16px;
+    line-height: 1.6;
+  }
+  
+  strong {
+    color: #ff4d4f;
+  }
+}
+
+/* 用户消息模态框样式 */
+.userMessagesModal {
+  z-index: 1050 !important; /* 确保在最高层级显示 */
+}
+
+.userMessagesContent {
+  padding: 10px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+/* 添加邀请按钮样式 */
+.inviteButton {
+  margin-right: 8px;
+}
+
+/* 添加邀请消息样式 */
+.inviteMessage {
+  background-color: #f6ffed;
+  border: 1px solid #b7eb8f;
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin: 8px 0;
+  text-align: center;
+}
+
+.inviteAction {
+  margin-top: 8px;
+  display: flex;
+  justify-content: center;
+}
+
+/* 冷却时间提示样式 */
+.cooldownTip {
+  font-size: 12px;
+  color: #ff4d4f;
+  margin-left: 8px;
+}
+
+/* 房间列表样式 */
+.roomTabs {
+  width: 100%;
+  
+  :global(.ant-tabs-nav) {
+    margin-bottom: 12px;
+  }
+}
+
+.roomListContainer {
+  height: 450px;
+  overflow-y: auto;
+  
+  /* 自定义滚动条样式 */
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: #f5f5f5;
+    border-radius: 4px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: #d9d9d9;
+    border-radius: 4px;
+  }
+  
+  &::-webkit-scrollbar-thumb:hover {
+    background: #bfbfbf;
+  }
+}
+
+.roomList {
+  background-color: #fff;
+  border-radius: 8px;
+  
+  :global(.ant-list-item) {
+    padding: 12px;
+    transition: background-color 0.3s;
+    
+    &:hover {
+      background-color: #f5f5f5;
+    }
+  }
+}
+
+.roomListItem {
+  width: 100%;
+}
+
+/* 新增房间列表项内容容器样式 */
+.roomListItemContent {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+/* 第一行：头像和名称 */
+.roomListItemHeader {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.roomListItemTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  
+  span {
+    font-weight: 500;
+  }
+
+  .roomId {
+    font-weight: normal;
+    color: #999;
+    font-size: 12px;
+  }
+}
+
+/* 房间状态 - 现在在第一行 */
+.roomListItemStatus {
+  margin-left: auto;
+}
+
+/* 第二行：房间模式和人数 */
+.roomListItemInfo {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #666;
+  margin: 8px 0;
+}
+
+.roomListItemMode, .roomListItemPlayers {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* 第四行：操作按钮 */
+.roomListItemActions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+  
+  button {
+    min-width: 80px;
+  }
+}
+
+.roomListItemDesc {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  color: #666;
+  
+  div {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+}
+
+.roomListFooter {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  margin-top: 8px;
+}
+
+/* 静默刷新动画 */
+.silentRefresh {
+  animation: silentPulse 0.5s ease-in-out;
+}
+
+@keyframes silentPulse {
+  0% {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+  50% {
+    box-shadow: 0 4px 20px rgba(24, 144, 255, 0.4);
+  }
+  100% {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+}
+
+// 添加倒计时相关样式
+.countdownContainer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: rgba(24, 144, 255, 0.1);
+  border-radius: 4px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  border-left: 3px solid #1890ff;
+}
+
+.countdownTitle {
+  display: flex;
+  align-items: center;
+  font-weight: 500;
+  color: #1890ff;
+  
+  .countdownIcon {
+    margin-right: 6px;
+  }
+}
+
+.countdownValue {
+  font-size: 16px;
+  font-weight: bold;
+  color: #ff4d4f;
+}
+
+.headerCountdown {
+  margin-left: 8px;
+  font-size: 14px;
+  background-color: #ff4d4f;
+  color: white;
+  padding: 0 8px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  
+  :global(.anticon) {
+    margin-right: 4px;
+  }
+}
+
+// 添加聊天栏倒计时样式
+.chatCountdown {
+  background-color: #ff4d4f;
+  color: white;
+  padding: 8px 12px;
+  text-align: center;
+  font-weight: 500;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  :global(.anticon) {
+    margin-right: 6px;
+  }
+}
+
+.chatCountdownValue {
+  font-size: 16px;
+  font-weight: bold;
+  margin: 0 4px;
+} 

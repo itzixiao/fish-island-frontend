@@ -1,3 +1,4 @@
+import { resetFloatingChatPosition } from '@/components/FloatingChat/storage';
 import {
   getLoginUserUsingGet,
   signInUsingPost,
@@ -7,6 +8,16 @@ import {
   userEmailSendUsingPost,
   userLogoutUsingPost
 } from '@/services/backend/userController';
+import {
+  createAppUsingPost,
+  deleteAppUsingPost,
+  getAppDetailUsingGet,
+  listMyAppsUsingGet,
+  resetSecretUsingPost,
+  updateAppUsingPost,
+} from '@/services/backend/fishAuthController';
+import {getCurrentUserVipUsingGet, checkPermanentVipUsingGet} from '@/services/backend/userVipController';
+import {useRedeemCodeUsingPost} from '@/services/backend/redeemCodeController';
 import {listAvailableFramesUsingGet1, setCurrentFrameUsingPost1} from '@/services/backend/userTitleController';
 import {uploadFileByMinioUsingPost} from '@/services/backend/fileController';
 import {
@@ -17,7 +28,26 @@ import {
   SwapOutlined,
   UploadOutlined,
   UserOutlined,
+  ApiOutlined,
+  CopyOutlined,
+  ReloadOutlined,
+  DeleteOutlined,
+  PlusOutlined,
+  EyeInvisibleOutlined,
+  EyeOutlined,
+  CalendarOutlined,
+  LeftOutlined,
+  RightOutlined,
+  CheckCircleFilled,
+  GiftOutlined,
+  BulbOutlined,
+  IdcardOutlined,
+  CompassOutlined,
 } from '@ant-design/icons';
+import {
+  getMonthSignInUsingGet,
+  makeUpSignInUsingPost,
+} from '@/services/backend/userSignInController';
 import {history, useModel} from '@umijs/max';
 import {
   Avatar,
@@ -27,15 +57,25 @@ import {
   Input,
   message,
   Modal,
+  Radio,
   Select,
+  Slider,
   Space,
   Switch,
   TimePicker,
   Tooltip,
-  Upload
+  Upload,
+  Badge,
+  Table,
+  Tag,
+  Popconfirm,
+  Typography,
+  Row,
+  Col,
 } from 'antd';
+import defaultSettings from '../../../config/defaultSettings';
 import type {MenuInfo} from 'rc-menu/lib/interface';
-import React, {lazy, useCallback, useEffect, useState} from 'react';
+import React, {lazy, useCallback, useEffect, useRef, useState} from 'react';
 import {flushSync} from 'react-dom';
 import HeaderDropdown from '../HeaderDropdown';
 import {useEmotionCss} from "@ant-design/use-emotion-css";
@@ -44,10 +84,12 @@ import './app.css';
 import './money-button.css';
 import {RcFile} from "antd/lib/upload";
 import LoginRegister from '../LoginRegister';
-import {setNotificationEnabled} from '@/utils/notification';
 import FoodRecommender from '@/components/FoodRecommender';
+import MessageNotification, { MessageNotificationRef } from '@/components/MessageNotification';
+import UserDetailModal from '@/components/UserDetailModal';
+import MoneyButton from '../MoneyButton';
+import { startSiteTour } from '@/components/SiteTour';
 
-lazy(() => import('@/components/MusicPlayer'));
 export type GlobalHeaderRightProps = {
   menu?: boolean;
 };
@@ -136,17 +178,17 @@ const compressImage = (file: File): Promise<File> => {
 
 export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
   const [bigWeekBaseDate, setBigWeekBaseDate] = useState(() => {
-  const savedData = localStorage.getItem('bigWeekBaseDate');
-  return savedData ? moment(savedData) : moment();
-});
+    const savedData = localStorage.getItem('bigWeekBaseDate');
+    return savedData ? moment(savedData) : moment();
+  });
 
-const calculateCurrentWeekType = (baseDate: moment.Moment) => {
-  const currentDate = moment();
-  const weeksDiff = currentDate.diff(baseDate, 'weeks');
-  return weeksDiff % 2 === 0 ? 'big' : 'small';
-};
+  const calculateCurrentWeekType = (baseDate: moment.Moment) => {
+    const currentDate = moment();
+    const weeksDiff = currentDate.diff(baseDate, 'weeks');
+    return weeksDiff % 2 === 0 ? 'big' : 'small';
+  };
 
-const [moYuData, setMoYuData] = useState<MoYuTimeType>({
+  const [moYuData, setMoYuData] = useState<MoYuTimeType>({
     startTime: moment('08:30', 'HH:mm'),
     endTime: moment('17:30', 'HH:mm'),
     lunchTime: moment('12:00', 'HH:mm'),
@@ -228,15 +270,24 @@ const [moYuData, setMoYuData] = useState<MoYuTimeType>({
 
   const {initialState, setInitialState} = useModel('@@initialState');
   const {currentUser}: any = initialState || {};
+  // @ts-ignore
+  const { isDarkMode, toggleTheme } = useModel('theme');
 
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const [isMyCardOpen, setIsMyCardOpen] = useState(false);
   const [editProfileForm] = Form.useForm();
   const [siteConfigForm] = Form.useForm();
   const [selectedAvatar, setSelectedAvatar] = useState<string>('');
   const [previewAvatar, setPreviewAvatar] = useState<string>('');
+  const [previewBgUrl, setPreviewBgUrl] = useState<string>('');
   const [emailCountdown, setEmailCountdown] = useState(0);
   const [emailCode, setEmailCode] = useState('');
   const [availableTitles, setAvailableTitles] = useState<API.UserTitle[]>([]);
+  const [userVipInfo, setUserVipInfo] = useState<API.UserVipVO | null>(null);
+  const [isPermanentVip, setIsPermanentVip] = useState<boolean>(false);
+  const [isRedeemCodeOpen, setIsRedeemCodeOpen] = useState(false);
+  const [redeemCode, setRedeemCode] = useState('');
+  const [redeemLoading, setRedeemLoading] = useState(false);
 
   // 获取可用称号列表
   const fetchAvailableTitles = async () => {
@@ -282,6 +333,31 @@ const [moYuData, setMoYuData] = useState<MoYuTimeType>({
     fetchAvailableTitles();
   }, []);
 
+  // 获取用户VIP信息
+  const fetchUserVipInfo = async () => {
+    try {
+      const [vipRes, permanentRes] = await Promise.all([
+        getCurrentUserVipUsingGet(),
+        checkPermanentVipUsingGet()
+      ]);
+      if (vipRes.data) {
+        setUserVipInfo(vipRes.data);
+      }
+      if (permanentRes.data) {
+        setIsPermanentVip(permanentRes.data);
+      }
+    } catch (error) {
+      console.error('获取VIP信息失败:', error);
+    }
+  };
+
+  // 会员类型映射
+  const vipTypeMap: Record<number, string> = {
+    0: '普通会员',
+    1: '月度会员',
+    2: '永久会员',
+  };
+
   // 处理称号设置
   const handleSetTitle = async (titleId: number) => {
     try {
@@ -324,6 +400,7 @@ const [moYuData, setMoYuData] = useState<MoYuTimeType>({
       const res = await updateMyUserUsingPost({
         ...values,
         userAvatar,
+        momentsBgUrl: values.momentsBgUrl || undefined,
       });
       if (res.code === 0) {
         message.success('修改信息成功！');
@@ -339,19 +416,37 @@ const [moYuData, setMoYuData] = useState<MoYuTimeType>({
 
   const [isSiteConfigOpen, setIsSiteConfigOpen] = useState(false);
   const [siteConfig, setSiteConfig] = useState(() => {
-    const savedConfig = localStorage.getItem('siteConfig');
-    return savedConfig ? JSON.parse(savedConfig) : {
+    const defaults = {
       siteName: '摸鱼岛',
-      siteIcon: 'https://api.oss.cqbo.com/moyu/moyu.png',
-      notificationEnabled: true
+      siteIcon: 'https://oss.cqbo.com/moyu/moyu.png',
+      layoutMode: 'top',
+      showFishCircle: true,
+      fishCirclePosition: 'left',
+      showChatPet: true,
+      chatPetSize: 100,
     };
+    const savedConfig = localStorage.getItem('siteConfig');
+    if (savedConfig) {
+      const parsed = JSON.parse(savedConfig);
+      // 如果没有主动设置过 layoutMode（旧数据默认是 side），迁移为 top
+      if (!parsed._layoutSet && parsed.layoutMode === 'side') {
+        parsed.layoutMode = 'top';
+      }
+      // 用默认值兜底，确保新增字段在旧数据中也有正确初始值
+      return { ...defaults, ...parsed };
+    }
+    return defaults;
   });
 
   // 添加默认网站配置
   const defaultSiteConfig = {
     siteName: '摸鱼岛',
-    siteIcon: 'https://api.oss.cqbo.com/moyu/moyu.png',
-    notificationEnabled: true
+    siteIcon: 'https://oss.cqbo.com/moyu/moyu.png',
+    layoutMode: 'top',
+    showFishCircle: true,
+    fishCirclePosition: 'left',
+    showChatPet: true,
+    chatPetSize: 100,
   };
 
   const [isMoneyVisible, setIsMoneyVisible] = useState(() => {
@@ -381,7 +476,7 @@ const [moYuData, setMoYuData] = useState<MoYuTimeType>({
   // 获取假期信息
   const fetchHolidayInfo = async () => {
     try {
-      const response = await fetch('/data/2025-holiday.json');
+      const response = await fetch('/data/2026-holiday.json');
       const data = await response.json();
 
       // 获取当前日期
@@ -398,9 +493,21 @@ const [moYuData, setMoYuData] = useState<MoYuTimeType>({
           date: nextHoliday.date,
           name: nextHoliday.name
         });
+      } else {
+        // 如果没有找到下一个假期，设置一个默认的假期信息
+        // 这里可以设置为下一年的元旦或者显示"暂无假期"
+        setHolidayInfo({
+          date: '2026-01-01',
+          name: '元旦'
+        });
       }
     } catch (error) {
       console.error('获取假期信息失败:', error);
+      // 发生错误时也设置一个默认值，避免一直显示加载中
+      setHolidayInfo({
+        date: '2026-01-01',
+        name: '元旦'
+      });
     }
   };
 
@@ -505,6 +612,73 @@ const [moYuData, setMoYuData] = useState<MoYuTimeType>({
   const [hasCheckedIn, setHasCheckedIn] = useState(false);
   const [isCheckinAnimating, setIsCheckinAnimating] = useState(false);
 
+  // 签到弹窗相关 state
+  const [isSignInModalOpen, setIsSignInModalOpen] = useState(false);
+  const [signInMonthData, setSignInMonthData] = useState<API.MonthSignInVO | null>(null);
+  const [signInMonthLoading, setSignInMonthLoading] = useState(false);
+  const [signInViewYear, setSignInViewYear] = useState(moment().year());
+  const [signInViewMonth, setSignInViewMonth] = useState(moment().month() + 1);
+  const [makeUpLoading, setMakeUpLoading] = useState<string | null>(null);
+
+  // 获取月度签到数据
+  const fetchMonthSignIn = async (year: number, month: number) => {
+    setSignInMonthLoading(true);
+    try {
+      const res = await getMonthSignInUsingGet({ year, month });
+      if (res.code === 0) {
+        setSignInMonthData(res.data ?? null);
+      }
+    } catch (e) {
+      // ignore
+    } finally {
+      setSignInMonthLoading(false);
+    }
+  };
+
+  // 打开签到弹窗
+  const handleOpenSignInModal = () => {
+    const y = moment().year();
+    const m = moment().month() + 1;
+    setSignInViewYear(y);
+    setSignInViewMonth(m);
+    setIsSignInModalOpen(true);
+    fetchMonthSignIn(y, m);
+  };
+
+  // 切换月份
+  const handleSignInMonthChange = (delta: number) => {
+    let newMonth = signInViewMonth + delta;
+    let newYear = signInViewYear;
+    if (newMonth > 12) { newMonth = 1; newYear += 1; }
+    if (newMonth < 1) { newMonth = 12; newYear -= 1; }
+    setSignInViewMonth(newMonth);
+    setSignInViewYear(newYear);
+    fetchMonthSignIn(newYear, newMonth);
+  };
+
+  // 补签
+  const handleMakeUp = async (date: string) => {
+    setMakeUpLoading(date);
+    try {
+      const res = await makeUpSignInUsingPost({ signDate: date });
+      if (res.code === 0) {
+        message.success(`补签 ${date} 成功！`);
+        fetchMonthSignIn(signInViewYear, signInViewMonth);
+        // 刷新用户信息
+        const userInfo = await getLoginUserUsingGet();
+        if (userInfo.data) {
+          setInitialState((s) => ({ ...s, currentUser: userInfo.data }));
+        }
+      } else {
+        message.error(res.message || '补签失败');
+      }
+    } catch (e) {
+      message.error('补签失败，请稍后重试');
+    } finally {
+      setMakeUpLoading(null);
+    }
+  };
+
   // 检查今日是否已签到
   useEffect(() => {
     if (currentUser?.lastSignInDate) {
@@ -515,9 +689,14 @@ const [moYuData, setMoYuData] = useState<MoYuTimeType>({
   }, [currentUser?.lastSignInDate]);
 
   // 处理签到
-  const handleCheckin = async () => {
+  const handleCheckin = useCallback(async () => {
+    // 如果已经签到，禁止点击
     if (hasCheckedIn) {
-      message.info('今天已经摸鱼打卡啦！明天继续加油 🐟');
+      return;
+    }
+
+    // 如果正在执行签到动画，防止重复点击
+    if (isCheckinAnimating) {
       return;
     }
 
@@ -526,7 +705,12 @@ const [moYuData, setMoYuData] = useState<MoYuTimeType>({
       const res = await signInUsingPost();
       if (res.code === 0) {
         setHasCheckedIn(true);
-        message.success('摸鱼打卡成功！获得 10 积分 ');
+        // 根据用户VIP状态显示不同的提示信息
+        if (currentUser?.vip) {
+          message.success('摸鱼打卡成功！获得 20（10 点可用积分）积分');
+        } else {
+          message.success('摸鱼打卡成功！获得 10 积分');
+        }
         // 更新用户信息
         const userInfo = await getLoginUserUsingGet();
         if (userInfo.data) {
@@ -543,7 +727,7 @@ const [moYuData, setMoYuData] = useState<MoYuTimeType>({
     } finally {
       setIsCheckinAnimating(false);
     }
-  };
+  }, [hasCheckedIn, isCheckinAnimating]);
 
   // VIP 标识动画样式
   const vipBadgeStyle = useEmotionCss(() => ({
@@ -646,7 +830,7 @@ const [moYuData, setMoYuData] = useState<MoYuTimeType>({
 
   // 签到按钮的样式
   const checkinButtonStyle = useEmotionCss(() => ({
-    cursor: 'pointer',
+    cursor: hasCheckedIn ? 'not-allowed' : 'pointer',
     transition: 'all 0.3s ease',
     display: 'inline-flex',
     alignItems: 'center',
@@ -659,8 +843,9 @@ const [moYuData, setMoYuData] = useState<MoYuTimeType>({
       ? '0 2px 4px rgba(24, 144, 255, 0.2)'
       : '0 1px 3px rgba(0, 0, 0, 0.05)',
     border: `1px solid ${hasCheckedIn ? '#1890ff' : '#e8e8e8'}`,
+    opacity: hasCheckedIn ? 0.8 : 1,
     '&:hover': {
-      transform: 'scale(1.03)',
+      transform: hasCheckedIn ? 'none' : 'scale(1.03)',
       background: hasCheckedIn
         ? 'linear-gradient(135deg, #1890ff 0%, #096dd9 100%)'
         : 'linear-gradient(135deg, #f0f0f0 0%, #f5f5f5 100%)',
@@ -685,17 +870,14 @@ const [moYuData, setMoYuData] = useState<MoYuTimeType>({
     },
   }));
 
-  const [isMusicVisible, setIsMusicVisible] = useState(() => {
-    const savedVisibility = localStorage.getItem('musicPlayerVisibility');
-    return savedVisibility === null ? true : savedVisibility === 'true';
-  });
+
 
   // 添加标签页模式按钮样式
   const tabModeButtonStyle = useEmotionCss(() => ({
     color: '#ffffff',
     fontSize: '16px',
     position: 'fixed',
-    top: '16px',
+    top: '60px',
     right: '16px',
     zIndex: 1000,
     background: '#ffa768',
@@ -740,48 +922,7 @@ const [moYuData, setMoYuData] = useState<MoYuTimeType>({
     }
   }));
 
-  const [musicPlayer, setMusicPlayer] = useState<React.ComponentType<any> | null>(null);
 
-  useEffect(() => {
-    if (isMusicVisible) {
-      import('@/components/MusicPlayer').then(module => {
-        setMusicPlayer(() => module.default);
-      });
-    } else {
-      setMusicPlayer(null);
-    }
-
-    // 添加清理函数
-    return () => {
-      setMusicPlayer(null);
-      // 移除所有音乐播放器相关的DOM元素
-      const elementsToRemove = [
-        '.music-player-container',
-        '#myhkTips',
-        '.myhk-player',
-        '.myhk-player-container',
-        '.myhk-player-controls',
-        '.myhk-player-progress',
-        '.myhk-player-volume',
-        '.myhk-player-playlist',
-        '.switch-player'  // 添加 switch-player 元素
-      ];
-
-      elementsToRemove.forEach(selector => {
-        const elements = document.querySelectorAll(selector);
-        elements.forEach(element => {
-          element.remove();
-        });
-      });
-
-      // 移除可能添加的全局样式
-      const styleId = 'myhk-player-styles';
-      const styleElement = document.getElementById(styleId);
-      if (styleElement) {
-        styleElement.remove();
-      }
-    };
-  }, [isMusicVisible]);
 
   const menuItems = [
     ...(menu
@@ -807,6 +948,11 @@ const [moYuData, setMoYuData] = useState<MoYuTimeType>({
       label: '修改信息',
     },
     {
+      key: 'myCard',
+      icon: <IdcardOutlined/>,
+      label: '我的卡片',
+    },
+    {
       key: 'resetPassword',
       icon: <LockOutlined/>,
       label: '找回密码',
@@ -815,6 +961,11 @@ const [moYuData, setMoYuData] = useState<MoYuTimeType>({
       key: 'bossKey',
       icon: <LockOutlined/>,
       label: '老板键设置',
+    },
+    {
+      key: 'openPlatform',
+      icon: <ApiOutlined/>,
+      label: '开放平台',
     },
     {
       key: 'siteConfig',
@@ -827,9 +978,24 @@ const [moYuData, setMoYuData] = useState<MoYuTimeType>({
       label: isMoneyVisible ? '隐藏工作时间' : '显示工作时间',
     },
     {
-      key: 'toggleMusic',
+      key: 'resetMoneyPosition',
       icon: <SettingOutlined/>,
-      label: isMusicVisible ? '隐藏音乐播放器' : '显示音乐播放器',
+      label: '重置位置',
+    },
+    {
+      key: 'redeemCode',
+      icon: <GiftOutlined/>,
+      label: '兑换码',
+    },
+    {
+      key: 'siteTour',
+      icon: <CompassOutlined/>,
+      label: '网站引导',
+    },
+    {
+      key: 'toggleTheme',
+      icon: <BulbOutlined/>,
+      label: isDarkMode ? '切换浅色模式' : '切换深色模式',
     },
     {
       key: 'logout',
@@ -851,10 +1017,24 @@ const [moYuData, setMoYuData] = useState<MoYuTimeType>({
       }
       if (key === 'edit') {
         setIsEditProfileOpen(true);
+        // 获取VIP信息
+        fetchUserVipInfo();
         // 设置初始头像预览
         if (currentUser?.userAvatar && !defaultAvatars.includes(currentUser.userAvatar)) {
           setPreviewAvatar(currentUser.userAvatar);
         }
+        // 设置初始背景图预览
+        if (currentUser?.momentsBgUrl) {
+          setPreviewBgUrl(currentUser.momentsBgUrl);
+        }
+        return;
+      }
+      if (key === 'myCard') {
+        if (!currentUser?.id) {
+          message.warning('请先登录');
+          return;
+        }
+        setIsMyCardOpen(true);
         return;
       }
       if (key === 'resetPassword') {
@@ -865,7 +1045,25 @@ const [moYuData, setMoYuData] = useState<MoYuTimeType>({
         setIsBossKeyOpen(true);
         return;
       }
+      if (key === 'openPlatform') {
+        setIsOpenPlatformOpen(true);
+        fetchMyApps();
+        return;
+      }
       if (key === 'siteConfig') {
+        // 打开弹窗前先同步最新配置到表单，避免 initialValues 只生效一次的问题
+        const latestConfig = localStorage.getItem('siteConfig');
+        const defaults = {
+          siteName: '摸鱼岛',
+          siteIcon: 'https://oss.cqbo.com/moyu/moyu.png',
+          layoutMode: 'top',
+          showFishCircle: true,
+          fishCirclePosition: 'left',
+          showChatPet: true,
+          chatPetSize: 100,
+        };
+        const configValues = latestConfig ? { ...defaults, ...JSON.parse(latestConfig) } : defaults;
+        siteConfigForm.setFieldsValue(configValues);
         setIsSiteConfigOpen(true);
         return;
       }
@@ -875,15 +1073,30 @@ const [moYuData, setMoYuData] = useState<MoYuTimeType>({
         localStorage.setItem('moneyButtonVisibility', newValue.toString());
         return;
       }
-      if (key === 'toggleMusic') {
-        const newValue = !isMusicVisible;
-        setIsMusicVisible(newValue);
-        localStorage.setItem('musicPlayerVisibility', newValue.toString());
+      if (key === 'resetMoneyPosition') {
+        localStorage.removeItem('moneyButtonPosition');
+        localStorage.removeItem('miniPetPosition');
+        resetFloatingChatPosition();
+        window.dispatchEvent(new CustomEvent('resetMoneyButtonPosition'));
+        window.dispatchEvent(new CustomEvent('resetMiniPetPosition'));
+        return;
+      }
+      if (key === 'redeemCode') {
+        setRedeemCode('');
+        setIsRedeemCodeOpen(true);
+        return;
+      }
+      if (key === 'toggleTheme') {
+        toggleTheme();
+        return;
+      }
+      if (key === 'siteTour') {
+        window.setTimeout(() => startSiteTour(), 200);
         return;
       }
       history.push(`/account/${key}`);
     },
-    [setInitialState, currentUser?.userAvatar, isMoneyVisible, isMusicVisible],
+    [setInitialState, currentUser?.userAvatar, isMoneyVisible, toggleTheme],
   );
 
   // 发送邮箱验证码
@@ -1009,18 +1222,186 @@ const [moYuData, setMoYuData] = useState<MoYuTimeType>({
     }
   };
 
-  // 在组件加载时获取通知设置
-  useEffect(() => {
-    const savedConfig = localStorage.getItem('siteConfig');
-    if (savedConfig) {
-      const config = JSON.parse(savedConfig);
-      if (config.notificationEnabled !== undefined) {
-        setNotificationEnabled(config.notificationEnabled);
+  const [isFoodRecommenderOpen, setIsFoodRecommenderOpen] = useState(false);
+  const messageNotificationRef = useRef<MessageNotificationRef>(null);
+  const [unreadMessageCount, setUnreadMessageCount] = useState<number>(0);
+
+  // ===== 开放平台 =====
+  const [isOpenPlatformOpen, setIsOpenPlatformOpen] = useState(false);
+  const [myApps, setMyApps] = useState<API.FishAuthVO[]>([]);
+  const [appLoading, setAppLoading] = useState(false);
+  const [isCreateAppOpen, setIsCreateAppOpen] = useState(false);
+  const [isEditAppOpen, setIsEditAppOpen] = useState(false);
+  const [editingApp, setEditingApp] = useState<API.FishAuthVO | null>(null);
+  const [appDetailMap, setAppDetailMap] = useState<Record<number, API.FishAuthDetailVO>>({});
+  const [visibleSecrets, setVisibleSecrets] = useState<Record<number, boolean>>({});
+  const [createAppForm] = Form.useForm();
+  const [editAppForm] = Form.useForm();
+
+  const fetchMyApps = async () => {
+    setAppLoading(true);
+    try {
+      const res = await listMyAppsUsingGet();
+      if (res.code === 0) {
+        setMyApps(res.data || []);
+      }
+    } catch (e) {
+      message.error('获取应用列表失败');
+    } finally {
+      setAppLoading(false);
+    }
+  };
+
+  const handleCreateApp = async (values: API.FishAuthAddRequest) => {
+    try {
+      const res = await createAppUsingPost(values);
+      if (res.code === 0) {
+        message.success('应用创建成功');
+        setIsCreateAppOpen(false);
+        createAppForm.resetFields();
+        fetchMyApps();
+      }
+    } catch (e: any) {
+      message.error(`创建失败：${e.message}`);
+    }
+  };
+
+  const handleUpdateApp = async (values: any) => {
+    if (!editingApp?.id) return;
+    try {
+      const res = await updateAppUsingPost({ ...values, id: editingApp.id });
+      if (res.code === 0) {
+        message.success('更新成功');
+        setIsEditAppOpen(false);
+        editAppForm.resetFields();
+        fetchMyApps();
+      }
+    } catch (e: any) {
+      message.error(`更新失败：${e.message}`);
+    }
+  };
+
+  const handleDeleteApp = async (id: number) => {
+    try {
+      const res = await deleteAppUsingPost({ id: String(id) });
+      if (res.code === 0) {
+        message.success('删除成功');
+        fetchMyApps();
+      }
+    } catch (e: any) {
+      message.error(`删除失败：${e.message}`);
+    }
+  };
+
+  const handleResetSecret = async (id: number) => {
+    try {
+      const res = await resetSecretUsingPost({ id });
+      if (res.code === 0) {
+        message.success('Secret 已重置');
+        // 刷新该应用的详情
+        const detail = await getAppDetailUsingGet({ id });
+        if (detail.code === 0 && detail.data) {
+          setAppDetailMap((prev) => ({ ...prev, [id]: detail.data! }));
+        }
+      }
+    } catch (e: any) {
+      message.error(`重置失败：${e.message}`);
+    }
+  };
+
+  const handleShowSecret = async (id: number) => {
+    if (!appDetailMap[id]) {
+      try {
+        const res = await getAppDetailUsingGet({ id });
+        if (res.code === 0 && res.data) {
+          setAppDetailMap((prev) => ({ ...prev, [id]: res.data! }));
+        }
+      } catch (e) {
+        message.error('获取详情失败');
+        return;
       }
     }
-  }, []);
+    setVisibleSecrets((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
 
-  const [isFoodRecommenderOpen, setIsFoodRecommenderOpen] = useState(false);
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text).then(() => message.success('已复制'));
+  };
+
+  // 破蛋日样式
+  const eggBirthdayContainerStyle = useEmotionCss(() => ({
+    fontSize: '14px',
+    color: '#333',
+    padding: '12px 16px',
+    background: 'linear-gradient(135deg, #fff9f0 0%, #fff4e6 100%)',
+    border: '1px solid #ffd8a8',
+    borderRadius: '12px',
+    boxShadow: '0 2px 8px rgba(255, 167, 104, 0.1)',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    position: 'relative',
+    overflow: 'hidden'
+  }));
+
+  const eggIconStyle = useEmotionCss(() => ({
+    width: '40px',
+    height: '40px',
+    borderRadius: '50%',
+    background: 'linear-gradient(135deg, #ffa768 0%, #ff9248 100%)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    boxShadow: '0 2px 6px rgba(255, 167, 104, 0.3)',
+    animation: 'eggPulse 2s infinite ease-in-out',
+    '@keyframes eggPulse': {
+      '0%': {
+        transform: 'scale(1)',
+        boxShadow: '0 2px 6px rgba(255, 167, 104, 0.3)'
+      },
+      '50%': {
+        transform: 'scale(1.05)',
+        boxShadow: '0 4px 12px rgba(255, 167, 104, 0.4)'
+      },
+      '100%': {
+        transform: 'scale(1)',
+        boxShadow: '0 2px 6px rgba(255, 167, 104, 0.3)'
+      }
+    }
+  }));
+
+  const eggDateStyle = useEmotionCss(() => ({
+    fontWeight: 'bold',
+    fontSize: '16px',
+    color: '#ff7d38',
+    marginBottom: '4px',
+    textShadow: '0 1px 1px rgba(255, 167, 104, 0.2)'
+  }));
+
+  const eggDaysContainerStyle = useEmotionCss(() => ({
+    color: '#ff9248',
+    fontSize: '13px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px'
+  }));
+
+  const eggDaysCountStyle = useEmotionCss(() => ({
+    fontWeight: 'bold',
+    background: 'linear-gradient(135deg, #ff9248 0%, #ff7d38 100%)',
+    padding: '2px 8px',
+    borderRadius: '10px',
+    color: 'white'
+  }));
+
+  // 显示消息通知抽屉
+  const showMessageDrawer = (e: React.MouseEvent) => {
+    // 阻止事件冒泡，防止触发下拉菜单
+    e.stopPropagation();
+    if (messageNotificationRef.current) {
+      messageNotificationRef.current.showDrawer();
+    }
+  };
 
   if (!currentUser) {
     return (
@@ -1105,95 +1486,16 @@ const [moYuData, setMoYuData] = useState<MoYuTimeType>({
               </Form>
             </div>
           </Modal>
-          {isMoneyVisible && (
-            <Tooltip
-              title={
-                holidayInfo ? (
-                  <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}>
-                    <div style={{
-                      fontSize: '16px',
-                      fontWeight: 'bold',
-                      color: '#fff',
-                      textShadow: '0 1px 2px rgba(0,0,0,0.1)'
-                    }}>
-                      {holidayInfo.name}
-                    </div>
-                    <div style={{
-                      fontSize: '14px',
-                      color: '#fff',
-                      opacity: 0.9
-                    }}>
-                      {moment(holidayInfo.date).format('YYYY年MM月DD日')}
-                    </div>
-                    <div style={{
-                      fontSize: '18px',
-                      fontWeight: 'bold',
-                      color: '#fff',
-                      textShadow: '0 1px 2px rgba(0,0,0,0.1)'
-                    }}>
-                      {(() => {
-                        const now = moment();
-                        const holidayDate = moment(holidayInfo.date);
-                        const diffDays = holidayDate.diff(now, 'days');
-
-                        if (diffDays > 0) {
-                          return `还有 ${diffDays} 天 🎉`;
-                        } else {
-                          const diffHours = holidayDate.diff(now, 'hours') % 24;
-                          const diffMinutes = holidayDate.diff(now, 'minutes') % 60;
-                          const diffSeconds = holidayDate.diff(now, 'seconds') % 60;
-
-                          if (diffHours <= 0 && diffMinutes <= 0 && diffSeconds <= 0) {
-                            return '假期已到 🎉';
-                          }
-
-                          return `还有 ${String(diffHours).padStart(2, '0')}:${String(diffMinutes).padStart(2, '0')}:${String(diffSeconds).padStart(2, '0')} 🎉`;
-                        }
-                      })()}
-                    </div>
-                  </div>
-                ) : '加载中...'
-              }
-              placement="top"
-              overlayClassName={holidayTooltipStyle}
-            >
-              <Button
-                type="primary"
-                shape="circle"
-                onClick={() => {
-                  setIsMoneyOpen(true);
-                }}
-                className="money-button"
-              >
-                <div className="money-button-content">
-                  <Tooltip title="点击查看今天吃什么" placement="top">
-                    <div className="money-button-emoji" onClick={(e) => {
-                      e.stopPropagation();
-                      setIsFoodRecommenderOpen(true);
-                    }}>
-                      {timeInfo.type === 'lunch' ? '🍱' : '🧑‍💻'}
-                    </div>
-                  </Tooltip>
-                  <div className="money-button-time">
-                    {timeInfo.type === 'lunch' ?
-                      `午餐: ${timeInfo.timeRemaining}` :
-                      `下班: ${timeInfo.timeRemaining}`
-                    }
-                  </div>
-                  {timeInfo.earnedAmount !== undefined && (
-                    <div className="money-button-amount">
-                      💰：{timeInfo.earnedAmount.toFixed(2)}
-                    </div>
-                  )}
-                </div>
-              </Button>
-            </Tooltip>
-          )}
+                    {isMoneyVisible && (
+                      <MoneyButton
+                        isMoneyVisible={isMoneyVisible}
+                        holidayInfo={holidayInfo}
+                        timeInfo={timeInfo}
+                        holidayTooltipStyle={holidayTooltipStyle}
+                        setIsMoneyOpen={setIsMoneyOpen}
+                        setIsFoodRecommenderOpen={setIsFoodRecommenderOpen}
+                      />
+                    )}
         </div>
 
         {/* 找回密码 Modal */}
@@ -1364,6 +1666,7 @@ const [moYuData, setMoYuData] = useState<MoYuTimeType>({
         <Button
           type="text"
           icon={<SwapOutlined/>}
+          data-tour="tab-mode"
           onClick={() => {
             const currentPath = window.location.pathname;
             history.push(`/home?redirect=${encodeURIComponent(currentPath)}`);
@@ -1382,6 +1685,11 @@ const [moYuData, setMoYuData] = useState<MoYuTimeType>({
         />
       </Tooltip>
 
+      {/* 消息通知组件 */}
+      <MessageNotification ref={messageNotificationRef} onUnreadCountChange={setUnreadMessageCount} />
+
+      {/* 合并头像和下拉菜单 */}
+      <div data-tour="user-avatar">
       <HeaderDropdown
         menu={{
           selectedKeys: [],
@@ -1390,29 +1698,34 @@ const [moYuData, setMoYuData] = useState<MoYuTimeType>({
         }}
       >
         <Space>
-          <div style={{position: 'relative'}}>
-            {currentUser?.userAvatar ? (
-              <div style={{position: 'relative'}}>
-                <Avatar size="default" src={currentUser?.userAvatar}/>
-                {currentUser?.avatarFramerUrl && (
-                  <img
-                    src={currentUser.avatarFramerUrl}
-                    style={{
-                      position: 'absolute',
-                      top: '-8px',
-                      left: '-8px',
-                      width: 'calc(100% + 16px)',
-                      height: 'calc(100% + 16px)',
-                      pointerEvents: 'none'
-                    }}
-                    alt="头像框"
-                  />
-                )}
-              </div>
-            ) : (
-              <Avatar size="default" icon={<UserOutlined/>}/>
-            )}
+          {/* 头像 - 点击显示消息通知 */}
+          <div onClick={showMessageDrawer} style={{ cursor: 'pointer', position: 'relative' }}>
+            <Badge count={unreadMessageCount} size="small" offset={[-2, 2]}>
+              {currentUser?.userAvatar ? (
+                <div style={{position: 'relative'}}>
+                  <Avatar size="default" src={currentUser?.userAvatar}/>
+                  {currentUser?.avatarFramerUrl && (
+                    <img
+                      src={currentUser.avatarFramerUrl}
+                      style={{
+                        position: 'absolute',
+                        top: '-8px',
+                        left: '-8px',
+                        width: 'calc(100% + 16px)',
+                        height: 'calc(100% + 16px)',
+                        pointerEvents: 'none'
+                      }}
+                      alt="头像框"
+                    />
+                  )}
+                </div>
+              ) : (
+                <Avatar size="default" icon={<UserOutlined/>}/>
+              )}
+            </Badge>
           </div>
+
+          {/* 用户名 */}
           <Tooltip title={currentUser?.userName ?? '无名'}>
             <span style={{
               maxWidth: '80px',
@@ -1420,15 +1733,14 @@ const [moYuData, setMoYuData] = useState<MoYuTimeType>({
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
               display: 'inline-block',
-              verticalAlign: 'middle'
+              verticalAlign: 'middle',
             }}>
               {currentUser?.userName?.length > 5 ? `${currentUser.userName.slice(0, 5)}...` : (currentUser?.userName ?? '无名')}
             </span>
           </Tooltip>
         </Space>
       </HeaderDropdown>
-
-      {musicPlayer && React.createElement(musicPlayer, {playerId: "1742366149119", key: isMusicVisible.toString()})}
+      </div>
 
       {/* 添加修改信息的 Modal */}
       <Modal
@@ -1438,10 +1750,11 @@ const [moYuData, setMoYuData] = useState<MoYuTimeType>({
           setIsEditProfileOpen(false);
           setPreviewAvatar('');
           setSelectedAvatar('');
+          setPreviewBgUrl('');
           editProfileForm.resetFields();
         }}
         footer={null}
-        width={600}
+        width={720}
       >
         <Form
           form={editProfileForm}
@@ -1451,236 +1764,610 @@ const [moYuData, setMoYuData] = useState<MoYuTimeType>({
             userProfile: currentUser?.userProfile,
             userAvatar: !defaultAvatars.includes(currentUser?.userAvatar || '') ? currentUser?.userAvatar : '',
             titleId: currentUser?.titleId,
+            momentsBgUrl: currentUser?.momentsBgUrl || '',
           }}
+          layout="vertical"
         >
+          {/* 第一行：用户名 + 邮箱 */}
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="userName"
+                label="用户名"
+                tooltip={'新用户免费修改一次用户名，后面每月只能修改一次，且消耗100积分'}
+                rules={[
+                  {required: true, message: '请输入用户名！'},
+                  {max: 10, message: '用户名不能超过10个字符！'},
+                ]}
+              >
+                <Input
+                  maxLength={10}
+                  showCount
+                  placeholder="请输入用户名"
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\s/g, '');
+                    editProfileForm.setFieldValue('userName', value);
+                  }}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              {!currentUser?.email ? (
+                <Form.Item
+                  name="email"
+                  label="绑定邮箱"
+                  rules={[
+                    {required: true, message: '请输入邮箱地址！'},
+                    {type: 'email', message: '请输入正确的邮箱地址！'}
+                  ]}
+                >
+                  <div style={{display: 'flex', gap: '8px'}}>
+                    <Input placeholder="请输入要绑定的邮箱地址" style={{flex: 1}}/>
+                    <Button
+                      type="primary"
+                      onClick={handleSendEmailCode}
+                      disabled={emailCountdown > 0}
+                    >
+                      {emailCountdown > 0 ? `${emailCountdown}秒` : '获取验证码'}
+                    </Button>
+                  </div>
+                </Form.Item>
+              ) : (
+                <Form.Item label="绑定邮箱">
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '5px 12px',
+                    background: '#f6ffed',
+                    border: '1px solid #b7eb8f',
+                    borderRadius: '6px',
+                    height: 32,
+                  }}>
+                    <span style={{color: '#52c41a', fontSize: 14}}>✓</span>
+                    <span style={{color: '#555', fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{currentUser.email}</span>
+                  </div>
+                </Form.Item>
+              )}
+            </Col>
+          </Row>
+
+          {/* 验证码行（仅未绑定邮箱时显示） */}
+          {!currentUser?.email && (
+            <Row gutter={16}>
+              <Col span={12} offset={12}>
+                <Form.Item
+                  name="emailCode"
+                  label="验证码"
+                  rules={[{required: true, message: '请输入验证码！'}]}
+                >
+                  <div style={{display: 'flex', gap: '8px'}}>
+                    <Input placeholder="请输入验证码" style={{flex: 1}}/>
+                    <Button
+                      type="primary"
+                      onClick={handleEmailBind}
+                      style={{background: '#52c41a', borderColor: '#52c41a', whiteSpace: 'nowrap'}}
+                    >
+                      绑定邮箱
+                    </Button>
+                  </div>
+                </Form.Item>
+              </Col>
+            </Row>
+          )}
+
+          {/* 头像区域：左侧当前头像大图 + 右侧操作 */}
+          <Form.Item label="头像设置" name="userAvatar" style={{marginBottom: 8}}>
+            <div style={{
+              display: 'flex',
+              gap: '16px',
+              padding: '12px 14px',
+              background: '#fafafa',
+              border: '1px solid #f0f0f0',
+              borderRadius: '8px',
+            }}>
+              {/* 左：当前头像预览 */}
+              <div style={{flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4}}>
+                <Avatar
+                  src={previewAvatar || editProfileForm.getFieldValue('userAvatar') || (selectedAvatar || currentUser?.userAvatar)}
+                  size={72}
+                  style={{border: '2px solid #e8e8e8'}}
+                />
+                <span style={{fontSize: 11, color: '#999'}}>当前头像</span>
+              </div>
+              {/* 右：上传+输入+默认头像选择 */}
+              <div style={{flex: 1, display: 'flex', flexDirection: 'column', gap: '10px'}}>
+                <div style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
+                  <Upload
+                    accept="image/*"
+                    showUploadList={false}
+                    beforeUpload={async (file) => {
+                      const url = await handleUpload(file);
+                      if (url) {
+                        setPreviewAvatar(url as any);
+                        editProfileForm.setFieldValue('userAvatar', url);
+                      }
+                      return false;
+                    }}
+                  >
+                    <Button icon={<UploadOutlined/>} loading={uploading} size="small">上传图片</Button>
+                  </Upload>
+                  <Input
+                    size="small"
+                    placeholder="或输入在线图片地址"
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setSelectedAvatar('');
+                      setPreviewAvatar(value);
+                      editProfileForm.setFieldValue('userAvatar', value);
+                    }}
+                    value={editProfileForm.getFieldValue('userAvatar')}
+                    style={{flex: 1}}
+                  />
+                </div>
+                <div style={{display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center'}}>
+                  <span style={{fontSize: 12, color: '#999', marginRight: 2}}>默认：</span>
+                  {defaultAvatars.map((avatar, index) => (
+                    <div
+                      key={index}
+                      onClick={() => {
+                        setSelectedAvatar(avatar);
+                        setPreviewAvatar('');
+                        editProfileForm.setFieldValue('userAvatar', '');
+                      }}
+                      style={{
+                        cursor: 'pointer',
+                        border: (selectedAvatar === avatar || (!previewAvatar && !editProfileForm.getFieldValue('userAvatar') && currentUser?.userAvatar === avatar))
+                          ? '2px solid #1890ff' : '2px solid transparent',
+                        borderRadius: '50%',
+                        padding: '2px',
+                        transition: 'border-color 0.2s',
+                      }}
+                    >
+                      <Avatar src={avatar} size={44}/>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </Form.Item>
+
+          {/* 第三行：朋友圈背景 + 称号 */}
+          <Row gutter={16} style={{marginTop: 8}}>
+            <Col span={14}>
+              <Form.Item
+                label="朋友圈背景"
+                name="momentsBgUrl"
+              >
+                <div style={{
+                  display: 'flex',
+                  gap: '8px',
+                  padding: '10px 12px',
+                  background: '#fafafa',
+                  border: '1px solid #f0f0f0',
+                  borderRadius: '8px',
+                  alignItems: 'center',
+                }}>
+                  {/* 背景预览 */}
+                  <div style={{
+                    width: 72,
+                    height: 48,
+                    borderRadius: '6px',
+                    overflow: 'hidden',
+                    flexShrink: 0,
+                    background: '#e8e8e8',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}>
+                    {previewBgUrl ? (
+                      <img src={previewBgUrl} alt="背景预览" style={{width: '100%', height: '100%', objectFit: 'cover'}}/>
+                    ) : (
+                      <span style={{fontSize: 11, color: '#bbb'}}>预览</span>
+                    )}
+                  </div>
+                  <div style={{flex: 1, display: 'flex', flexDirection: 'column', gap: '6px'}}>
+                    <Upload
+                      accept="image/*"
+                      showUploadList={false}
+                      beforeUpload={async (file) => {
+                        const url = await handleUpload(file);
+                        if (url) {
+                          setPreviewBgUrl(url as any);
+                          editProfileForm.setFieldValue('momentsBgUrl', url);
+                        }
+                        return false;
+                      }}
+                    >
+                      <Button icon={<UploadOutlined/>} loading={uploading} size="small" style={{width: '100%'}}>上传背景图</Button>
+                    </Upload>
+                    <Input
+                      size="small"
+                      placeholder="或输入图片地址"
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setPreviewBgUrl(value);
+                        editProfileForm.setFieldValue('momentsBgUrl', value);
+                      }}
+                      value={previewBgUrl}
+                    />
+                  </div>
+                </div>
+              </Form.Item>
+            </Col>
+            <Col span={10}>
+              <Form.Item label="称号设置" name="titleId">
+                <div style={{display: 'flex', flexDirection: 'column', gap: '6px'}}>
+                  <Select
+                    placeholder="请选择称号"
+                    onChange={handleSetTitle}
+                    value={currentUser?.titleId}
+                  >
+                    {availableTitles.map((title) => (
+                      <Select.Option key={title.titleId} value={title.titleId}>
+                        <span>{title.name}</span>
+                      </Select.Option>
+                    ))}
+                  </Select>
+                  {currentUser?.titleId !== undefined && currentUser?.titleId !== null && (
+                    <div style={{
+                      fontSize: '12px',
+                      color: '#52c41a',
+                      padding: '4px 10px',
+                      background: '#f6ffed',
+                      border: '1px solid #b7eb8f',
+                      borderRadius: '4px',
+                    }}>
+                      当前：{currentUser.titleId == 0 ? '等级称号' : (availableTitles.find(t => t.titleId === currentUser.titleId)?.name || '未知称号')}
+                    </div>
+                  )}
+                </div>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          {/* 个人简介 */}
           <Form.Item
-            name="userName"
-            label="用户名"
-            tooltip={'新用户免费修改一次用户名，后面每月只能修改一次，且消耗100积分'}
-            rules={[
-              {required: true, message: '请输入用户名！'},
-              {max: 10, message: '用户名不能超过10个字符！'},
-            ]}
+            name="userProfile"
+            label="个人简介"
+            rules={[{max: 100, message: '个人简介不能超过100个字符！'}]}
           >
-            <Input
-              maxLength={10}
+            <Input.TextArea
+              rows={3}
+              maxLength={100}
               showCount
-              placeholder="请输入用户名"
-              onChange={(e) => {
-                const value = e.target.value.replace(/\s/g, '');
-                editProfileForm.setFieldValue('userName', value);
-              }}
+              placeholder="介绍一下自己吧（最多100字）"
             />
           </Form.Item>
 
-          <Form.Item
-            label="头像选择"
-            name="userAvatar"
-            help="可以上传图片，输入在线图片地址，或者选择下方默认头像"
-          >
-            <div style={{display: 'flex', gap: '8px', alignItems: 'flex-start', flexWrap: 'wrap'}}>
-              <Upload
-                accept="image/*"
-                showUploadList={false}
-                beforeUpload={async (file) => {
-                  const url = await handleUpload(file);
-                  if (url) {
-                    setPreviewAvatar(url as any);
-                    editProfileForm.setFieldValue('userAvatar', url);
-                  }
-                  return false;
-                }}
-              >
-                <Button icon={<UploadOutlined/>} loading={uploading}>
-                  上传头像
-                </Button>
-              </Upload>
-              <Input
-                placeholder="请输入头像地址（选填）"
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setSelectedAvatar('');
-                  setPreviewAvatar(value);
-                  editProfileForm.setFieldValue('userAvatar', value);
-                }}
-                value={editProfileForm.getFieldValue('userAvatar')}
-                style={{flex: 1}}
-              />
-              {(previewAvatar || editProfileForm.getFieldValue('userAvatar')) && (
-                <div style={{
-                  marginLeft: '8px',
-                  padding: '4px',
-                  border: '1px solid #d9d9d9',
-                  borderRadius: '4px'
-                }}>
-                  <Avatar
-                    src={previewAvatar || editProfileForm.getFieldValue('userAvatar')}
-                    size={64}
-                  />
-                </div>
-              )}
-            </div>
-          </Form.Item>
-
-          <Form.Item label="默认头像">
-            <div style={{display: 'flex', gap: '8px', flexWrap: 'wrap'}}>
-              {defaultAvatars.map((avatar, index) => (
-                <div
-                  key={index}
-                  onClick={() => {
-                    setSelectedAvatar(avatar);
-                    setPreviewAvatar('');
-                    editProfileForm.setFieldValue('userAvatar', '');
-                  }}
-                  style={{
-                    cursor: 'pointer',
-                    border: (selectedAvatar === avatar || currentUser?.userAvatar === avatar) ? '2px solid #1890ff' : '2px solid transparent',
-                    borderRadius: '4px',
-                    padding: '4px',
-                  }}
-                >
-                  <Avatar src={avatar} size={64}/>
-                </div>
-              ))}
-            </div>
-          </Form.Item>
-
-          {!currentUser?.email ? (
-            <>
-              <Form.Item
-                name="email"
-                label="绑邮箱"
-                rules={[
-                  {required: true, message: '请输入邮箱地址！'},
-                  {type: 'email', message: '请输入正确的邮箱地址！'}
-                ]}
-              >
-                <div style={{display: 'flex', gap: '8px'}}>
-                  <Input placeholder="请输入要绑定的邮箱地址" style={{flex: 1}}/>
-                  <Button
-                    type="primary"
-                    onClick={handleSendEmailCode}
-                    disabled={emailCountdown > 0}
-                  >
-                    {emailCountdown > 0 ? `${emailCountdown}秒` : '获取验证码'}
-                  </Button>
-                </div>
-              </Form.Item>
-
-              <Form.Item
-                name="emailCode"
-                label="验证码"
-                rules={[{required: true, message: '请输入验证码！'}]}
-              >
-                <div style={{display: 'flex', gap: '8px', alignItems: 'flex-start'}}>
-                  <Input placeholder="请输入验证码" style={{flex: 1}}/>
-                  <Button
-                    type="primary"
-                    onClick={handleEmailBind}
-                    style={{
-                      background: '#52c41a',
-                      borderColor: '#52c41a',
-                      whiteSpace: 'nowrap'
-                    }}
-                  >
-                    绑定邮箱
-                  </Button>
-                </div>
-              </Form.Item>
-            </>
-          ) : (
-            <Form.Item label="已绑定邮箱">
+          {/* 会员信息展示 */}
+          {currentUser?.vip && userVipInfo && (
+            <Form.Item label="会员信息">
               <div style={{
+                padding: '12px 16px',
+                background: '#fff7e6',
+                border: '1px solid #ffd591',
+                borderRadius: '8px',
                 display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '4px 11px',
-                background: '#f6ffed',
-                border: '1px solid #b7eb8f',
-                borderRadius: '6px'
+                alignItems: 'flex-start',
+                gap: '12px'
               }}>
-                <span style={{color: '#52c41a'}}>✓</span>
-                <span style={{color: '#333'}}>{currentUser.email}</span>
+                <div style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #ffd591 0%, #ffbb6e 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                  fontSize: '20px'
+                }}>
+                  👑
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{
+                    fontWeight: 600,
+                    fontSize: '16px',
+                    color: '#d46b08',
+                    marginBottom: '4px'
+                  }}>
+                    {vipTypeMap[userVipInfo.type || 0] || '普通会员'}
+                  </div>
+                  <div style={{
+                    fontSize: '14px',
+                    color: '#666',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}>
+                    <span>到期时间：</span>
+                    {isPermanentVip ? (
+                      <span style={{
+                        color: '#d46b08',
+                        fontWeight: 500,
+                        background: '#fff1e6',
+                        padding: '2px 8px',
+                        borderRadius: '4px'
+                      }}>
+                        永久有效
+                      </span>
+                    ) : userVipInfo.validDays ? (
+                      <>
+                        <span style={{ color: '#333' }}>
+                          {moment(userVipInfo.validDays).format('YYYY年MM月DD日')}
+                        </span>
+                        <span style={{
+                          color: '#d46b08',
+                          fontWeight: 500,
+                          background: '#fff1e6',
+                          padding: '2px 8px',
+                          borderRadius: '4px',
+                          marginLeft: '8px'
+                        }}>
+                          还剩 {moment(userVipInfo.validDays).diff(moment(), 'days')} 天
+                        </span>
+                      </>
+                    ) : (
+                      <span style={{ color: '#999' }}>未设置</span>
+                    )}
+                  </div>
+                </div>
               </div>
             </Form.Item>
           )}
 
-          <Form.Item
-            name="userProfile"
-            label="个人简介"
-            rules={[
-              {max: 100, message: '个人简介不能超过100个字符！'}
-            ]}
-          >
-            <Input.TextArea
-              rows={4}
-              maxLength={100}
-              showCount
-              placeholder="请输入不超过100个字符的个人简介"
-            />
-          </Form.Item>
-
-          <Form.Item label="称号设置" name="titleId">
-            <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
-              <Select
-                placeholder="请选择称号"
-                onChange={handleSetTitle}
-                allowClear
-                value={currentUser?.titleId}
-              >
-                {availableTitles.map((title) => (
-                  <Select.Option key={title.titleId} value={title.titleId}>
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px'
-                    }}>
-                      <span>{title.name}</span>
-                    </div>
-                  </Select.Option>
-                ))}
-              </Select>
-              {currentUser?.titleId && (
-                <div style={{
-                  fontSize: '12px',
-                  color: '#52c41a',
-                  padding: '4px 8px',
-                  background: '#f6ffed',
-                  border: '1px solid #b7eb8f',
-                  borderRadius: '4px'
-                }}>
-                  当前称号：
-                  {currentUser.titleId == 0 ? '等级称号' : (availableTitles.find(t => t.titleId === currentUser.titleId)?.name || '未知称号')}
+          {currentUser?.createTime && (
+            <Form.Item label="破蛋日">
+              <div className={eggBirthdayContainerStyle}>
+                <div className={eggIconStyle}>
+                  <span style={{ fontSize: '24px' }}>🐣</span>
                 </div>
-              )}
-            </div>
-          </Form.Item>
+                <div style={{ flex: 1 }}>
+                  <div className={eggDateStyle}>
+                    {moment(currentUser.createTime).format('YYYY年MM月DD日')}
+                  </div>
+                  <div className={eggDaysContainerStyle}>
+                    <span>已经在摸鱼岛生活了 </span>
+                    <span className={eggDaysCountStyle}>
+                      {moment().diff(moment(currentUser.createTime), 'days')} 天
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </Form.Item>
+          )}
 
           <Form.Item>
-            <Button type="primary" htmlType="submit">
-              保存修改
-            </Button>
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <Button type="primary" htmlType="submit" size="large" style={{ paddingLeft: 40, paddingRight: 40 }}>
+                保存修改
+              </Button>
+            </div>
           </Form.Item>
         </Form>
       </Modal>
 
-      <Tooltip title={hasCheckedIn ? '今日已完成摸鱼打卡' : '点击摸鱼打卡'}>
+      <Tooltip title={hasCheckedIn ? '今日已签到，点击查看签到日历' : '点击签到'}>
         <div
-          className={checkinButtonStyle}
           onClick={(e) => {
             e.stopPropagation();
-            handleCheckin();
+            handleOpenSignInModal();
           }}
-          style={{marginLeft: 24}}
+          style={{
+            marginLeft: 24,
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 32,
+            height: 32,
+            borderRadius: '50%',
+            background: hasCheckedIn
+              ? 'linear-gradient(135deg, #40a9ff 0%, #1890ff 100%)'
+              : 'linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%)',
+            boxShadow: hasCheckedIn
+              ? '0 2px 6px rgba(24, 144, 255, 0.35)'
+              : '0 1px 3px rgba(0,0,0,0.08)',
+            border: `1px solid ${hasCheckedIn ? '#1890ff' : '#d9d9d9'}`,
+            transition: 'all 0.3s ease',
+            position: 'relative',
+          }}
         >
-          <span className="checkin-emoji">
-            {hasCheckedIn ? '🐟' : ''}
-          </span>
-          <span className="checkin-text">
-            {hasCheckedIn ? '已打卡' : '摸鱼🐟'}
-          </span>
+          <CalendarOutlined style={{ fontSize: 16, color: hasCheckedIn ? '#fff' : '#595959' }} />
+          {!hasCheckedIn && (
+            <span style={{
+              position: 'absolute',
+              top: -3,
+              right: -3,
+              width: 10,
+              height: 10,
+              borderRadius: '50%',
+              background: '#ff4d4f',
+              border: '1.5px solid #fff',
+            }} />
+          )}
         </div>
       </Tooltip>
+
+      {/* 签到弹窗 */}
+      <Modal
+        open={isSignInModalOpen}
+        onCancel={() => setIsSignInModalOpen(false)}
+        footer={null}
+        title={null}
+        width={520}
+        styles={{ body: { padding: 0 } }}
+        destroyOnClose
+      >
+        <div style={{ borderRadius: 12, overflow: 'hidden' }}>
+          {/* 顶部统计区 */}
+          <div style={{
+            background: 'linear-gradient(135deg, #1890ff 0%, #096dd9 100%)',
+            padding: '20px 24px 16px',
+            color: '#fff',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <span style={{ fontSize: 18, fontWeight: 700 }}>签到日历</span>
+              <div style={{
+                background: hasCheckedIn ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.15)',
+                borderRadius: 20,
+                padding: '4px 14px',
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: hasCheckedIn ? 'default' : 'pointer',
+                border: '1px solid rgba(255,255,255,0.4)',
+                transition: 'all 0.2s',
+              }}
+                onClick={() => { if (!hasCheckedIn) handleCheckin(); }}
+              >
+                {hasCheckedIn ? '✅ 今日已签到' : '🐟 立即签到'}
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 32 }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 28, fontWeight: 800, lineHeight: 1 }}>
+                  {signInMonthData?.continuousDays ?? 0}
+                </div>
+                <div style={{ fontSize: 12, opacity: 0.85, marginTop: 4 }}>连续签到天数</div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 28, fontWeight: 800, lineHeight: 1 }}>
+                  {signInMonthData?.totalSignInDays ?? 0}
+                </div>
+                <div style={{ fontSize: 12, opacity: 0.85, marginTop: 4 }}>累计签到天数</div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 28, fontWeight: 800, lineHeight: 1 }}>
+                  {signInMonthData?.currentPoints ?? 0}
+                </div>
+                <div style={{ fontSize: 12, opacity: 0.85, marginTop: 4 }}>当前积分</div>
+              </div>
+            </div>
+          </div>
+
+          {/* 日历区 */}
+          <div style={{ padding: '16px 20px 20px', background: '#fff' }}>
+            {/* 月份切换 */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <Button
+                type="text"
+                icon={<LeftOutlined />}
+                size="small"
+                onClick={() => handleSignInMonthChange(-1)}
+              />
+              <span style={{ fontWeight: 600, fontSize: 15 }}>
+                {signInViewYear}年 {signInViewMonth}月
+              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 12, color: '#fa8c16' }}>
+                  🎫 剩余补签次数：{signInMonthData?.remainMakeUpCount ?? 0} 次
+                </span>
+                <Button
+                  type="text"
+                  icon={<RightOutlined />}
+                  size="small"
+                  onClick={() => handleSignInMonthChange(1)}
+                  disabled={
+                    signInViewYear > moment().year() ||
+                    (signInViewYear === moment().year() && signInViewMonth >= moment().month() + 1)
+                  }
+                />
+              </div>
+            </div>
+
+            {/* 星期头 */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, marginBottom: 6 }}>
+              {['周日', '周一', '周二', '周三', '周四', '周五', '周六'].map((d) => (
+                <div key={d} style={{ textAlign: 'center', fontSize: 12, color: '#8c8c8c', padding: '4px 0' }}>{d}</div>
+              ))}
+            </div>
+
+            {/* 日历格子 */}
+            {signInMonthLoading ? (
+              <div style={{ textAlign: 'center', padding: '32px 0', color: '#999' }}>加载中...</div>
+            ) : (() => {
+              const days = signInMonthData?.days ?? [];
+              // 计算第一天是星期几
+              const firstDay = moment(`${signInViewYear}-${String(signInViewMonth).padStart(2, '0')}-01`).day();
+              const cells: React.ReactNode[] = [];
+              // 填充空格
+              for (let i = 0; i < firstDay; i++) {
+                cells.push(<div key={`empty-${i}`} />);
+              }
+              days.forEach((d) => {
+                const isSigned = d.signed;
+                const isToday = d.isToday;
+                const canMakeUp = d.canMakeUp && !isSigned && (signInMonthData?.remainMakeUpCount ?? 0) > 0;
+                const isMakeUpLoading = makeUpLoading === d.date;
+                const isMakeUpType = d.signType === 2;
+
+                cells.push(
+                  <div
+                    key={d.date}
+                    onClick={() => { if (canMakeUp && d.date) handleMakeUp(d.date); }}
+                    style={{
+                      borderRadius: 8,
+                      padding: '6px 2px',
+                      textAlign: 'center',
+                      cursor: canMakeUp ? 'pointer' : 'default',
+                      background: isToday
+                        ? 'linear-gradient(135deg, #e6f7ff, #bae7ff)'
+                        : isSigned
+                          ? 'linear-gradient(135deg, #f0f9ff, #e6f7ff)'
+                          : '#fafafa',
+                      border: isToday
+                        ? '1.5px solid #1890ff'
+                        : isSigned
+                          ? '1px solid #91d5ff'
+                          : canMakeUp
+                            ? '1px dashed #fa8c16'
+                            : '1px solid #f0f0f0',
+                      transition: 'all 0.2s',
+                      position: 'relative',
+                      opacity: isMakeUpLoading ? 0.6 : 1,
+                    }}
+                  >
+                    {/* 已签到勾 */}
+                    {isSigned && (
+                      <CheckCircleFilled style={{
+                        position: 'absolute',
+                        top: 2,
+                        right: 2,
+                        fontSize: 10,
+                        color: isMakeUpType ? '#fa8c16' : '#1890ff',
+                      }} />
+                    )}
+                    <div style={{
+                      fontSize: 14,
+                      fontWeight: isToday ? 700 : 500,
+                      color: isToday ? '#1890ff' : isSigned ? '#1890ff' : '#595959',
+                    }}>
+                      {d.day}
+                    </div>
+                    <div style={{ fontSize: 10, color: isSigned ? '#1890ff' : canMakeUp ? '#fa8c16' : '#bfbfbf', marginTop: 1 }}>
+                      {isMakeUpLoading ? '...' : `+${d.rewardPoints} 积分`}
+                    </div>
+                  </div>
+                );
+              });
+              return (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
+                  {cells}
+                </div>
+              );
+            })()}
+
+            {/* 图例 */}
+            <div style={{ display: 'flex', gap: 16, marginTop: 14, fontSize: 11, color: '#8c8c8c' }}>
+              <span><span style={{ color: '#1890ff' }}>●</span> 已签到</span>
+              <span><span style={{ color: '#fa8c16' }}>●</span> 补签</span>
+              <span style={{ borderBottom: '1px dashed #fa8c16', paddingBottom: 1 }}>虚线框</span>
+              <span>= 可补签</span>
+            </div>
+          </div>
+        </div>
+      </Modal>
       <div className="App" style={{marginLeft: 'auto'}}>
         {/* 其他内容 */}
         <Modal title="工作时间设定" footer={null} open={isMoneyOpen} onCancel={() => {
@@ -1763,99 +2450,206 @@ const [moYuData, setMoYuData] = useState<MoYuTimeType>({
             </Form>
           </div>
         </Modal>
-        {isMoneyVisible && (
-          <Tooltip
-            title={
-              holidayInfo ? (
-                <div style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '4px'
-                }}>
-                  <div style={{
-                    fontSize: '16px',
-                    fontWeight: 'bold',
-                    color: '#fff',
-                    textShadow: '0 1px 2px rgba(0,0,0,0.1)'
-                  }}>
-                    {holidayInfo.name}
-                  </div>
-                  <div style={{
-                    fontSize: '14px',
-                    color: '#fff',
-                    opacity: 0.9
-                  }}>
-                    {moment(holidayInfo.date).format('YYYY年MM月DD日')}
-                  </div>
-                  <div style={{
-                    fontSize: '18px',
-                    fontWeight: 'bold',
-                    color: '#fff',
-                    textShadow: '0 1px 2px rgba(0,0,0,0.1)'
-                  }}>
-                    {(() => {
-                      const now = moment();
-                      const holidayDate = moment(holidayInfo.date);
-                      const diffDays = holidayDate.diff(now, 'days');
-
-                      if (diffDays > 0) {
-                        return `还有 ${diffDays} 天 🎉`;
-                      } else {
-                        const diffHours = holidayDate.diff(now, 'hours') % 24;
-                        const diffMinutes = holidayDate.diff(now, 'minutes') % 60;
-                        const diffSeconds = holidayDate.diff(now, 'seconds') % 60;
-
-                        if (diffHours <= 0 && diffMinutes <= 0 && diffSeconds <= 0) {
-                          return '假期已到 🎉';
-                        }
-
-                        return `还有 ${String(diffHours).padStart(2, '0')}:${String(diffMinutes).padStart(2, '0')}:${String(diffSeconds).padStart(2, '0')} 🎉`;
-                      }
-                    })()}
-                  </div>
-                </div>
-              ) : '加载中...'
-            }
-            placement="top"
-            overlayClassName={holidayTooltipStyle}
-          >
-            <Button
-              type="primary"
-              shape="circle"
-              onClick={() => {
-                setIsMoneyOpen(true);
-              }}
-              className="money-button"
-            >
-              <div className="money-button-content">
-                <Tooltip title="点击查看今天吃什么" placement="top">
-                  <div className="money-button-emoji" onClick={(e) => {
-                    e.stopPropagation();
-                    setIsFoodRecommenderOpen(true);
-                  }}>
-                    {timeInfo.type === 'lunch' ? '🍱' : '🧑‍💻'}
-                  </div>
-                </Tooltip>
-                <div className="money-button-time">
-                  {timeInfo.type === 'lunch' ?
-                    `午餐: ${timeInfo.timeRemaining}` :
-                    `下班: ${timeInfo.timeRemaining}`
-                  }
-                </div>
-                {timeInfo.earnedAmount !== undefined && (
-                  <div className="money-button-amount">
-                    💰：{timeInfo.earnedAmount.toFixed(2)}
-                  </div>
-                )}
-              </div>
-            </Button>
-          </Tooltip>
-        )}
+        <MoneyButton
+          isMoneyVisible={isMoneyVisible}
+          holidayInfo={holidayInfo}
+          timeInfo={timeInfo}
+          holidayTooltipStyle={holidayTooltipStyle}
+          setIsMoneyOpen={setIsMoneyOpen}
+          setIsFoodRecommenderOpen={setIsFoodRecommenderOpen}
+        />
         <FoodRecommender
           isOpen={isFoodRecommenderOpen}
           onClose={() => setIsFoodRecommenderOpen(false)}
         />
+
+      {/* 开放平台 Modal */}
+      <Modal
+        title={
+          <Space>
+            <ApiOutlined />
+            开放平台 - 我的应用
+          </Space>
+        }
+        open={isOpenPlatformOpen}
+        onCancel={() => setIsOpenPlatformOpen(false)}
+        footer={null}
+        width={800}
+      >
+        <div style={{ marginBottom: 16 }}>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => setIsCreateAppOpen(true)}
+          >
+            创建应用
+          </Button>
+        </div>
+        <Table<API.FishAuthVO>
+          dataSource={myApps}
+          loading={appLoading}
+          rowKey="id"
+          pagination={false}
+          columns={[
+            {
+              title: '应用名称',
+              dataIndex: 'appName',
+              width: 120,
+            },
+            {
+              title: 'Client ID',
+              dataIndex: 'clientId',
+              width: 180,
+              render: (val: string) => (
+                <Space>
+                  <Typography.Text code copyable={{ text: val }} style={{ fontSize: 12 }}>
+                    {val}
+                  </Typography.Text>
+                </Space>
+              ),
+            },
+            {
+              title: 'Client Secret',
+              dataIndex: 'id',
+              width: 200,
+              render: (_: any, record: API.FishAuthVO) => {
+                const id = record.id!;
+                const detail = appDetailMap[id];
+                const visible = visibleSecrets[id];
+                return (
+                  <Space>
+                    {visible && detail?.clientSecret ? (
+                      <Typography.Text code style={{ fontSize: 11 }}>
+                        {detail.clientSecret}
+                      </Typography.Text>
+                    ) : (
+                      <Typography.Text type="secondary">••••••••</Typography.Text>
+                    )}
+                    <Button
+                      size="small"
+                      type="text"
+                      icon={visible ? <EyeInvisibleOutlined /> : <EyeOutlined />}
+                      onClick={() => handleShowSecret(id)}
+                    />
+                    {visible && detail?.clientSecret && (
+                      <Button
+                        size="small"
+                        type="text"
+                        icon={<CopyOutlined />}
+                        onClick={() => copyToClipboard(detail.clientSecret!)}
+                      />
+                    )}
+                    <Popconfirm
+                      title="确认重置 Secret？旧 Secret 将立即失效"
+                      onConfirm={() => handleResetSecret(id)}
+                      okText="确认"
+                      cancelText="取消"
+                    >
+                      <Button size="small" type="text" icon={<ReloadOutlined />} />
+                    </Popconfirm>
+                  </Space>
+                );
+              },
+            },
+            {
+              title: '状态',
+              dataIndex: 'status',
+              width: 70,
+              render: (val: number) =>
+                val === 1 ? <Tag color="success">启用</Tag> : <Tag color="default">禁用</Tag>,
+            },
+            {
+              title: '操作',
+              width: 100,
+              render: (_: any, record: API.FishAuthVO) => (
+                <Space>
+                  <Button
+                    size="small"
+                    type="link"
+                    onClick={() => {
+                      setEditingApp(record);
+                      editAppForm.setFieldsValue({
+                        appName: record.appName,
+                        appDesc: record.appDesc,
+                        appWebsite: record.appWebsite,
+                        redirectUri: record.redirectUri,
+                        status: record.status,
+                      });
+                      setIsEditAppOpen(true);
+                    }}
+                  >
+                    编辑
+                  </Button>
+                  <Popconfirm
+                    title="确认删除该应用？"
+                    onConfirm={() => handleDeleteApp(record.id!)}
+                    okText="确认"
+                    cancelText="取消"
+                  >
+                    <Button size="small" type="link" danger icon={<DeleteOutlined />} />
+                  </Popconfirm>
+                </Space>
+              ),
+            },
+          ]}
+        />
+      </Modal>
+
+      {/* 创建应用 Modal */}
+      <Modal
+        title="创建应用"
+        open={isCreateAppOpen}
+        onCancel={() => { setIsCreateAppOpen(false); createAppForm.resetFields(); }}
+        onOk={() => createAppForm.submit()}
+        okText="创建"
+        cancelText="取消"
+      >
+        <Form form={createAppForm} onFinish={handleCreateApp} layout="vertical">
+          <Form.Item name="appName" label="应用名称" rules={[{ required: true, message: '请输入应用名称' }]}>
+            <Input placeholder="请输入应用名称" />
+          </Form.Item>
+          <Form.Item name="redirectUri" label="回调地址" rules={[{ required: true, message: '请输入回调地址' }]}>
+            <Input placeholder="多个地址用逗号分隔" />
+          </Form.Item>
+          <Form.Item name="appWebsite" label="应用网站">
+            <Input placeholder="请输入应用网站地址（选填）" />
+          </Form.Item>
+          <Form.Item name="appDesc" label="应用描述">
+            <Input.TextArea placeholder="请输入应用描述（选填）" rows={3} />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* 编辑应用 Modal */}
+      <Modal
+        title="编辑应用"
+        open={isEditAppOpen}
+        onCancel={() => { setIsEditAppOpen(false); editAppForm.resetFields(); }}
+        onOk={() => editAppForm.submit()}
+        okText="保存"
+        cancelText="取消"
+      >
+        <Form form={editAppForm} onFinish={handleUpdateApp} layout="vertical">
+          <Form.Item name="appName" label="应用名称" rules={[{ required: true, message: '请输入应用名称' }]}>
+            <Input placeholder="请输入应用名称" />
+          </Form.Item>
+          <Form.Item name="redirectUri" label="回调地址">
+            <Input placeholder="多个地址用逗号分隔" />
+          </Form.Item>
+          <Form.Item name="appWebsite" label="应用网站">
+            <Input placeholder="请输入应用网站地址（选填）" />
+          </Form.Item>
+          <Form.Item name="appDesc" label="应用描述">
+            <Input.TextArea placeholder="请输入应用描述（选填）" rows={3} />
+          </Form.Item>
+          <Form.Item name="status" label="状态">
+            <Select>
+              <Select.Option value={1}>启用</Select.Option>
+              <Select.Option value={0}>禁用</Select.Option>
+            </Select>
+          </Form.Item>
+        </Form>
+      </Modal>
       </div>
 
       {/* 添加老板键设置Modal */}
@@ -1916,16 +2710,16 @@ const [moYuData, setMoYuData] = useState<MoYuTimeType>({
         open={isSiteConfigOpen}
         onCancel={() => setIsSiteConfigOpen(false)}
         footer={null}
+        width={620}
       >
         <Form
           form={siteConfigForm}
           initialValues={siteConfig}
+          layout="vertical"
           onFinish={(values) => {
-            setSiteConfig(values);
-            localStorage.setItem('siteConfig', JSON.stringify(values));
-
-            // 更新通知设置
-            setNotificationEnabled(values.notificationEnabled);
+            const configToSave = { ...values, _layoutSet: true };
+            setSiteConfig(configToSave);
+            localStorage.setItem('siteConfig', JSON.stringify(configToSave));
 
             // 更新所有图标相关的标签
             const iconTypes = ['icon', 'shortcut icon', 'apple-touch-icon'];
@@ -1941,12 +2735,19 @@ const [moYuData, setMoYuData] = useState<MoYuTimeType>({
               document.head.appendChild(newLink);
             });
 
-            // 更新网站标题
-            document.title = values.siteName;
+            // 使用setTimeout确保localStorage更新完成后再设置标题
+            setTimeout(() => {
+              document.title = values.siteName;
+            }, 0);
+
+            // 触发自定义事件，通知其他组件网站设置已更新
+            window.dispatchEvent(new CustomEvent('siteConfigChange'));
+
             message.success('网站设置已保存');
             setIsSiteConfigOpen(false);
           }}
         >
+          {/* 第一行：网站名称 */}
           <Form.Item
             label="网站名称"
             name="siteName"
@@ -1955,101 +2756,173 @@ const [moYuData, setMoYuData] = useState<MoYuTimeType>({
             <Input placeholder="请输入网站名称"/>
           </Form.Item>
 
-          <Form.Item
-            label="网站图标"
-            name="siteIcon"
-            help="可以上传图片，输入在线图片地址，或者选择下方默认图标"
-          >
-            <div style={{display: 'flex', gap: '8px', alignItems: 'flex-start', flexWrap: 'wrap'}}>
-              <Upload
-                accept="image/*"
-                showUploadList={false}
-                beforeUpload={async (file) => {
-                  const url = await handleUpload(file);
-                  if (url) {
-                    siteConfigForm.setFieldValue('siteIcon', url);
-                  }
-                  return false;
-                }}
-              >
-                <Button icon={<UploadOutlined/>} loading={uploading}>
-                  上传图标
-                </Button>
-              </Upload>
-              <Input
-                placeholder="请输入图标地址（选填）"
-                onChange={(e) => {
-                  const value = e.target.value;
-                  siteConfigForm.setFieldValue('siteIcon', value);
-                }}
-                value={siteConfigForm.getFieldValue('siteIcon')}
-                style={{flex: 1}}
-              />
-              {siteConfigForm.getFieldValue('siteIcon') && (
-                <div style={{
-                  marginLeft: '8px',
-                  padding: '4px',
-                  border: '1px solid #d9d9d9',
-                  borderRadius: '4px'
-                }}>
-                  <Avatar
-                    src={siteConfigForm.getFieldValue('siteIcon')}
-                    size={64}
+          {/* 图标区域：卡片式，左侧预览 + 右侧操作 */}
+          <Form.Item label="网站图标" name="siteIcon" style={{marginBottom: 8}}>
+            <div style={{
+              display: 'flex',
+              gap: '16px',
+              padding: '12px 14px',
+              background: '#fafafa',
+              border: '1px solid #f0f0f0',
+              borderRadius: '8px',
+            }}>
+              {/* 左：当前图标预览 */}
+              <div style={{flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4}}>
+                <Avatar
+                  src={siteConfigForm.getFieldValue('siteIcon')}
+                  size={64}
+                  shape="square"
+                  style={{border: '1px solid #e8e8e8', borderRadius: 8}}
+                />
+                <span style={{fontSize: 11, color: '#999'}}>当前图标</span>
+              </div>
+              {/* 右：上传+输入+默认图标 */}
+              <div style={{flex: 1, display: 'flex', flexDirection: 'column', gap: '10px'}}>
+                <div style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
+                  <Upload
+                    accept="image/*"
+                    showUploadList={false}
+                    beforeUpload={async (file) => {
+                      const url = await handleUpload(file);
+                      if (url) {
+                        siteConfigForm.setFieldValue('siteIcon', url);
+                      }
+                      return false;
+                    }}
+                  >
+                    <Button icon={<UploadOutlined/>} loading={uploading} size="small">上传图标</Button>
+                  </Upload>
+                  <Input
+                    size="small"
+                    placeholder="或输入在线图片地址"
+                    onChange={(e) => siteConfigForm.setFieldValue('siteIcon', e.target.value)}
+                    value={siteConfigForm.getFieldValue('siteIcon')}
+                    style={{flex: 1}}
                   />
                 </div>
-              )}
-            </div>
-          </Form.Item>
-
-          <Form.Item label="默认图标">
-            <div style={{display: 'flex', gap: '8px', flexWrap: 'wrap'}}>
-              {defaultSiteIcons.map((icon, index) => (
-                <div
-                  key={index}
-                  onClick={() => {
-                    siteConfigForm.setFieldValue('siteIcon', icon);
-                  }}
-                  style={{
-                    cursor: 'pointer',
-                    border: siteConfigForm.getFieldValue('siteIcon') === icon ? '2px solid #1890ff' : '2px solid transparent',
-                    borderRadius: '4px',
-                    padding: '4px',
-                  }}
-                >
-                  <Avatar src={icon} size={64}/>
+                <div style={{display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap'}}>
+                  <span style={{fontSize: 12, color: '#999'}}>默认：</span>
+                  {defaultSiteIcons.map((icon, index) => (
+                    <div
+                      key={index}
+                      onClick={() => siteConfigForm.setFieldValue('siteIcon', icon)}
+                      style={{
+                        cursor: 'pointer',
+                        border: siteConfigForm.getFieldValue('siteIcon') === icon ? '2px solid #1890ff' : '2px solid transparent',
+                        borderRadius: '6px',
+                        padding: '2px',
+                        transition: 'border-color 0.2s',
+                      }}
+                    >
+                      <Avatar src={icon} size={44} shape="square" style={{borderRadius: 4}}/>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </div>
             </div>
           </Form.Item>
 
-          <Form.Item
-            label="消息闪烁"
-            name="notificationEnabled"
-            valuePropName="checked"
-            help="关闭后，收到新消息时标题和图标不会闪烁"
-          >
-            <Switch
-              checkedChildren="开启"
-              unCheckedChildren="关闭"
-            />
-          </Form.Item>
+          {/* 第三行：图片显示 + 导航布局 */}
+          <Row gutter={16} style={{marginTop: 4}}>
+            <Col span={12}>
+              <Form.Item
+                label="图片显示"
+                name="imageDisplayMode"
+              >
+                <Select
+                  placeholder="请选择"
+                  options={[
+                    { label: '显示所有图片', value: 'show' },
+                    { label: '隐藏所有图片', value: 'hide' }
+                  ]}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="导航布局"
+                name="layoutMode"
+              >
+                <Select
+                  placeholder="请选择"
+                  options={[
+                    { label: '侧边菜单 (side)', value: 'side' },
+                    { label: '顶部菜单 (top)', value: 'top' },
+                    { label: '混合菜单 (mix)', value: 'mix' },
+                  ]}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
 
-          <Form.Item
-            label="图片显示设置"
-            name="imageDisplayMode"
-            help="设置聊天记录中图片的显示方式"
-          >
-            <Select
-              options={[
-                { label: '显示所有图片', value: 'show' },
-                { label: '隐藏所有图片', value: 'hide' }
-              ]}
-            />
-          </Form.Item>
+          {/* 鱼小圈开关 */}
+          <div style={{
+            padding: '10px 14px',
+            background: '#fafafa',
+            border: '1px solid #f0f0f0',
+            borderRadius: '8px',
+            marginBottom: 20,
+          }}>
+            <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
+              <div>
+                <div style={{fontWeight: 500, fontSize: 14, color: '#333'}}>鱼小圈动态栏</div>
+                <div style={{fontSize: 12, color: '#999', marginTop: 2}}>顶部/混合布局下，聊天室侧边显示鱼小圈动态</div>
+              </div>
+              <Form.Item name="showFishCircle" valuePropName="checked" style={{marginBottom: 0}}>
+                <Switch checkedChildren="显示" unCheckedChildren="隐藏"/>
+              </Form.Item>
+            </div>
+            <Form.Item noStyle shouldUpdate={(prev, cur) => prev.showFishCircle !== cur.showFishCircle}>
+              {({ getFieldValue }) =>
+                getFieldValue('showFishCircle') && (
+                  <div style={{marginTop: 10, display: 'flex', alignItems: 'center', gap: 8}}>
+                    <span style={{fontSize: 13, color: '#555', flexShrink: 0}}>显示位置</span>
+                    <Form.Item name="fishCirclePosition" style={{marginBottom: 0, flex: 1}}>
+                      <Radio.Group size="small" buttonStyle="solid">
+                        <Radio.Button value="left">⬅ 左侧</Radio.Button>
+                        <Radio.Button value="right">右侧 ➡</Radio.Button>
+                      </Radio.Group>
+                    </Form.Item>
+                  </div>
+                )
+              }
+            </Form.Item>
+          </div>
 
-          <Form.Item>
-            <Space>
-              <Button type="primary" htmlType="submit">
+          {/* 聊天室宠物开关 */}
+          <div style={{
+            padding: '10px 14px',
+            background: '#fafafa',
+            border: '1px solid #f0f0f0',
+            borderRadius: '8px',
+            marginBottom: 20,
+          }}>
+            <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
+              <div>
+                <div style={{fontWeight: 500, fontSize: 14, color: '#333'}}>聊天室宠物</div>
+                <div style={{fontSize: 12, color: '#999', marginTop: 2}}>聊天室内可拖动的宠物小图标</div>
+              </div>
+              <Form.Item name="showChatPet" valuePropName="checked" style={{marginBottom: 0}}>
+                <Switch checkedChildren="显示" unCheckedChildren="隐藏"/>
+              </Form.Item>
+            </div>
+            <Form.Item noStyle shouldUpdate={(prev, cur) => prev.showChatPet !== cur.showChatPet}>
+              {({ getFieldValue }) =>
+                getFieldValue('showChatPet') && (
+                  <div style={{marginTop: 10, display: 'flex', alignItems: 'center', gap: 8}}>
+                    <span style={{fontSize: 13, color: '#555', flexShrink: 0}}>宠物大小</span>
+                    <Form.Item name="chatPetSize" style={{marginBottom: 0, flex: 1}}>
+                      <Slider min={40} max={200} step={10} marks={{ 40: '小', 100: '中', 200: '大' }} />
+                    </Form.Item>
+                  </div>
+                )
+              }
+            </Form.Item>
+          </div>
+
+          <Form.Item style={{marginBottom: 0}}>
+            <div style={{display: 'flex', gap: 8, justifyContent: 'center'}}>
+              <Button type="primary" htmlType="submit" style={{paddingLeft: 28, paddingRight: 28}}>
                 保存设置
               </Button>
               <Button onClick={() => setIsSiteConfigOpen(false)}>
@@ -2061,9 +2934,6 @@ const [moYuData, setMoYuData] = useState<MoYuTimeType>({
                   siteConfigForm.setFieldsValue(defaultSiteConfig);
                   setSiteConfig(defaultSiteConfig);
                   localStorage.setItem('siteConfig', JSON.stringify(defaultSiteConfig));
-
-                  // 更新通知设置
-                  setNotificationEnabled(defaultSiteConfig.notificationEnabled);
 
                   // 更新所有图标相关的标签
                   const iconTypes = ['icon', 'shortcut icon', 'apple-touch-icon'];
@@ -2079,17 +2949,126 @@ const [moYuData, setMoYuData] = useState<MoYuTimeType>({
                     document.head.appendChild(newLink);
                   });
 
-                  // 更新网站标题
-                  document.title = defaultSiteConfig.siteName;
+                  // 使用setTimeout确保localStorage更新完成后再设置标题
+                  setTimeout(() => {
+                    document.title = defaultSettings.title || '摸鱼岛';
+                  }, 0);
+
+                  // 触发自定义事件，通知其他组件网站设置已更新
+                  window.dispatchEvent(new CustomEvent('siteConfigChange'));
+
                   message.success('网站设置已重置为默认样式');
                 }}
               >
                 重置为默认样式
               </Button>
-            </Space>
+            </div>
           </Form.Item>
         </Form>
       </Modal>
+      {/* 兑换码 Modal */}
+      <Modal
+        title={<><GiftOutlined style={{ marginRight: 8, color: '#fa8c16' }} />兑换码</>}
+        open={isRedeemCodeOpen}
+        onCancel={() => setIsRedeemCodeOpen(false)}
+        footer={null}
+        width={400}
+        destroyOnClose
+      >
+        <div style={{ padding: '8px 0 16px' }}>
+          <p style={{ color: '#666', marginBottom: 16 }}>请输入兑换码，兑换成功后奖励将自动发放到您的账户。</p>
+          <Input
+            placeholder="请输入兑换码"
+            value={redeemCode}
+            onChange={(e) => setRedeemCode(e.target.value)}
+            onPressEnter={async () => {
+              if (!redeemCode.trim()) {
+                message.warning('请输入兑换码');
+                return;
+              }
+              setRedeemLoading(true);
+              try {
+                const res = await useRedeemCodeUsingPost({ code: redeemCode.trim() });
+                if (res.code === 0) {
+                  message.success(res.data?.message || '兑换成功！');
+                  setIsRedeemCodeOpen(false);
+                  // 刷新用户信息
+                  const userInfo = await getLoginUserUsingGet();
+                  if (userInfo.data) {
+                    setInitialState((s) => ({ ...s, currentUser: userInfo.data }));
+                  }
+                } else {
+                  message.error(res.message || '兑换失败，请检查兑换码是否正确');
+                }
+              } catch (e: any) {
+                message.error(e?.message || '兑换失败，请稍后重试');
+              } finally {
+                setRedeemLoading(false);
+              }
+            }}
+            style={{ marginBottom: 16 }}
+            allowClear
+          />
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <Button onClick={() => setIsRedeemCodeOpen(false)}>取消</Button>
+            <Button
+              type="primary"
+              loading={redeemLoading}
+              onClick={async () => {
+                if (!redeemCode.trim()) {
+                  message.warning('请输入兑换码');
+                  return;
+                }
+                setRedeemLoading(true);
+                try {
+                  const res = await useRedeemCodeUsingPost({ code: redeemCode.trim() });
+                  if (res.code === 0) {
+                    message.success(res.data?.message || '兑换成功！');
+                    setIsRedeemCodeOpen(false);
+                    // 刷新用户信息
+                    const userInfo = await getLoginUserUsingGet();
+                    if (userInfo.data) {
+                      setInitialState((s) => ({ ...s, currentUser: userInfo.data }));
+                    }
+                  } else {
+                    message.error(res.message || '兑换失败，请检查兑换码是否正确');
+                  }
+                } catch (e: any) {
+                  message.error(e?.message || '兑换失败，请稍后重试');
+                } finally {
+                  setRedeemLoading(false);
+                }
+              }}
+            >
+              立即兑换
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <UserDetailModal
+        user={
+          currentUser?.id
+            ? {
+                id: currentUser.id,
+                userName: currentUser.userName,
+                userAvatar: currentUser.userAvatar,
+                momentsBgUrl: currentUser.momentsBgUrl,
+                followerCount: currentUser.followerCount,
+                followingCount: currentUser.followingCount,
+                level: currentUser.level,
+                points: currentUser.points,
+                isAdmin: currentUser.userRole === 'admin',
+                vip: currentUser.vip,
+                avatarFramerUrl: currentUser.avatarFramerUrl,
+                titleId: currentUser.titleId,
+                titleIdList: currentUser.titleIdList,
+              }
+            : null
+        }
+        open={isMyCardOpen}
+        onClose={() => setIsMyCardOpen(false)}
+      />
     </div>
   )
 };

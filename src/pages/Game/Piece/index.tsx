@@ -12,6 +12,7 @@ import { wsService } from '@/services/websocket';
 
 // 添加消息类型定义
 interface ChatMessage {
+  roomId: string;
   id: string;
   content: string;
   sender: {
@@ -76,7 +77,7 @@ function App() {
   const [activeTab, setActiveTab] = useState<'chat' | 'history'>('chat');
   const [hasSentInvitation, setHasSentInvitation] = useState(false);
   const [invitationCooldown, setInvitationCooldown] = useState(0);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   // 添加从路由获取房间号的逻辑
   useEffect(() => {
@@ -191,7 +192,9 @@ function App() {
 
   // 添加聊天相关的函数
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
   };
 
   // 在消息列表更新时自动滚动到底部
@@ -540,6 +543,7 @@ function App() {
     }
 
     const newMessage: ChatMessage = {
+      roomId: roomId,
       id: `${Date.now()}`,
       content: chatInputValue,
       sender: {
@@ -1049,7 +1053,7 @@ function App() {
                 {/* 聊天窗口 - 仅在联机模式下显示 */}
                 {gameMode === 'online' && activeTab === 'chat' && (
                   <div className="flex-1 flex flex-col min-h-0">
-                    <div className="h-[500px] overflow-y-auto mb-4 space-y-4 px-2" style={{ height: '500px' }}>
+                    <div ref={chatContainerRef} className="h-[500px] overflow-y-auto mb-4 space-y-4 px-2" style={{ height: '500px' }}>
                       {chatMessages.map((msg) => (
                         <div
                           key={msg.id}
@@ -1084,7 +1088,6 @@ function App() {
                           </div>
                         </div>
                       ))}
-                      <div ref={messagesEndRef} />
                     </div>
                     <div className="flex gap-3 mt-auto pt-4 pb-4 border-t">
                       <Input.TextArea

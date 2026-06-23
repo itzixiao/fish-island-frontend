@@ -53,8 +53,23 @@ export async function getRedPacketRecordsUsingGet(
   params: API.getRedPacketRecordsUsingGETParams,
   options?: { [key: string]: any },
 ) {
-  return request<API.BaseResponseListVO_>('/api/redpacket/records', {
+  return request<API.BaseResponseListVO2>('/api/redpacket/records', {
     method: 'GET',
+    params: {
+      ...params,
+    },
+    ...(options || {}),
+  });
+}
+
+/** 手动标记/取消标记脚本用户（仅管理员） POST /api/redpacket/script/mark */
+export async function markScriptUserUsingPost(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: API.markScriptUserUsingPOSTParams,
+  options?: { [key: string]: any },
+) {
+  return request<API.BaseResponseBoolean_>('/api/redpacket/script/mark', {
+    method: 'POST',
     params: {
       ...params,
     },

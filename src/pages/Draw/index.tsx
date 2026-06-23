@@ -1,570 +1,551 @@
-import type React from "react"
+import React, { useState, useEffect } from 'react';
+import { PageContainer } from '@ant-design/pro-components';
+import { Card, List, Button, Typography, Space, Badge, Input, Modal, Form, message, Empty, Avatar, Tooltip, Tag, Row, Col, Switch, Popconfirm, Radio, InputNumber } from 'antd';
+import { SearchOutlined, PlusOutlined, UserOutlined, TeamOutlined, ClockCircleOutlined, InfoCircleOutlined, ReloadOutlined, DeleteOutlined } from '@ant-design/icons';
+import { getAllRoomsUsingGet, createRoomUsingPost, joinRoomUsingPost, removeRoomUsingPost } from '@/services/backend/drawGameController';
+import { useModel, history } from '@umijs/max';
+import './index.less';
+import { wsService } from '@/services/websocket';
 
-import { useState, useRef, useEffect } from "react"
-import { Button, Card, Input, Tabs, Avatar, Badge, List, Typography, Space, Slider, Row, Col, Layout, Form } from "antd"
-import {
-  EditOutlined,
-  DeleteOutlined,
-  UndoOutlined,
-  ClockCircleOutlined,
-  CrownOutlined,
-  SendOutlined,
-  TeamOutlined,
-} from "@ant-design/icons"
-import { useModel } from '@umijs/max'
-import { wsService } from '@/services/websocket'
-import { message } from 'antd'
+const { Text } = Typography;
 
-const { Title, Text, Paragraph } = Typography
-const { TabPane } = Tabs
-const { Header, Content, Footer } = Layout
+// 使用与后端接口一致的类型
+type RoomItem = API.DrawRoomVO;
 
-// 游戏组件
-function GameRoom({ roomId, playerName, onExit }: { roomId: string; playerName: string; onExit: () => void }) {
-  const [currentWord, setCurrentWord] = useState<string>("苹果")
-  const [timeLeft, setTimeLeft] = useState<number>(60)
-  const [isDrawing, setIsDrawing] = useState<boolean>(false)
-  const [guess, setGuess] = useState<string>("")
-  const [messages, setMessages] = useState<Array<{ user: string; message: string; isCorrect?: boolean }>>([
-    { user: "系统", message: "游戏开始！" },
-  ])
-  const [players, setPlayers] = useState<Array<{
-    id: number;
-    name: string;
-    avatar: string;
-    score: number;
-    isDrawing: boolean;
-  }>>([])
-  const { initialState } = useModel('@@initialState')
+const DrawRoomPage: React.FC = () => {
+  // 使用initialState获取当前用户信息
+  const { initialState } = useModel('@@initialState');
+  const currentUser = initialState?.currentUser;
 
-  const currentUser = initialState?.currentUser
+  // 调试信息
+  console.log('initialState:', initialState);
+  console.log('currentUser:', currentUser);
 
-  const handleUserListUpdate = (data: any) => {
-    setPlayers(data.data.map((user: any) => ({
-      id: user.id,
-      name: user.userName,
-      avatar: user.userAvatar,
-      score: user.score || 0,
-      isDrawing: user.isDrawing || false
-    })))
-  }
+  // 状态管理
+  const [rooms, setRooms] = useState<RoomItem[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
 
-  const handleUserJoin = (data: any) => {
-    const newUser = data.data
-    setPlayers(prev => [...prev, {
-      id: newUser.id,
-      name: newUser.userName,
-      avatar: newUser.userAvatar,
-      score: newUser.score || 0,
-      isDrawing: newUser.isDrawing || false
-    }])
-    setMessages(prev => [...prev, { user: "系统", message: `${newUser.userName} 加入了房间` }])
-  }
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [createRoomVisible, setCreateRoomVisible] = useState(false);
+  const [customRounds, setCustomRounds] = useState<boolean>(false);
 
-  const handleUserLeave = (data: any) => {
-    const userId = data.data
-    setPlayers(prev => prev.filter(player => player.id !== userId))
-    const leavingUser = players.find(p => p.id === userId)
-    if (leavingUser) {
-      setMessages(prev => [...prev, { user: "系统", message: `${leavingUser.name} 离开了房间` }])
-    }
-  }
-  useEffect(() => {
-    // 添加用户列表更新处理器
-    wsService.addMessageHandler('roomDrawUserList', handleUserListUpdate)
-    wsService.addMessageHandler('roomDrawUserJoin', handleUserJoin)
-    wsService.addMessageHandler('roomDrawUserLeave', handleUserLeave)
+  const [form] = Form.useForm();
 
-    return () => {
-      wsService.removeMessageHandler('roomDrawUserList', handleUserListUpdate)
-      wsService.removeMessageHandler('roomDrawUserJoin', handleUserJoin)
-      wsService.removeMessageHandler('roomDrawUserLeave', handleUserLeave)
-    }
-  }, [roomId])
-
-
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const [context, setContext] = useState<CanvasRenderingContext2D | null>(null)
-  const [color, setColor] = useState<string>("#000000")
-  const [brushSize, setBrushSize] = useState<number>(5)
-  const [tool, setTool] = useState<"pencil" | "eraser">("pencil")
-
-  // 初始化画布
-  useEffect(() => {
-    if (canvasRef.current) {
-      const canvas = canvasRef.current
-      const ctx = canvas.getContext("2d")
-
-      // 获取画布的显示尺寸
-      const displayWidth = canvas.offsetWidth
-      const displayHeight = canvas.offsetHeight
-
-      // 设置画布的实际尺寸为显示尺寸的2倍，以提高清晰度
-      canvas.width = displayWidth * 2
-      canvas.height = displayHeight * 2
-
-      if (ctx) {
-        ctx.lineCap = "round"
-        ctx.lineJoin = "round"
-        // 设置缩放比例
-        ctx.scale(2, 2)
-        setContext(ctx)
+  // 获取房间列表
+  const fetchRooms = async () => {
+    setLoading(true);
+    try {
+      const res = await getAllRoomsUsingGet();
+      if (res.data && res.code === 0) {
+        setRooms(res.data);
+      } else {
+        message.error('获取房间列表失败');
       }
+    } catch (error) {
+      console.error('获取房间列表出错:', error);
+      message.error('获取房间列表出错');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 初始加载房间列表
+  useEffect(() => {
+    fetchRooms();
+  }, []);
+
+  // 过滤房间列表
+  const filteredRooms = rooms.filter(room =>
+    (room.creatorName?.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+    room.roomId?.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+    room.wordHint?.toLowerCase().includes(searchKeyword.toLowerCase()))
+  );
+
+  // 判断当前用户是否是管理员
+  const isAdmin = currentUser?.userRole === 'admin';
+
+  // 删除房间
+  const handleRemoveRoom = async (roomId: string) => {
+    try {
+      const res = await removeRoomUsingPost({ roomId });
+      if (res.data && res.code === 0) {
+        message.success('房间删除成功');
+        fetchRooms(); // 刷新房间列表
+      } else {
+        message.error(res.message || '删除房间失败');
+      }
+    } catch (error) {
+      console.error('删除房间出错:', error);
+      message.error('删除房间失败，请稍后再试');
+    }
+  };
+
+  // 计算房间剩余时间
+  const getRemainingTime = (room: RoomItem) => {
+    if (!room.roundEndTime) return null;
+
+    const now = Date.now();
+    const endTime = room.roundEndTime;
+    const remainingSeconds = Math.max(0, Math.floor((endTime - now) / 1000));
+
+    return remainingSeconds > 0 ? `${remainingSeconds}秒` : '即将结束';
+  };
+
+  // 创建房间
+  const handleCreateRoom = async (values: any) => {
+    try {
+      const res = await createRoomUsingPost({
+        maxPlayers: values.maxPlayers,
+        totalRounds: values.totalRounds || 3,
+        creatorOnlyMode: !values.creatorOnlyMode,
+        wordType: values.wordType || '', // 添加词库类型参数
+      });
+
+      if (res.data && res.code === 0) {
+        message.success('创建房间成功');
+        setCreateRoomVisible(false);
+        form.resetFields();
+        setCustomRounds(false);
+
+        // 创建完后直接进入房间
+        history.push(`/game/draw/${res.data}`);
+      } else {
+        message.error(res.message || '创建房间失败');
+      }
+    } catch (error) {
+      console.error('创建房间出错:', error);
+      message.error('创建房间失败，请稍后再试');
+    }
+  };
+
+  // 添加发送邀请的函数
+  const [hasSentInvitation, setHasSentInvitation] = useState(false);
+  const [invitationCooldown, setInvitationCooldown] = useState(0);
+  
+  const handleSendInvitation = (roomId: string | undefined) => {
+    if (!currentUser?.id) {
+      message.error('请先登录！');
+      return;
     }
 
-    // 倒计时
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer)
-          return 0
-        }
-        return prev - 1
-      })
-    }, 1000)
-
-    return () => clearInterval(timer)
-  }, [])
-
-  // 绘画功能
-  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!context) return
-
-    const canvas = canvasRef.current
-    if (!canvas) return
-
-    const rect = canvas.getBoundingClientRect()
-    // 计算鼠标在画布上的实际位置
-    const x = (e.clientX - rect.left) * (canvas.width / (rect.width * 2))
-    const y = (e.clientY - rect.top) * (canvas.height / (rect.height * 2))
-
-    context.beginPath()
-    context.moveTo(x, y)
-    setIsDrawing(true)
-
-    // 在开始绘画时设置画笔属性
-    if (tool === "eraser") {
-      context.strokeStyle = "#FFFFFF"
-    } else {
-      context.strokeStyle = color
-    }
-    context.lineWidth = brushSize
-  }
-
-  const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDrawing || !context) return
-
-    const canvas = canvasRef.current
-    if (!canvas) return
-
-    const rect = canvas.getBoundingClientRect()
-    // 计算鼠标在画布上的实际位置
-    const x = (e.clientX - rect.left) * (canvas.width / (rect.width * 2))
-    const y = (e.clientY - rect.top) * (canvas.height / (rect.height * 2))
-
-    context.lineTo(x, y)
-    context.stroke()
-  }
-
-  const stopDrawing = () => {
-    if (!context) return
-    context.closePath()
-    setIsDrawing(false)
-  }
-
-  const clearCanvas = () => {
-    if (!context || !canvasRef.current) return
-    context.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height)
-  }
-
-  const handleGuessSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!guess.trim()) return
-
-    const isCorrect = guess === currentWord
-
-    setMessages((prev) => [
-      ...prev,
-      {
-        user: "你",
-        message: guess,
-        isCorrect,
-      },
-    ])
-
-    if (isCorrect) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          user: "系统",
-          message: "恭喜你猜对了！🎉",
-        },
-      ])
+    if (hasSentInvitation) {
+      message.warning('你已经发送过邀请了，请等待60秒后再试');
+      return;
     }
 
-    setGuess("")
-  }
-
-  return (
-    <Layout style={{ minHeight: "100vh", background: "#f0f2f5" }}>
-      <Content style={{ padding: "24px", maxWidth: "1400px", margin: "0 auto" }}>
-        <Row justify="space-between" align="middle" style={{ marginBottom: "24px" }}>
-          <Col>
-            <Title level={2} style={{ margin: 0 }}>
-              你画我猜 🎨
-            </Title>
-          </Col>
-          <Col>
-            <Space>
-              <Text>房间号: {roomId}</Text>
-              <Button type="primary" danger onClick={onExit}>
-                退出房间
-              </Button>
-            </Space>
-          </Col>
-        </Row>
-
-        <Row gutter={[16, 16]}>
-          {/* 上方画布区域 */}
-          <Col span={24}>
-            <Card
-              title={
-                <Row justify="space-between" align="middle">
-                  <Col>
-                    <Space>
-                      <span>绘画区域</span>
-                      <Badge
-                        count={`提示词: ${players[0]?.isDrawing ? currentWord : "_ ".repeat(currentWord.length)}`}
-                        style={{ backgroundColor: "#f0f0f0", color: "#000000" }}
-                      />
-                    </Space>
-                  </Col>
-                  <Col>
-                    <Space>
-                      <ClockCircleOutlined style={{ color: "#fa8c16" }} />
-                      <Text strong style={{ color: "#fa8c16" }}>
-                        {timeLeft}秒
-                      </Text>
-                    </Space>
-                  </Col>
-                </Row>
-              }
-            >
-              <Space direction="vertical" style={{ width: "100%" }}>
-                <Row gutter={8} align="middle">
-                  <Col>
-                    <Button
-                      type={tool === "pencil" ? "primary" : "default"}
-                      icon={<EditOutlined />}
-                      onClick={() => setTool("pencil")}
-                    >
-                      画笔
-                    </Button>
-                  </Col>
-                  <Col>
-                    <Button
-                      type={tool === "eraser" ? "primary" : "default"}
-                      icon={<DeleteOutlined />}
-                      onClick={() => setTool("eraser")}
-                    >
-                      橡皮
-                    </Button>
-                  </Col>
-                  <Col>
-                    <Button icon={<UndoOutlined />} onClick={clearCanvas}>
-                      清空
-                    </Button>
-                  </Col>
-                  <Col flex="auto">
-                    <Row gutter={8} align="middle" justify="end">
-                      <Col>
-                        <Text>颜色:</Text>
-                      </Col>
-                      <Col>
-                        <input
-                          type="color"
-                          value={color}
-                          onChange={(e) => setColor(e.target.value)}
-                          style={{ width: "32px", height: "32px", cursor: "pointer" }}
-                        />
-                      </Col>
-                      <Col>
-                        <Text>粗细:</Text>
-                      </Col>
-                      <Col span={8}>
-                        <Slider min={1} max={20} value={brushSize} onChange={(value) => setBrushSize(value)} />
-                      </Col>
-                    </Row>
-                  </Col>
-                </Row>
-
-                <div
-                  style={{
-                    border: "1px solid #d9d9d9",
-                    borderRadius: "8px",
-                    overflow: "hidden",
-                    background: "#ffffff",
-                    height: "500px",
-                    width: "100%",
-                    position: "relative",
-                  }}
-                >
-                  <canvas
-                    ref={canvasRef}
-                    style={{
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      width: "100%",
-                      height: "100%",
-                      cursor: "crosshair",
-                    }}
-                    onMouseDown={startDrawing}
-                    onMouseMove={draw}
-                    onMouseUp={stopDrawing}
-                    onMouseLeave={stopDrawing}
-                  />
-                </div>
-              </Space>
-            </Card>
-          </Col>
-
-          {/* 下方左侧排行榜 */}
-          <Col xs={24} md={8}>
-            <Card
-              title={
-                <Space>
-                  <CrownOutlined style={{ color: "#faad14" }} />
-                  <span>玩家排行</span>
-                </Space>
-              }
-              style={{ height: "100%" }}
-            >
-              <List
-                itemLayout="horizontal"
-                dataSource={players}
-                renderItem={(player) => (
-                  <List.Item
-                    extra={
-                      player.isDrawing ? (
-                        <Badge
-                          count={<EditOutlined style={{ color: "#1890ff" }} />}
-                          offset={[0, 0]}
-                          style={{ backgroundColor: "#e6f7ff", color: "#1890ff", boxShadow: "none" }}
-                        >
-                          <Text style={{ marginRight: 8 }}>绘画中</Text>
-                        </Badge>
-                      ) : null
-                    }
-                  >
-                    <List.Item.Meta
-                      avatar={<Avatar src={player.avatar} size={28}/>}
-                      title={player.name}
-                      description={`获取分数🔥：${player.score} 分`}
-                    />
-                  </List.Item>
-                )}
-              />
-            </Card>
-          </Col>
-
-          {/* 下方右侧聊天区域 */}
-          <Col xs={24} md={16}>
-            <Card title="聊天区 & 猜词" style={{ height: "100%" }}>
-              <div
-                style={{
-                  height: "300px",
-                  overflowY: "auto",
-                  border: "1px solid #d9d9d9",
-                  borderRadius: "8px",
-                  padding: "12px",
-                  marginBottom: "12px",
-                  background: "#f9f9f9",
-                }}
-              >
-                {messages.map((msg, index) => (
-                  <div key={index} style={{ marginBottom: "8px" }}>
-                    <Text strong style={{ color: msg.user === "系统" ? "#1890ff" : "inherit" }}>
-                      {msg.user}:
-                    </Text>{" "}
-                    <Text
-                      style={{
-                        color: msg.isCorrect ? "#52c41a" : "inherit",
-                        fontWeight: msg.isCorrect ? "bold" : "normal",
-                      }}
-                    >
-                      {msg.message}
-                    </Text>
-                    {msg.isCorrect && " ✅"}
-                  </div>
-                ))}
-              </div>
-              <form onSubmit={handleGuessSubmit}>
-                <Row gutter={8}>
-                  <Col flex="auto">
-                    <Input placeholder="输入你的猜测..." value={guess} onChange={(e) => setGuess(e.target.value)} />
-                  </Col>
-                  <Col>
-                    <Button type="primary" htmlType="submit" icon={<SendOutlined />}>
-                      发送
-                    </Button>
-                  </Col>
-                </Row>
-              </form>
-            </Card>
-          </Col>
-        </Row>
-      </Content>
-    </Layout>
-  )
-}
-
-// 主组件
-export default function DrawAndGuessGame() {
-  const [isInRoom, setIsInRoom] = useState(false)
-  const [roomId, setRoomId] = useState("")
-  const { initialState } = useModel('@@initialState')
-  const currentUser = initialState?.currentUser
-  const [messageApi, contextHolder] = message.useMessage();
-
-  const handleRoomCreated = (data: any) => {
-    console.log("11",data)
-    setRoomId(data.data)
-    setIsInRoom(true)
-    message.success('房间创建成功！')
-  }
-
-  const handleRoomJoined = (data: any) => {
-    setRoomId(data.data)
-    setIsInRoom(true)
-    message.success('成功加入房间！')
-
-    // 请求用户列表
+    // 发送邀请消息到聊天室
     wsService.send({
       type: 2,
       userId: -1,
       data: {
-        type: 'getDrawRoomUsers',
-        content: data.data
-      }
-    })
-  }
+        type: 'chat',
+        content: {
+          message: {
+            id: `${Date.now()}`,
+            content: `[invite/draw]${roomId}[/invite]`,
+            sender: {
+              id: String(currentUser.id),
+              name: currentUser.userName || '游客',
+              avatar: currentUser.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
+              level: currentUser.level || 1,
+              isAdmin: currentUser.userRole === 'admin',
+            },
+            timestamp: new Date(),
+          },
+        },
+      },
+    });
 
-  // 添加 WebSocket 连接初始化
-  useEffect(() => {
-    if (currentUser?.id) {
-      const token = localStorage.getItem('tokenValue');
-      if (!token) {
-        messageApi.error('请先登录！');
-        return;
-      }
+    setHasSentInvitation(true);
+    setInvitationCooldown(60);
+    message.success('邀请已发送到聊天室');
 
-      // 添加消息处理器
-      wsService.addMessageHandler('roomDrawCreated', handleRoomCreated)
-      wsService.addMessageHandler('roomDrawJoined', handleRoomJoined)
-
-      // 连接WebSocket
-      wsService.connect(token);
-
-      return () => {
-        // 清理消息处理器
-        wsService.removeMessageHandler('roomDrawCreated', handleRoomCreated)
-        wsService.removeMessageHandler('roomDrawJoined', handleRoomJoined)
-      };
-    }
-  }, [currentUser?.id]);
-
-  const handleJoinRoom = (values: { roomId?: string }) => {
-    if (values.roomId) {
-      // 加入已有房间
-      wsService.send({
-        type: 2,
-        userId: -1,
-        data: {
-          type: 'joinDrawRoom',
-          content: values.roomId
+    // 设置60秒冷却时间
+    const timer = setInterval(() => {
+      setInvitationCooldown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          setHasSentInvitation(false);
+          return 0;
         }
-      })
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const handleJoinButtonClick = async (room: RoomItem, isUserInRoom: boolean | undefined)=> {
+    if (isUserInRoom || room.status === 'PLAYING') {
+      // 如果用户已在房间或者是观战模式，直接进入
+      history.push(`/game/draw/${room.roomId}`);
     } else {
-      // 创建新房间
-      wsService.send({
-        type: 2,
-        userId: -1,
-        data: {
-          type: 'createDrawRoom',
-        }
-      })
+      // 正常加入房间
+      handleJoinRoom(room);
     }
   }
-
-  const handleExitRoom = () => {
-    if (roomId) {
-      wsService.send({
-        type: 2,
-        userId: -1,
-        data: {
-          type: 'leaveDrawRoom',
-          content: roomId
-        }
-      })
+  // 加入房间
+  const handleJoinRoom = async (room: RoomItem) => {
+    // 如果房间已满
+    if (room.currentPlayers && room.maxPlayers && room.currentPlayers >= room.maxPlayers) {
+      message.error('房间已满');
+      return;
     }
-    setIsInRoom(false)
-  }
 
-  if (!isInRoom) {
-    return (
-      <Layout style={{ minHeight: "100vh", background: "#f0f2f5" }}>
-        <Content style={{ padding: "24px" }}>
-          <Row justify="center" align="middle" style={{ minHeight: "80vh" }}>
-            <Col xs={22} sm={16} md={12} lg={8}>
-              <Card
-                style={{
-                  borderRadius: "16px",
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-                }}
-              >
-                <div style={{ textAlign: "center", marginBottom: "32px" }}>
-                  <Title level={1} style={{ marginBottom: "8px" }}>
-                    你画我猜 🎨
-                  </Title>
-                  <Text type="secondary">创建或加入一个房间开始游戏吧！</Text>
-                </div>
+    if (!room.roomId) {
+      message.error('房间ID无效');
+      return;
+    }
 
-                <Form onFinish={handleJoinRoom} layout="vertical" size="large">
-                  <Form.Item
-                    name="roomId"
-                    label="房间号"
-                    extra="不填则自动创建新房间"
+    try {
+      const res = await joinRoomUsingPost({ roomId: room.roomId });
+      if (res.data && res.code === 0) {
+        message.success('加入房间成功');
+        history.push(`/game/draw/${room.roomId}`);
+      } else {
+        message.error(res.message || '加入房间失败');
+      }
+    } catch (error) {
+      console.error('加入房间出错:', error);
+      message.error('加入房间失败，请稍后再试');
+    }
+  };
+
+  return (
+    <PageContainer
+      header={{
+        title: '你画我猜房间列表',
+      }}
+    >
+      <Row justify="center">
+        <Col xs={24} sm={24} md={20} lg={18} xl={16}>
+          <div className="room-controls">
+            <Space style={{ marginBottom: 16, width: '100%', justifyContent: 'space-between' }} size="large">
+              <div>
+                <Input
+                  placeholder="搜索房间"
+                  prefix={<SearchOutlined className="search-icon" />}
+                  value={searchKeyword}
+                  onChange={e => setSearchKeyword(e.target.value)}
+                  style={{ width: 250 }}
+                  allowClear
+                  className="search-input"
+                />
+              </div>
+              <div>
+                <Space>
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={() => setCreateRoomVisible(true)}
+                    className="create-button"
                   >
-                    <Input
-                      prefix={<TeamOutlined style={{ color: '#1890ff' }} />}
-                      placeholder="请输入房间号"
-                      style={{ height: "40px" }}
-                    />
-                  </Form.Item>
-                  <Form.Item style={{ marginBottom: 0 }}>
-                    <Button
-                      type="primary"
-                      htmlType="submit"
-                      block
-                      size="large"
-                      style={{ height: "40px" }}
+                    创建房间
+                  </Button>
+                  <Button
+                    onClick={fetchRooms}
+                    loading={loading}
+                    icon={<ReloadOutlined />}
+                  >
+                    刷新
+                  </Button>
+                </Space>
+              </div>
+            </Space>
+          </div>
+
+          <Card
+            className="room-list-card"
+            loading={loading}
+            title={
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 12px' }}>
+                <span>房间列表</span>
+                <Text type="secondary" style={{ fontSize: 13 }}>
+                  共 {filteredRooms.length} 个房间
+                </Text>
+              </div>
+            }
+            headStyle={{ padding: '16px 12px' }}
+          >
+            {filteredRooms.length > 0 ? (
+              <List
+                itemLayout="horizontal"
+                dataSource={filteredRooms}
+                renderItem={room => {
+                  const remainingTime = getRemainingTime(room);
+                  const isRoomFull = !!(room.currentPlayers && room.maxPlayers && room.currentPlayers >= room.maxPlayers);
+
+                  // 检查当前用户是否已在房间中
+                  const isUserInRoom = currentUser && room.participants &&
+                    room.participants.some(player => {
+                      if (!currentUser || !player.userId) return false;
+
+                      // 将两个ID都转换为字符串进行比较
+                      const currentUserId = String(currentUser.id);
+                      const playerUserId = String(player.userId);
+
+
+                      return currentUserId === playerUserId;
+                    });
+
+                  // 判断当前用户是否是房主
+                  const isRoomCreator = currentUser && room.creatorId === currentUser.id;
+                  
+                  // 判断用户是否可以删除房间（房主或管理员）
+                  const canDeleteRoom = isRoomCreator || isAdmin;
+
+
+                  return (
+                    <List.Item
+                      className="room-list-item"
+                      actions={[
+                        <Button
+                          type="primary"
+                          onClick={() => handleJoinButtonClick(room, isUserInRoom)}
+                          className={`join-button ${isUserInRoom ? 'join-button-detail' :
+                            (room.status === 'WAITING' ? 'join-button-waiting' : 'join-button-playing')}`}
+                        >
+                          {isUserInRoom ? '查看详情' : (room.status === 'WAITING' ? '加入' : '观战')}
+                        </Button>,
+                        <Button 
+                          type="primary" 
+                          onClick={() => handleSendInvitation(room.roomId)}
+                          disabled={hasSentInvitation}
+                          style={{ display: isRoomCreator ? 'block' : 'none' }}
+                        >
+                          {hasSentInvitation ? `冷却中 (${invitationCooldown}s)` : '发送邀请'}
+                        </Button>,
+                        canDeleteRoom && (
+                          <Popconfirm
+                            title="确定要删除该房间吗？"
+                            onConfirm={() => handleRemoveRoom(room.roomId!)}
+                            okText="确定"
+                            cancelText="取消"
+                          >
+                            <Button
+                              danger
+                              icon={<DeleteOutlined />}
+                              size="middle"
+                            >
+                              删除
+                            </Button>
+                          </Popconfirm>
+                        )
+                      ].filter(Boolean)}
                     >
-                      {roomId ? "加入房间" : "开始游戏"}
-                    </Button>
-                  </Form.Item>
-                </Form>
-              </Card>
-            </Col>
-          </Row>
-        </Content>
-        <Footer style={{ textAlign: "center", background: "transparent" }}>
-          <Text type="secondary">欢迎来到你画我猜游戏！邀请好友一起来玩吧 🎮</Text>
-        </Footer>
-      </Layout>
-    )
-  }
+                      <List.Item.Meta
+                        avatar={
+                          <Avatar src={room.creatorAvatar} size={40} className="room-avatar" />
+                        }
+                        title={
+                          <div className="room-title">
+                            <Text strong className="room-name">{room.creatorName}的房间</Text>
+                            <Badge
+                              status={room.status === 'WAITING' ? 'success' : 'processing'}
+                              text={
+                                <span className={`room-status ${room.status === 'WAITING' ? 'status-waiting' : 'status-playing'}`}>
+                                  {room.status === 'WAITING' ? '等待中' : '游戏中'}
+                                </span>
+                              }
+                            />
+                            {room.status === 'PLAYING' && room.currentDrawerName && (
+                              <Tag color="blue">
+                                当前绘画者: {room.currentDrawerName}
+                              </Tag>
+                            )}
+                            {isUserInRoom && (
+                              <Tag color="success" className="user-joined-tag">
+                                已加入
+                              </Tag>
+                            )}
+                          </div>
+                        }
+                        description={
+                          <div className="room-info">
+                            <div className="room-owner">
+                              <UserOutlined className="owner-icon" />
+                              <span>房主: {room.creatorName}</span>
+                            </div>
+                            <div className="room-players">
+                              <TeamOutlined className="players-icon" />
+                              <span className={isRoomFull ? 'room-full' : ''}>
+                                {room.currentPlayers}/{room.maxPlayers}
+                              </span>
+                            </div>
+                            {room.status === 'PLAYING' && remainingTime && (
+                              <div className="room-timer">
+                                <ClockCircleOutlined />
+                                <span>剩余时间: {remainingTime}</span>
+                              </div>
+                            )}
+                            {/* 隐藏提示词 */}
+                            <div className="room-create-time">
+                              <span>创建时间: {new Date(room.createTime || '').toLocaleString()}</span>
+                              <Tooltip title={`房间ID: ${room.roomId}`}>
+                                <InfoCircleOutlined style={{ marginLeft: 8, cursor: 'pointer' }} />
+                              </Tooltip>
+                            </div>
+                            {room.participants && room.participants.length > 0 && (
+                              <div className="room-participants">
+                                <span>参与者: </span>
+                                <Avatar.Group maxCount={5} size={20}>
+                                  {room.participants.map((player, index) => (
+                                    <Tooltip
+                                      key={index}
+                                      title={
+                                        <>
+                                          {player.userName}
+                                          {currentUser && String(player.userId) === String(currentUser.id) && ' (你)'}
+                                        </>
+                                      }
+                                    >
+                                      <Avatar
+                                        src={player.userAvatar}
+                                        size={20}
+                                        style={currentUser && String(player.userId) === String(currentUser.id) ?
+                                          { border: '2px solid #52c41a' } : undefined}
+                                      />
+                                    </Tooltip>
+                                  ))}
+                                </Avatar.Group>
+                                {currentUser && room.participants.some(p =>
+                                  String(p.userId) === String(currentUser.id)
+                                ) && (
+                                  <Tag color="success" style={{ marginLeft: 8 }}>已加入</Tag>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        }
+                      />
+                    </List.Item>
+                  );
+                }}
+              />
+            ) : (
+              <Empty
+                description="暂无房间，创建一个吧！"
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                style={{ margin: '40px 0', padding: '20px 0' }}
+                imageStyle={{ height: 60 }}
+              >
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={() => setCreateRoomVisible(true)}
+                  style={{ marginTop: 16 }}
+                >
+                  创建房间
+                </Button>
+              </Empty>
+            )}
+          </Card>
+        </Col>
+      </Row>
 
-  return <GameRoom roomId={roomId} playerName={currentUser?.userName || '未知用户'} onExit={handleExitRoom} />
-}
+      {/* 创建房间的模态框 */}
+      <Modal
+        title={<div className="create-room-title">创建你画我猜房间</div>}
+        open={createRoomVisible}
+        onCancel={() => {
+          setCreateRoomVisible(false);
+          setCustomRounds(false);
+        }}
+        footer={null}
+        className="create-room-modal"
+        width={420}
+        centered
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleCreateRoom}
+          initialValues={{
+            maxPlayers: 8,
+            totalRounds: 6,
+            creatorOnlyMode: true,
+            wordType: 'default', 
+          }}
+          className="create-room-form"
+        >
+          <Form.Item
+            name="maxPlayers"
+            label={<span className="form-label">最大玩家数</span>}
+            rules={[{ required: true, message: '请选择最大玩家数' }]}
+          >
+            <Input
+              type="number"
+              min={2}
+              max={20}
+              prefix={<TeamOutlined className="input-prefix-icon" />}
+              className="styled-input"
+            />
+          </Form.Item>
 
+          <Form.Item
+            name="totalRounds"
+            label={<span className="form-label">游戏轮数</span>}
+            rules={[{ required: true, message: '请选择游戏轮数' }]}
+          >
+            <div>
+              <Radio.Group 
+                onChange={(e) => {
+                  if (e.target.value === 'custom') {
+                    setCustomRounds(true);
+                  } else {
+                    setCustomRounds(false);
+                    form.setFieldsValue({ totalRounds: e.target.value });
+                  }
+                }}
+                defaultValue={6}
+              >
+                <Radio.Button value={3}>3轮</Radio.Button>
+                <Radio.Button value={6}>6轮</Radio.Button>
+                <Radio.Button value={8}>8轮</Radio.Button>
+                <Radio.Button value={12}>12轮</Radio.Button>
+                <Radio.Button value="custom">自定义</Radio.Button>
+              </Radio.Group>
+              
+              {customRounds && (
+                <InputNumber 
+                  min={1} 
+                  max={20} 
+                  className="styled-input" 
+                  style={{ marginTop: 8, width: '100%' }}
+                  onChange={(value) => form.setFieldsValue({ totalRounds: value })}
+                  placeholder="请输入轮数(1-20)"
+                />
+              )}
+            </div>
+          </Form.Item>
+
+          <Form.Item
+            name="wordType"
+            label={<span className="form-label">词库类型</span>}
+            rules={[{ required: true, message: '请选择词库类型' }]}
+          >
+            <Radio.Group>
+              <Radio.Button value="default">默认词库</Radio.Button>
+              <Radio.Button value="hero">王者荣耀</Radio.Button>
+              <Radio.Button value="idiom">成语</Radio.Button>
+            </Radio.Group>
+          </Form.Item>
+
+          <Form.Item
+            name="creatorOnlyMode"
+            label={<span className="form-label">轮换模式</span>}
+            valuePropName="checked"
+          >
+            <Switch />
+          </Form.Item>
+
+          <Form.Item className="submit-button-container">
+            <Button type="primary" htmlType="submit" block className="create-room-button">
+              创建房间
+            </Button>
+          </Form.Item>
+        </Form>
+      </Modal>
+    </PageContainer>
+  );
+};
+
+export default DrawRoomPage;

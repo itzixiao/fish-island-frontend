@@ -1,4 +1,33 @@
 declare namespace API {
+  type AddFundRequest = {
+    /** 持有金额 */
+    amount: number;
+    /** 基金代码 */
+    code: string;
+    /** 盈亏金额（正数为盈利，负数为亏损） */
+    profit: number;
+  };
+
+  type addTitleToUserUsingPOSTParams = {
+    /** titleId */
+    titleId: number;
+    /** userId */
+    userId: number;
+  };
+
+  type authorizeUsingGETParams = {
+    /** client_id */
+    client_id: string;
+    /** redirect_uri */
+    redirect_uri: string;
+    /** response_type */
+    response_type?: string;
+    /** scope */
+    scope?: string;
+    /** state */
+    state?: string;
+  };
+
   type AvatarFrame = {
     createTime?: string;
     frameId?: number;
@@ -32,9 +61,27 @@ declare namespace API {
     message?: string;
   };
 
+  type BaseResponseBossBattleInfoVO_ = {
+    code?: number;
+    data?: BossBattleInfoVO;
+    message?: string;
+  };
+
   type BaseResponseCosCredentialVo_ = {
     code?: number;
     data?: CosCredentialVo;
+    message?: string;
+  };
+
+  type BaseResponseCropDTO_ = {
+    code?: number;
+    data?: CropDTO;
+    message?: string;
+  };
+
+  type BaseResponseDataSourceCookieVO_ = {
+    code?: number;
+    data?: DataSourceCookieVO;
     message?: string;
   };
 
@@ -44,9 +91,69 @@ declare namespace API {
     message?: string;
   };
 
+  type BaseResponseDrawGuessVO_ = {
+    code?: number;
+    data?: DrawGuessVO;
+    message?: string;
+  };
+
+  type BaseResponseDrawResultVO_ = {
+    code?: number;
+    data?: DrawResultVO;
+    message?: string;
+  };
+
+  type BaseResponseDrawRoomVO_ = {
+    code?: number;
+    data?: DrawRoomVO;
+    message?: string;
+  };
+
+  type BaseResponseFarmUserVO_ = {
+    code?: number;
+    data?: FarmUserVO;
+    message?: string;
+  };
+
+  type BaseResponseFishAuthDetailVO_ = {
+    code?: number;
+    data?: FishAuthDetailVO;
+    message?: string;
+  };
+
+  type BaseResponseFishAuthVO_ = {
+    code?: number;
+    data?: FishAuthVO;
+    message?: string;
+  };
+
+  type BaseResponseFundListVO_ = {
+    code?: number;
+    data?: FundListVO;
+    message?: string;
+  };
+
+  type BaseResponseHeroRankingVO_ = {
+    code?: number;
+    data?: HeroRankingVO;
+    message?: string;
+  };
+
   type BaseResponseHeroVO_ = {
     code?: number;
     data?: HeroVO;
+    message?: string;
+  };
+
+  type BaseResponseIndexPositionVO_ = {
+    code?: number;
+    data?: IndexPositionVO;
+    message?: string;
+  };
+
+  type BaseResponseIndexTradeResultVO_ = {
+    code?: number;
+    data?: IndexTradeResultVO;
     message?: string;
   };
 
@@ -56,9 +163,105 @@ declare namespace API {
     message?: string;
   };
 
+  type BaseResponseIP_ = {
+    code?: number;
+    data?: IP_;
+    message?: string;
+  };
+
+  type BaseResponseItemInstances_ = {
+    code?: number;
+    data?: ItemInstances;
+    message?: string;
+  };
+
+  type BaseResponseItemInstanceVO_ = {
+    code?: number;
+    data?: ItemInstanceVO;
+    message?: string;
+  };
+
+  type BaseResponseItemTemplateVO_ = {
+    code?: number;
+    data?: ItemTemplateVO;
+    message?: string;
+  };
+
   type BaseResponseListAvatarFrame_ = {
     code?: number;
     data?: AvatarFrame[];
+    message?: string;
+  };
+
+  type BaseResponseListBattleResultVO_ = {
+    code?: number;
+    data?: BattleResultVO[];
+    message?: string;
+  };
+
+  type BaseResponseListBossChallengeRankingVO_ = {
+    code?: number;
+    data?: BossChallengeRankingVO[];
+    message?: string;
+  };
+
+  type BaseResponseListBossVO_ = {
+    code?: number;
+    data?: BossVO[];
+    message?: string;
+  };
+
+  type BaseResponseListCropCategoryVO_ = {
+    code?: number;
+    data?: CropCategoryVO[];
+    message?: string;
+  };
+
+  type BaseResponseListCropDTO_ = {
+    code?: number;
+    data?: CropDTO[];
+    message?: string;
+  };
+
+  type BaseResponseListDataSourceKeyOptionVO_ = {
+    code?: number;
+    data?: DataSourceKeyOptionVO[];
+    message?: string;
+  };
+
+  type BaseResponseListDrawGuessVO_ = {
+    code?: number;
+    data?: DrawGuessVO[];
+    message?: string;
+  };
+
+  type BaseResponseListDrawRoomVO_ = {
+    code?: number;
+    data?: DrawRoomVO[];
+    message?: string;
+  };
+
+  type BaseResponseListFarmFriendListVO_ = {
+    code?: number;
+    data?: FarmFriendListVO[];
+    message?: string;
+  };
+
+  type BaseResponseListFarmStealRecord_ = {
+    code?: number;
+    data?: FarmStealRecord[];
+    message?: string;
+  };
+
+  type BaseResponseListFarmStealRecordVO_ = {
+    code?: number;
+    data?: FarmStealRecordVO[];
+    message?: string;
+  };
+
+  type BaseResponseListFishAuthVO_ = {
+    code?: number;
+    data?: FishAuthVO[];
     message?: string;
   };
 
@@ -74,15 +277,111 @@ declare namespace API {
     message?: string;
   };
 
+  type BaseResponseListIndexPositionVO_ = {
+    code?: number;
+    data?: IndexPositionVO[];
+    message?: string;
+  };
+
+  type BaseResponseListLandDTO_ = {
+    code?: number;
+    data?: LandDTO[];
+    message?: string;
+  };
+
+  type BaseResponseListLuckyBag_ = {
+    code?: number;
+    data?: LuckyBag[];
+    message?: string;
+  };
+
+  type BaseResponseListMarketIndexVO_ = {
+    code?: number;
+    data?: MarketIndexVO[];
+    message?: string;
+  };
+
   type BaseResponseListNewUserDataWebVO_ = {
     code?: number;
     data?: NewUserDataWebVO[];
     message?: string;
   };
 
+  type BaseResponseListPetBattleResultVO_ = {
+    code?: number;
+    data?: PetBattleResultVO[];
+    message?: string;
+  };
+
+  type BaseResponseListPetEquipForgeVO_ = {
+    code?: number;
+    data?: PetEquipForgeVO[];
+    message?: string;
+  };
+
+  type BaseResponseListPetRankVO_ = {
+    code?: number;
+    data?: PetRankVO[];
+    message?: string;
+  };
+
+  type BaseResponseListReportReasonOptionVO_ = {
+    code?: number;
+    data?: ReportReasonOptionVO[];
+    message?: string;
+  };
+
   type BaseResponseListSimpleHeroVO_ = {
     code?: number;
     data?: SimpleHeroVO[];
+    message?: string;
+  };
+
+  type BaseResponseListString_ = {
+    code?: number;
+    data?: string[];
+    message?: string;
+  };
+
+  type BaseResponseListTaskDTO_ = {
+    code?: number;
+    data?: TaskDTO[];
+    message?: string;
+  };
+
+  type BaseResponseListTournamentRankVO_ = {
+    code?: number;
+    data?: TournamentRankVO[];
+    message?: string;
+  };
+
+  type BaseResponseListTowerRankVO_ = {
+    code?: number;
+    data?: TowerRankVO[];
+    message?: string;
+  };
+
+  type BaseResponseListTurntableVO_ = {
+    code?: number;
+    data?: TurntableVO[];
+    message?: string;
+  };
+
+  type BaseResponseListUndercoverPlayerDetailVO_ = {
+    code?: number;
+    data?: UndercoverPlayerDetailVO[];
+    message?: string;
+  };
+
+  type BaseResponseListUndercoverRoomVO_ = {
+    code?: number;
+    data?: UndercoverRoomVO[];
+    message?: string;
+  };
+
+  type BaseResponseListUndercoverVoteVO_ = {
+    code?: number;
+    data?: UndercoverVoteVO[];
     message?: string;
   };
 
@@ -100,7 +399,13 @@ declare namespace API {
 
   type BaseResponseListVO_ = {
     code?: number;
-    data?: VO[];
+    data?: VO2[];
+    message?: string;
+  };
+
+  type BaseResponseListVO2 = {
+    code?: number;
+    data?: VO3[];
     message?: string;
   };
 
@@ -116,15 +421,87 @@ declare namespace API {
     message?: string;
   };
 
+  type BaseResponseLuckyBag_ = {
+    code?: number;
+    data?: LuckyBag;
+    message?: string;
+  };
+
+  type BaseResponseMapStringString_ = {
+    code?: number;
+    data?: Record<string, any>;
+    message?: string;
+  };
+
   type BaseResponseMockInterview_ = {
     code?: number;
     data?: MockInterview;
     message?: string;
   };
 
+  type BaseResponseMomentsLotteryVO_ = {
+    code?: number;
+    data?: MomentsLotteryVO;
+    message?: string;
+  };
+
+  type BaseResponseMomentsVO_ = {
+    code?: number;
+    data?: MomentsVO;
+    message?: string;
+  };
+
+  type BaseResponseMonthSignInVO_ = {
+    code?: number;
+    data?: MonthSignInVO;
+    message?: string;
+  };
+
+  type BaseResponseOAuth2TokenVO_ = {
+    code?: number;
+    data?: OAuth2TokenVO;
+    message?: string;
+  };
+
+  type BaseResponseOAuth2UserInfoVO_ = {
+    code?: number;
+    data?: OAuth2UserInfoVO;
+    message?: string;
+  };
+
+  type BaseResponseOtherUserPetVO_ = {
+    code?: number;
+    data?: OtherUserPetVO;
+    message?: string;
+  };
+
   type BaseResponsePageAvatarFrameVO_ = {
     code?: number;
     data?: PageAvatarFrameVO_;
+    message?: string;
+  };
+
+  type BaseResponsePageCommentNodeVO_ = {
+    code?: number;
+    data?: PageCommentNodeVO_;
+    message?: string;
+  };
+
+  type BaseResponsePageCommentVO_ = {
+    code?: number;
+    data?: PageCommentVO_;
+    message?: string;
+  };
+
+  type BaseResponsePageDataSourceCookieVO_ = {
+    code?: number;
+    data?: PageDataSourceCookieVO_;
+    message?: string;
+  };
+
+  type BaseResponsePageDonationDetailRecordsVO_ = {
+    code?: number;
+    data?: PageDonationDetailRecordsVO_;
     message?: string;
   };
 
@@ -140,15 +517,69 @@ declare namespace API {
     message?: string;
   };
 
+  type BaseResponsePageDrawRecordVO_ = {
+    code?: number;
+    data?: PageDrawRecordVO_;
+    message?: string;
+  };
+
   type BaseResponsePageEmoticonFavour_ = {
     code?: number;
     data?: PageEmoticonFavour_;
     message?: string;
   };
 
+  type BaseResponsePageEventRemindVO_ = {
+    code?: number;
+    data?: PageEventRemindVO_;
+    message?: string;
+  };
+
+  type BaseResponsePageIndexTransactionVO_ = {
+    code?: number;
+    data?: PageIndexTransactionVO_;
+    message?: string;
+  };
+
+  type BaseResponsePageItemInstances_ = {
+    code?: number;
+    data?: PageItemInstances_;
+    message?: string;
+  };
+
+  type BaseResponsePageItemInstanceVO_ = {
+    code?: number;
+    data?: PageItemInstanceVO_;
+    message?: string;
+  };
+
+  type BaseResponsePageItemTemplateVO_ = {
+    code?: number;
+    data?: PageItemTemplateVO_;
+    message?: string;
+  };
+
   type BaseResponsePageMockInterview_ = {
     code?: number;
     data?: PageMockInterview_;
+    message?: string;
+  };
+
+  type BaseResponsePageMomentsCommentVO_ = {
+    code?: number;
+    data?: PageMomentsCommentVO_;
+    message?: string;
+  };
+
+  type BaseResponsePageMomentsVO_ = {
+    code?: number;
+    data?: PageMomentsVO_;
+    message?: string;
+  };
+
+  type BaseResponsePagePetSkinVO_ = {
+    code?: number;
+    data?: PagePetSkinVO_;
     message?: string;
   };
 
@@ -164,9 +595,39 @@ declare namespace API {
     message?: string;
   };
 
+  type BaseResponsePagePropsVO_ = {
+    code?: number;
+    data?: PagePropsVO_;
+    message?: string;
+  };
+
+  type BaseResponsePageRedeemCodeVO_ = {
+    code?: number;
+    data?: PageRedeemCodeVO_;
+    message?: string;
+  };
+
+  type BaseResponsePageReportVO_ = {
+    code?: number;
+    data?: PageReportVO_;
+    message?: string;
+  };
+
   type BaseResponsePageRoomMessageVo_ = {
     code?: number;
     data?: PageRoomMessageVo_;
+    message?: string;
+  };
+
+  type BaseResponsePageTags_ = {
+    code?: number;
+    data?: PageTags_;
+    message?: string;
+  };
+
+  type BaseResponsePageTagsVO_ = {
+    code?: number;
+    data?: PageTagsVO_;
     message?: string;
   };
 
@@ -176,9 +637,87 @@ declare namespace API {
     message?: string;
   };
 
+  type BaseResponsePageUserFollowVO_ = {
+    code?: number;
+    data?: PageUserFollowVO_;
+    message?: string;
+  };
+
+  type BaseResponsePageUserTitle_ = {
+    code?: number;
+    data?: PageUserTitle_;
+    message?: string;
+  };
+
+  type BaseResponsePageUserVip_ = {
+    code?: number;
+    data?: PageUserVip_;
+    message?: string;
+  };
+
+  type BaseResponsePageUserVipVO_ = {
+    code?: number;
+    data?: PageUserVipVO_;
+    message?: string;
+  };
+
   type BaseResponsePageUserVO_ = {
     code?: number;
     data?: PageUserVO_;
+    message?: string;
+  };
+
+  type BaseResponsePageVO_ = {
+    code?: number;
+    data?: PageVO_;
+    message?: string;
+  };
+
+  type BaseResponsePageWordLibrary_ = {
+    code?: number;
+    data?: PageWordLibrary_;
+    message?: string;
+  };
+
+  type BaseResponsePayOrderVO_ = {
+    code?: number;
+    data?: PayOrderVO;
+    message?: string;
+  };
+
+  type BaseResponsePetAutoFeedConfigVO_ = {
+    code?: number;
+    data?: PetAutoFeedConfigVO;
+    message?: string;
+  };
+
+  type BaseResponsePetBattleInfoVO_ = {
+    code?: number;
+    data?: PetBattleInfoVO;
+    message?: string;
+  };
+
+  type BaseResponsePetEquipForgeDetailVO_ = {
+    code?: number;
+    data?: PetEquipForgeDetailVO;
+    message?: string;
+  };
+
+  type BaseResponsePetEquipForgeVO_ = {
+    code?: number;
+    data?: PetEquipForgeVO;
+    message?: string;
+  };
+
+  type BaseResponsePetVO_ = {
+    code?: number;
+    data?: PetVO;
+    message?: string;
+  };
+
+  type BaseResponsePostRewardTokenVO_ = {
+    code?: number;
+    data?: PostRewardTokenVO;
     message?: string;
   };
 
@@ -188,9 +727,27 @@ declare namespace API {
     message?: string;
   };
 
+  type BaseResponseRedeemCodeUseResultVO_ = {
+    code?: number;
+    data?: RedeemCodeUseResultVO;
+    message?: string;
+  };
+
   type BaseResponseRedPacket_ = {
     code?: number;
     data?: RedPacket;
+    message?: string;
+  };
+
+  type BaseResponseSignInStatusVO_ = {
+    code?: number;
+    data?: SignInStatusVO;
+    message?: string;
+  };
+
+  type BaseResponseSignInVO_ = {
+    code?: number;
+    data?: SignInVO;
     message?: string;
   };
 
@@ -200,15 +757,75 @@ declare namespace API {
     message?: string;
   };
 
+  type BaseResponseTagsVO_ = {
+    code?: number;
+    data?: TagsVO;
+    message?: string;
+  };
+
   type BaseResponseTokenLoginUserVo_ = {
     code?: number;
     data?: TokenLoginUserVo;
     message?: string;
   };
 
+  type BaseResponseTournamentChallengeResultVO_ = {
+    code?: number;
+    data?: TournamentChallengeResultVO;
+    message?: string;
+  };
+
+  type BaseResponseTowerClimbResultVO_ = {
+    code?: number;
+    data?: TowerClimbResultVO;
+    message?: string;
+  };
+
+  type BaseResponseTowerFloorMonsterVO_ = {
+    code?: number;
+    data?: TowerFloorMonsterVO;
+    message?: string;
+  };
+
+  type BaseResponseTowerProgressVO_ = {
+    code?: number;
+    data?: TowerProgressVO;
+    message?: string;
+  };
+
+  type BaseResponseTurntableVO_ = {
+    code?: number;
+    data?: TurntableVO;
+    message?: string;
+  };
+
+  type BaseResponseUndercoverPlayerDetailVO_ = {
+    code?: number;
+    data?: UndercoverPlayerDetailVO;
+    message?: string;
+  };
+
+  type BaseResponseUndercoverPlayerVO_ = {
+    code?: number;
+    data?: UndercoverPlayerVO;
+    message?: string;
+  };
+
+  type BaseResponseUndercoverRoomVO_ = {
+    code?: number;
+    data?: UndercoverRoomVO;
+    message?: string;
+  };
+
   type BaseResponseUser_ = {
     code?: number;
     data?: User;
+    message?: string;
+  };
+
+  type BaseResponseUserAiAvatar_ = {
+    code?: number;
+    data?: UserAiAvatar;
     message?: string;
   };
 
@@ -224,9 +841,39 @@ declare namespace API {
     message?: string;
   };
 
+  type BaseResponseUserRemark_ = {
+    code?: number;
+    data?: UserRemark;
+    message?: string;
+  };
+
+  type BaseResponseUserRewardVO_ = {
+    code?: number;
+    data?: UserRewardVO;
+    message?: string;
+  };
+
+  type BaseResponseUserTitle_ = {
+    code?: number;
+    data?: UserTitle;
+    message?: string;
+  };
+
+  type BaseResponseUserVipVO_ = {
+    code?: number;
+    data?: UserVipVO;
+    message?: string;
+  };
+
   type BaseResponseUserVO_ = {
     code?: number;
     data?: UserVO;
+    message?: string;
+  };
+
+  type BaseResponseVoteVO_ = {
+    code?: number;
+    data?: VoteVO;
     message?: string;
   };
 
@@ -234,6 +881,89 @@ declare namespace API {
     code?: number;
     data?: WebParseVO;
     message?: string;
+  };
+
+  type BaseResponseWordLibrary_ = {
+    code?: number;
+    data?: WordLibrary;
+    message?: string;
+  };
+
+  type BattleResultVO = {
+    /** 当前攻击对象类型：PET-宠物攻击，BOSS-Boss攻击 */
+    attackerType?: string;
+    /** Boss剩余血量 */
+    bossRemainingHealth?: number;
+    /** 扣血量 */
+    damage?: number;
+    /** 是否格挡 */
+    isBlock?: boolean;
+    /** 是否连击 */
+    isCombo?: boolean;
+    /** 是否暴击 */
+    isCritical?: boolean;
+    /** 是否闪避 */
+    isDodge?: boolean;
+    /** 是否普通攻击 */
+    isNormalAttack?: boolean;
+    /** 吸血回复量 */
+    lifestealHeal?: number;
+    /** 宠物剩余血量 */
+    petRemainingHealth?: number;
+  };
+
+  type battleUsingGET1Params = {
+    /** opponentUserId */
+    opponentUserId: number;
+  };
+
+  type battleUsingGETParams = {
+    /** bossId */
+    bossId: number;
+  };
+
+  type BossBattleInfoVO = {
+    bossInfo?: BossInfo;
+    petInfo?: PetInfo;
+  };
+
+  type BossChallengeRankingVO = {
+    damage?: number;
+    petAvatar?: string;
+    petName?: string;
+    rank?: number;
+    userAvatar?: string;
+    userId?: number;
+    userName?: string;
+  };
+
+  type BossInfo = {
+    attack?: number;
+    avatar?: string;
+    currentHealth?: number;
+    id?: number;
+    maxHealth?: number;
+    name?: string;
+    rewardPoints?: number;
+  };
+
+  type BossVO = {
+    attack?: number;
+    avatar?: string;
+    blockRate?: number;
+    blockResistance?: number;
+    comboRate?: number;
+    comboResistance?: number;
+    critRate?: number;
+    critResistance?: number;
+    dodgeRate?: number;
+    dodgeResistance?: number;
+    health?: number;
+    id?: number;
+    lifesteal?: number;
+    lifestealResistance?: number;
+    name?: string;
+    rewardPoints?: number;
   };
 
   type callbackUsingDELETEParams = {
@@ -291,6 +1021,69 @@ declare namespace API {
     source: string;
   };
 
+  type challengeUsingPOSTParams = {
+    /** targetRank */
+    targetRank: number;
+  };
+
+  type ChildCommentQueryRequest = {
+    current?: number;
+    pageSize?: number;
+    rootId?: number;
+    sortField?: string;
+    sortOrder?: string;
+  };
+
+  type claimRewardUsingPOSTParams = {
+    /** taskId */
+    taskId?: number;
+  };
+
+  type CommentAddRequest = {
+    content?: string;
+    parentId?: number;
+    postId?: number;
+    rootId?: number;
+  };
+
+  type CommentNodeVO = {
+    childCount?: number;
+    content?: string;
+    createTime?: string;
+    hasThumb?: boolean;
+    id?: number;
+    parentId?: number;
+    postId?: number;
+    previewChildren?: CommentVO[];
+    thumbNum?: number;
+    user?: UserVO;
+    userId?: number;
+  };
+
+  type CommentQueryRequest = {
+    current?: number;
+    pageSize?: number;
+    postId?: number;
+    sortField?: string;
+    sortOrder?: string;
+  };
+
+  type CommentThumbAddRequest = {
+    commentId?: number;
+  };
+
+  type CommentVO = {
+    content?: string;
+    createTime?: string;
+    hasThumb?: boolean;
+    id?: number;
+    parentId?: number;
+    postId?: number;
+    thumbNum?: number;
+    user?: UserVO;
+    userId?: number;
+  };
+
   type CosCredentialVo = {
     /** 桶名称 */
     bucket?: string;
@@ -301,13 +1094,33 @@ declare namespace API {
     response?: Response;
   };
 
+  type CreateLuckyBagRequest = {
+    /** 持续秒数（60-1800，默认180） */
+    durationSeconds?: number;
+    /** 福袋名称 */
+    name?: string;
+    /** 福袋总积分（1-100，且需满足单人最多50积分） */
+    totalAmount: number;
+    /** 分配类型：1-随机，2-平均 */
+    type: number;
+    /** 中奖人数（需满足总积分÷人数向上取整≤50） */
+    winnerCount: number;
+  };
+
+  type CreatePetRequest = {
+    name?: string;
+  };
+
   type CreateRedPacketRequest = {
+    /** 正确答案（答题红包必填） */
+    answer?: string;
     /** 红包个数 */
     count: number;
+    /** 红包名称（答题红包时作为题目） */
     name?: string;
     /** 红包总金额（积分） */
     totalAmount: number;
-    /** 红包类型：1-随机红包，2-平均红包 */
+    /** 红包类型：1-随机红包，2-平均红包，3-答题红包 */
     type: number;
   };
 
@@ -318,8 +1131,132 @@ declare namespace API {
     token?: string;
   };
 
-  type DeleteRequest = {
+  type CropCategoryVO = {
+    /** 分类名称 */
+    label?: string;
+    /** 分类编码（grain/vegetable/fruit/flower） */
+    value?: string;
+  };
+
+  type CropDTO = {
+    /** 作物分类（粮食/蔬菜/水果/花卉/特产） */
+    category?: string;
+    /** 收获积分 */
+    coin?: number;
+    /** 作物描述 */
+    description?: string;
+    /** 收获经验 */
+    experience?: number;
+    /** 生长时间（分钟） */
+    growthTime?: number;
+    /** 作物图标 */
+    icon?: string;
+    /** 作物ID */
     id?: number;
+    /** 是否未解锁（农场等级不足时为 true） */
+    locked?: boolean;
+    /** 作物名称 */
+    name?: string;
+    /** 购买价格（积分） */
+    price?: number;
+    /** 稀有度 */
+    rarity?: number;
+    /** 解锁所需农场等级 */
+    unlockLevel?: number;
+  };
+
+  type DataSourceCookieAddRequest = {
+    cookieValue?: string;
+    dataSourceKey?: string;
+    remark?: string;
+    status?: number;
+  };
+
+  type DataSourceCookieQueryRequest = {
+    current?: number;
+    dataSourceKey?: string;
+    id?: number;
+    pageSize?: number;
+    sortField?: string;
+    sortOrder?: string;
+    status?: number;
+  };
+
+  type DataSourceCookieUpdateRequest = {
+    cookieValue?: string;
+    dataSourceKey?: string;
+    id?: number;
+    remark?: string;
+    status?: number;
+  };
+
+  type DataSourceCookieVO = {
+    cookieValue?: string;
+    createTime?: string;
+    dataSourceKey?: string;
+    dataSourceName?: string;
+    id?: number;
+    remark?: string;
+    status?: number;
+    updateTime?: string;
+  };
+
+  type DataSourceKeyOptionVO = {
+    text?: string;
+    value?: string;
+  };
+
+  type DaySignInVO = {
+    /** 是否可补签 */
+    canMakeUp?: boolean;
+    /** 完整日期，格式 yyyy-MM-dd */
+    date?: string;
+    /** 日（1-31） */
+    day?: number;
+    /** 是否是今天 */
+    isToday?: boolean;
+    /** 签到积分奖励（已签到为实际值，未签到为预测值） */
+    rewardPoints?: number;
+    /** 签到类型：1-正常签到，2-补签，null-未签到 */
+    signType?: number;
+    /** 是否已签到 */
+    signed?: boolean;
+  };
+
+  type DeleteFundRequest = {
+    /** 基金代码 */
+    code: string;
+  };
+
+  type deleteRedeemCodeUsingDELETEParams = {
+    /** id */
+    id: number;
+  };
+
+  type DeleteRequest = {
+    id?: string;
+  };
+
+  type deleteVoteUsingPOSTParams = {
+    /** voteId */
+    voteId: string;
+  };
+
+  type DonationDetailRecordsQueryRequest = {
+    current?: number;
+    pageSize?: number;
+    sortField?: string;
+    sortOrder?: string;
+    userId?: number;
+  };
+
+  type DonationDetailRecordsVO = {
+    amount?: number;
+    createTime?: string;
+    donorUser?: LoginUserVO;
+    id?: number;
+    remark?: string;
+    userId?: number;
   };
 
   type DonationRecords = {
@@ -368,6 +1305,118 @@ declare namespace API {
     userId?: number;
   };
 
+  type DrawDataSaveRequest = {
+    drawData?: string;
+    roomId?: string;
+  };
+
+  type DrawGuessRequest = {
+    guessWord?: string;
+    messageWrapper?: MessageWrapper;
+    roomId?: string;
+  };
+
+  type DrawGuessVO = {
+    guessTime?: string;
+    guessWord?: string;
+    isCorrect?: boolean;
+    userAvatar?: string;
+    userId?: number;
+    userName?: string;
+  };
+
+  type DrawPlayerVO = {
+    hasGuessedCorrectly?: boolean;
+    isCreator?: boolean;
+    isCurrentDrawer?: boolean;
+    score?: number;
+    userAvatar?: string;
+    userId?: number;
+    userName?: string;
+  };
+
+  type DrawPrizeVO = {
+    convertedPoints?: number;
+    convertedToPoints?: boolean;
+    icon?: string;
+    name?: string;
+    prizeId?: number;
+    prizeType?: number;
+    quality?: number;
+    qualityName?: string;
+    turntablePrizeId?: number;
+  };
+
+  type DrawRecordVO = {
+    costPoints?: number;
+    createTime?: string;
+    guaranteeType?: number;
+    icon?: string;
+    id?: number;
+    isGuarantee?: boolean;
+    name?: string;
+    quality?: number;
+    qualityName?: string;
+  };
+
+  type DrawRequest = {
+    drawCount?: number;
+    turntableId?: number;
+  };
+
+  type DrawResultVO = {
+    costPoints?: number;
+    guaranteeType?: number;
+    isGuarantee?: boolean;
+    prizeList?: DrawPrizeVO[];
+  };
+
+  type DrawRoomCreateRequest = {
+    creatorOnlyMode?: boolean;
+    maxPlayers?: number;
+    totalRounds?: number;
+    wordType?: string;
+  };
+
+  type DrawRoomVO = {
+    correctGuessPlayers?: DrawPlayerVO[];
+    createTime?: string;
+    creatorAvatar?: string;
+    creatorId?: number;
+    creatorName?: string;
+    creatorOnlyMode?: boolean;
+    currentDrawerId?: number;
+    currentDrawerName?: string;
+    currentPlayers?: number;
+    currentRound?: number;
+    currentWord?: string;
+    drawData?: string;
+    maxPlayers?: number;
+    participants?: DrawPlayerVO[];
+    roomId?: string;
+    roundEndTime?: number;
+    startTime?: string;
+    status?: 'WAITING' | 'PLAYING' | 'ENDED';
+    totalRounds?: number;
+    wordHint?: string;
+  };
+
+  type EditFundRequest = {
+    /** 持有金额 */
+    amount: number;
+    /** 基金代码 */
+    code: string;
+    /** 盈亏金额（正数为盈利，负数为亏损） */
+    profit: number;
+  };
+
+  type eliminatePlayerUsingPOSTParams = {
+    /** roomId */
+    roomId: string;
+    /** userId */
+    userId: number;
+  };
+
   type EmoticonFavour = {
     createTime?: string;
     emoticonSrc?: string;
@@ -376,13 +1425,299 @@ declare namespace API {
     userId?: number;
   };
 
+  type endGameUsingPOST1Params = {
+    /** roomId */
+    roomId: string;
+  };
+
+  type endGameUsingPOSTParams = {
+    /** roomId */
+    roomId: string;
+  };
+
+  type EquipEntry = {
+    /** 词条属性，如：attack、critRate、antiCrit */
+    attr?: string;
+    /** 词条等级：1-白 2-蓝 3-紫 4-金 5-红 */
+    grade?: number;
+    /** 是否锁定，锁定后刷新该词条额外消耗 50 积分 */
+    locked?: boolean;
+    /** 词条属性数值，百分比类精度为 0.01%，如攻击力 120、暴击率 3.50（表示 3.50%） */
+    value?: number;
+  };
+
+  type EventRemindQueryRequest = {
+    action?: string;
+    current?: number;
+    pageSize?: number;
+    sortField?: string;
+    sortOrder?: string;
+    state?: number;
+  };
+
+  type EventRemindStateRequest = {
+    ids?: number[];
+  };
+
+  type EventRemindVO = {
+    action?: string;
+    createTime?: string;
+    id?: number;
+    recipientId?: number;
+    remindTime?: string;
+    senderId?: number;
+    senderUser?: UserVO;
+    sourceContent?: string;
+    sourceId?: number;
+    sourceType?: number;
+    state?: number;
+    url?: string;
+  };
+
   type exchangeFrameUsingPOSTParams = {
     /** frameId */
     frameId: number;
   };
 
+  type FarmFriendListVO = {
+    /** 好友头像 */
+    avatar?: string;
+    /** 是否可以偷菜（存在至少一块您尚未偷过的可偷土地） */
+    canSteal?: boolean;
+    /** 好友系统用户ID */
+    friendId?: number;
+    /** 好友等级 */
+    level?: number;
+    /** 好友昵称 */
+    nickname?: string;
+    /** 好友系统用户ID */
+    systemUserId?: number;
+  };
+
+  type FarmStealRecord = {
+    /** 获得的积分 */
+    coinGained?: number;
+    /** 作物ID */
+    cropId?: number;
+    /** 偷菜记录ID */
+    id?: number;
+    /** 是否已读(0-未读、1-已读) */
+    isRead?: number;
+    /** 地块ID */
+    landId?: number;
+    /** 农场主人系统用户ID */
+    ownerId?: number;
+    /** 种植记录ID */
+    plantRecordId?: number;
+    /** 偷菜者系统用户ID */
+    stealerId?: number;
+    /** 偷菜时间 */
+    stolenTime?: string;
+  };
+
+  type FarmStealRecordVO = {
+    /** 获得的积分 */
+    coinGained?: number;
+    /** 作物ID */
+    cropId?: number;
+    /** 作物名称 */
+    cropName?: string;
+    /** 偷菜记录ID */
+    id?: number;
+    /** 是否已读(0-未读、1-已读) */
+    isRead?: number;
+    /** 农场主人农场用户ID */
+    ownerId?: number;
+    /** 种植记录ID */
+    plantRecordId?: number;
+    /** 偷菜者头像 */
+    stealerAvatar?: string;
+    /** 偷菜者农场用户ID */
+    stealerId?: number;
+    /** 偷菜者昵称 */
+    stealerNickname?: string;
+    /** 偷菜时间 */
+    stolenTime?: string;
+  };
+
+  type FarmUserVO = {
+    /** 创建时间 */
+    createTime?: string;
+    /** 经验值 */
+    experience?: number;
+    /** 好友数量 */
+    friendCount?: number;
+    /** 农场等级 */
+    level?: number;
+    /** 状态（0-禁用，1-正常） */
+    status?: number;
+    /** 总防御次数 */
+    totalDefense?: number;
+    /** 总收获次数 */
+    totalHarvest?: number;
+    /** 总偷菜次数 */
+    totalSteal?: number;
+    /** 更新时间 */
+    updateTime?: string;
+    /** 用户头像（来自用户表） */
+    userAvatar?: string;
+    /** 系统用户ID（与 user 表 id 一致） */
+    userId?: number;
+    /** 用户昵称（来自用户表） */
+    userName?: string;
+    /** 被访问次数 */
+    visitedCount?: number;
+  };
+
+  type feedPetUsingPOSTParams = {
+    /** petId */
+    petId: number;
+  };
+
+  type FishAuthAddRequest = {
+    /** 应用描述 */
+    appDesc?: string;
+    /** 应用名称 */
+    appName: string;
+    /** 应用网站地址 */
+    appWebsite?: string;
+    /** 回调地址（多个用逗号分隔） */
+    redirectUri: string;
+  };
+
+  type FishAuthDetailVO = {
+    /** 应用描述 */
+    appDesc?: string;
+    /** 应用名称 */
+    appName?: string;
+    /** 应用网站地址 */
+    appWebsite?: string;
+    /** Client ID */
+    clientId?: string;
+    /** Client Secret */
+    clientSecret?: string;
+    /** 创建时间 */
+    createTime?: string;
+    /** 应用 ID */
+    id?: number;
+    /** 回调地址 */
+    redirectUri?: string;
+    /** 状态：0-禁用，1-启用 */
+    status?: number;
+  };
+
+  type FishAuthUpdateRequest = {
+    /** 应用描述 */
+    appDesc?: string;
+    /** 应用名称 */
+    appName?: string;
+    /** 应用网站地址 */
+    appWebsite?: string;
+    /** 应用 ID */
+    id: number;
+    /** 回调地址（多个用逗号分隔） */
+    redirectUri?: string;
+    /** 状态：0-禁用，1-启用 */
+    status?: number;
+  };
+
+  type FishAuthVO = {
+    /** 应用描述 */
+    appDesc?: string;
+    /** 应用名称 */
+    appName?: string;
+    /** 应用网站地址 */
+    appWebsite?: string;
+    /** Client ID */
+    clientId?: string;
+    /** 创建时间 */
+    createTime?: string;
+    /** 应用 ID */
+    id?: number;
+    /** 回调地址 */
+    redirectUri?: string;
+    /** 状态：0-禁用，1-启用 */
+    status?: number;
+  };
+
   type FluxString_ = {
     prefetch?: number;
+  };
+
+  type ForgeDetailRequest = {
+    /** 装备位置：1-武器 2-手套 3-鞋子 4-头盔 5-项链 6-翅膀 */
+    equipSlot: number;
+    /** 宠物ID */
+    petId: number;
+  };
+
+  type ForgeLockRequest = {
+    /** 装备位置：1-武器 2-手套 3-鞋子 4-头盔 5-项链 6-翅膀 */
+    equipSlot: number;
+    /** 需要锁定的词条序号列表（1~4），不在列表中的词条将被解锁，传空列表表示解锁全部 */
+    lockedEntries?: number[];
+    /** 宠物ID */
+    petId: number;
+  };
+
+  type ForgeRefreshRequest = {
+    /** 装备位置：1-武器 2-手套 3-鞋子 4-头盔 5-项链 6-翅膀 */
+    equipSlot: number;
+    /** 宠物ID */
+    petId: number;
+  };
+
+  type ForgeUpgradeRequest = {
+    /** 装备位置：1-武器 2-手套 3-鞋子 4-头盔 5-项链 6-翅膀 */
+    equipSlot: number;
+    /** 宠物ID */
+    petId: number;
+  };
+
+  type FundItemVO = {
+    /** 涨跌幅（%） */
+    changePercent?: number;
+    /** 基金代码 */
+    code?: string;
+    /** 成本价 */
+    cost?: number;
+    /** 当前价格（实时估值） */
+    currentPrice?: number;
+    /** 今日盈亏 */
+    dayProfit?: number;
+    /** 持有市值 */
+    marketValue?: number;
+    /** 基金名称 */
+    name?: string;
+    /** 昨日净值 */
+    prevPrice?: number;
+    /** 持有收益率（%） */
+    profitRate?: number;
+    /** 持有份额 */
+    shares?: number;
+    /** 累计盈亏 */
+    totalProfit?: number;
+    /** 更新时间 */
+    updateTime?: string;
+  };
+
+  type FundListVO = {
+    /** 基金列表 */
+    fundList: FundItemVO[];
+    /** 今日下跌的基金数量 */
+    todayDownCount?: number;
+    /** 今日上涨的基金数量 */
+    todayUpCount?: number;
+    /** 今日总盈亏 */
+    totalDayProfit?: number;
+    /** 今日总收益率（%） */
+    totalDayProfitRate?: number;
+    /** 总市值 */
+    totalMarketValue?: number;
+    /** 累计总盈亏 */
+    totalProfit?: number;
+    /** 总持有收益率（%） */
+    totalProfitRate?: number;
   };
 
   type generatePresignedDownloadUrlUsingGETParams = {
@@ -390,9 +1725,61 @@ declare namespace API {
     fileName: string;
   };
 
+  type getAppByClientIdUsingGETParams = {
+    /** clientId */
+    clientId: string;
+  };
+
+  type getAppDetailUsingGETParams = {
+    /** id */
+    id: number;
+  };
+
+  type getBossBattleInfoUsingGETParams = {
+    /** bossId */
+    bossId: number;
+  };
+
+  type getBossChallengeRankingUsingGETParams = {
+    /** bossId */
+    bossId: number;
+    /** limit */
+    limit?: number;
+  };
+
+  type getByIdUsingGETParams = {
+    /** id */
+    id?: number;
+  };
+
+  type getConfigUsingGETParams = {
+    /** petId */
+    petId: number;
+  };
+
   type getCosCredentialUsingGETParams = {
     /** fileName */
     fileName?: string;
+  };
+
+  type getCropByIdUsingGETParams = {
+    /** id */
+    id: number;
+  };
+
+  type getCropsByCategoryUsingGETParams = {
+    /** category */
+    category: string;
+  };
+
+  type getCurrentPlayerInfoUsingGETParams = {
+    /** roomId */
+    roomId: string;
+  };
+
+  type getCurrentRewardUserUsingGETParams = {
+    /** postId */
+    postId?: number;
   };
 
   type getDonationRecordsVoByIdUsingGETParams = {
@@ -400,9 +1787,39 @@ declare namespace API {
     id?: number;
   };
 
+  type getFloorMonsterUsingGETParams = {
+    /** floor */
+    floor: number;
+  };
+
+  type getFriendLandsUsingGETParams = {
+    /** friendUserId */
+    friendUserId: number;
+  };
+
   type getHeroByIdUsingGETParams = {
     /** id */
     id?: number;
+  };
+
+  type getItemInstanceByIdUsingGETParams = {
+    /** id */
+    id?: number;
+  };
+
+  type getItemTemplateVOByIdUsingPOSTParams = {
+    /** id */
+    id?: number;
+  };
+
+  type getLuckyBagDetailUsingGETParams = {
+    /** 福袋ID */
+    luckyBagId: string;
+  };
+
+  type getLuckyBagWinRecordsUsingGETParams = {
+    /** 福袋ID */
+    luckyBagId: string;
   };
 
   type getMinioPresignedUsingGETParams = {
@@ -415,9 +1832,65 @@ declare namespace API {
     id?: number;
   };
 
+  type getMomentDetailUsingGETParams = {
+    /** id */
+    id: number;
+  };
+
+  type getMonthSignInUsingGETParams = {
+    /** month */
+    month?: number;
+    /** year */
+    year?: number;
+  };
+
+  type getOtherUserPetUsingGETParams = {
+    /** otherUserId */
+    otherUserId: number;
+  };
+
+  type getPetBattleInfoUsingGETParams = {
+    /** opponentUserId */
+    opponentUserId: number;
+  };
+
+  type getPetRankListUsingGETParams = {
+    /** limit */
+    limit?: number;
+  };
+
+  type getPlayerDetailInfoUsingGETParams = {
+    /** roomId */
+    roomId: string;
+    /** userId */
+    userId: number;
+  };
+
+  type getPlayerInfoUsingGETParams = {
+    /** roomId */
+    roomId: string;
+    /** userId */
+    userId: number;
+  };
+
+  type getPositionUsingGETParams = {
+    /** 指数代码，默认 sh000001 */
+    indexCode?: string;
+  };
+
+  type getPostRewardTokenUsingGETParams = {
+    /** postId */
+    postId?: number;
+  };
+
   type getPostVoByIdUsingGETParams = {
     /** id */
     id?: number;
+  };
+
+  type getRankingUsingGETParams = {
+    /** limit */
+    limit?: number;
   };
 
   type getRedPacketDetailUsingGETParams = {
@@ -430,6 +1903,41 @@ declare namespace API {
     redPacketId: string;
   };
 
+  type getRoomByIdUsingGET1Params = {
+    /** roomId */
+    roomId?: string;
+  };
+
+  type getRoomByIdUsingGETParams = {
+    /** roomId */
+    roomId: string;
+  };
+
+  type getRoomGuessesUsingGETParams = {
+    /** roomId */
+    roomId: string;
+  };
+
+  type getRoomPlayersDetailUsingGETParams = {
+    /** roomId */
+    roomId: string;
+  };
+
+  type getRoomVotesUsingGETParams = {
+    /** roomId */
+    roomId: string;
+  };
+
+  type getTagsVOByIdUsingGETParams = {
+    /** id */
+    id?: number;
+  };
+
+  type getTurntableDetailUsingGETParams = {
+    /** id */
+    id: number;
+  };
+
   type getUserByIdUsingGETParams = {
     /** id */
     id?: number;
@@ -440,14 +1948,43 @@ declare namespace API {
     userId: number;
   };
 
+  type getUserTitleByIdUsingGETParams = {
+    /** id */
+    id?: number;
+  };
+
+  type getUserVipVOByIdUsingGETParams = {
+    /** id */
+    id?: number;
+  };
+
   type getUserVoByIdUsingGETParams = {
     /** id */
     id?: number;
   };
 
+  type getVoteResultUsingGETParams = {
+    /** voteId */
+    voteId: string;
+  };
+
+  type getWordLibraryByIdUsingGETParams = {
+    /** id */
+    id?: number;
+  };
+
   type grabRedPacketUsingPOSTParams = {
+    /** 用户答案（答题红包必填） */
+    answer?: string;
     /** 红包ID */
     redPacketId: string;
+  };
+
+  type HarvestRequest = {
+    /** 地块ID列表 */
+    landIds: number[];
+    /** 农场用户ID（可不传，以当前登录用户为准） */
+    userId?: number;
   };
 
   type HeroRankingVO = {
@@ -498,14 +2035,511 @@ declare namespace API {
     updateTime?: string;
   };
 
+  type IndexBuyRequest = {
+    /** 买入金额（积分） */
+    amount: number;
+    /** 指数代码 */
+    indexCode?: string;
+  };
+
+  type IndexPositionVO = {
+    /** 可用份额（可卖出） */
+    availableShares?: number;
+    /** 平均成本（净值） */
+    avgCost?: number;
+    /** 涨跌幅（%） */
+    changePercent?: number;
+    /** 当前净值 */
+    currentNav?: number;
+    /** 冻结份额（卖出待结算） */
+    frozenShares?: number;
+    /** 指数代码 */
+    indexCode?: string;
+    /** 指数名称 */
+    indexName?: string;
+    /** 锁定份额（当日买入，次日解锁） */
+    lockedShares?: number;
+    /** 持仓市值（积分） */
+    marketValue?: number;
+    /** 持有收益率（%） */
+    profitRate?: number;
+    /** 累计盈亏（积分） */
+    totalProfit?: number;
+    /** 总份额 */
+    totalShares?: number;
+    /** 更新时间 */
+    updateTime?: string;
+  };
+
+  type IndexSellRequest = {
+    /** 指数代码 */
+    indexCode?: string;
+    shares?: number;
+  };
+
+  type IndexTradeResultVO = {
+    /** 交易金额（积分，买入为支出，卖出为扣费后到账） */
+    amount?: number;
+    /** 预计结算日期（仅卖出有效） */
+    expectedSettleDate?: string;
+    /** 手续费（积分，仅卖出有效） */
+    fee?: number;
+    /** 卖出成交额（扣费前，仅卖出有效） */
+    grossAmount?: number;
+    /** 提示信息 */
+    message?: string;
+    /** 成交净值 */
+    nav?: number;
+    /** 成交份额 */
+    shares?: number;
+    /** 交易类型：1-买入，2-卖出 */
+    tradeType?: number;
+    /** 交易类型名称 */
+    tradeTypeName?: string;
+    /** 交易记录ID */
+    transactionId?: number;
+  };
+
+  type IndexTransactionQueryRequest = {
+    current?: number;
+    indexCode?: string;
+    pageSize?: number;
+    sortField?: string;
+    sortOrder?: string;
+    status?: number;
+    tradeType?: number;
+  };
+
+  type IndexTransactionVO = {
+    /** 实际结算时间（仅卖出） */
+    actualSettleTime?: string;
+    /** 交易金额（积分） */
+    amount?: number;
+    /** 下单时间 */
+    createTime?: string;
+    /** 预计结算日期（仅卖出） */
+    expectedSettleDate?: string;
+    /** 交易记录ID */
+    id?: number;
+    /** 指数代码 */
+    indexCode?: string;
+    /** 指数名称 */
+    indexName?: string;
+    /** 成交净值 */
+    nav?: number;
+    /** 盈亏金额（积分，仅卖出） */
+    profitLoss?: number;
+    /** 成交份额 */
+    shares?: number;
+    /** 状态：0-待结算，1-已完成 */
+    status?: number;
+    /** 状态名称 */
+    statusName?: string;
+    /** 交易类型：1-买入，2-卖出 */
+    tradeType?: number;
+    /** 交易类型名称 */
+    tradeTypeName?: string;
+  };
+
+  type IP_ = {
+    /** AS 编号 */
+    asNumber?: string;
+    /** AS 名称 */
+    asname?: string;
+    /** 城市 */
+    city?: string;
+    /** 大陆名称 */
+    continent?: string;
+    /** 大陆代号 */
+    continentCode?: string;
+    /** 国家名称 */
+    country?: string;
+    /** 国家代号 */
+    countryCode?: string;
+    /** 本国货币 */
+    currency?: string;
+    /** 区县 */
+    district?: string;
+    /** 互联网服务提供商 */
+    isp?: string;
+    /** 纬度 */
+    lat?: number;
+    /** 经度 */
+    lon?: number;
+    /** 失败时的错误信息 */
+    message?: string;
+    /** 组织名称 */
+    org?: string;
+    /** 查询的 IP 地址 */
+    query?: string;
+    /** 区域 */
+    region?: string;
+    /** 地区/省份 */
+    regionName?: string;
+    /** 返回状态：success 成功，fail 失败 */
+    status?: string;
+    /** 时区 */
+    timezone?: string;
+    /** 邮编 */
+    zip?: string;
+  };
+
+  type isFollowingUsingGETParams = {
+    /** 被关注用户ID */
+    followUserId: string;
+  };
+
+  type ItemEquipRequest = {
+    itemInstanceId?: number;
+  };
+
+  type ItemInstanceDecomposeRequest = {
+    itemInstanceId?: number;
+  };
+
+  type ItemInstanceEditRequest = {
+    /** 是否绑定（1绑定，0未绑定） */
+    bound?: number;
+    /** 耐久度 */
+    durability?: number;
+    /** 强化等级 */
+    enhanceLevel?: number;
+    /** 扩展信息（JSON字符串或对象） */
+    extraData?: Record<string, any>;
+    /** 物品实例ID */
+    id: number;
+    /** 是否需要返回模板信息，默认 true */
+    includeTemplate?: boolean;
+    /** 持有者用户ID（允许转移所有权） */
+    ownerUserId?: number;
+    /** 数量（大于0有效） */
+    quantity?: number;
+    /** 物品模板ID（允许修改实例关联的模板） */
+    templateId?: number;
+  };
+
+  type ItemInstanceQueryRequest = {
+    /** 物品大类（可选） */
+    category?: string;
+    current?: number;
+    /** 装备槽位（可选） */
+    equipSlot?: string;
+    pageSize?: number;
+    /** 稀有度等级（可选） */
+    rarity?: number;
+    sortField?: string;
+    sortOrder?: string;
+  };
+
+  type ItemInstances = {
+    bound?: number;
+    createTime?: string;
+    durability?: number;
+    enhanceLevel?: number;
+    extraData?: Record<string, any>;
+    id?: number;
+    isDelete?: number;
+    ownerUserId?: number;
+    quantity?: number;
+    templateId?: number;
+    updateTime?: string;
+  };
+
+  type ItemInstanceVO = {
+    bound?: number;
+    createTime?: string;
+    durability?: number;
+    enhanceLevel?: number;
+    equipStats?: SingleEquipStatsVO;
+    extraData?: Record<string, any>;
+    id?: number;
+    ownerUserId?: number;
+    quantity?: number;
+    template?: ItemTemplateVO;
+    templateId?: number;
+    updateTime?: string;
+  };
+
+  type ItemTemplateAddRequest = {
+    /** 基础攻击力 */
+    baseAttack?: number;
+    /** 基础防御力 */
+    baseDefense?: number;
+    /** 基础生命值 */
+    baseHp?: number;
+    /** 基础速度（决定战斗先手，速度高的一方先攻击） */
+    baseSpeed?: number;
+    /** 物品大类：equipment-装备类（能穿戴的）、consumable-消耗品（药水/卷轴/食物）、material-材料（强化石/合成材料） */
+    category?: string;
+    /** 模板唯一码，例如 sword_iron_01 */
+    code?: string;
+    /** 物品描述 */
+    description?: string;
+    /** 可穿戴槽位: head-头部, hand-手部, foot-脚部, weapon-武器；NULL 表示无法穿戴 */
+    equipSlot?: string;
+    /** 物品图标地址 */
+    icon?: string;
+    /** 使用等级需求 */
+    levelReq?: number;
+    /** 非常规属性/词缀(JSON)，格式: [{k,v},...] */
+    mainAttr?: Record<string, any>;
+    /** 物品名称 */
+    name?: string;
+    /** 稀有度等级（1-8，数字越高越稀有） */
+    rarity?: number;
+    /** 分解后获得的积分 */
+    removePoint?: number;
+    /** 是否可叠加，0-不可叠加，1-可叠加（如消耗品） */
+    stackable?: number;
+    /** 物品子类型，例如 weapon 武器、head 头盔、foot 鞋子、hand 手套 */
+    subType?: string;
+  };
+
+  type ItemTemplateEditRequest = {
+    /** 基础攻击力 */
+    baseAttack?: number;
+    /** 基础防御力 */
+    baseDefense?: number;
+    /** 基础生命值 */
+    baseHp?: number;
+    /** 基础速度（决定战斗先手，速度高的一方先攻击） */
+    baseSpeed?: number;
+    /** 物品大类 */
+    category: string;
+    /** 模板唯一码 */
+    code: string;
+    /** 物品描述 */
+    description?: string;
+    /** 可穿戴槽位 */
+    equipSlot?: string;
+    /** 物品图标地址 */
+    icon?: string;
+    /** 物品模板ID */
+    id: number;
+    /** 逻辑删除标识（0-正常，1-已删除） */
+    isDelete?: number;
+    /** 使用等级需求 */
+    levelReq?: number;
+    /** 非常规属性/词缀(JSON) */
+    mainAttr?: Record<string, any>;
+    /** 物品名称 */
+    name: string;
+    /** 稀有度等级（1-8） */
+    rarity?: number;
+    /** 分解后获得的积分 */
+    removePoint?: number;
+    /** 是否可叠加（0-不可叠加，1-可叠加） */
+    stackable?: number;
+    /** 物品子类型 */
+    subType?: string;
+  };
+
+  type ItemTemplateQueryRequest = {
+    /** 物品大类：equipment-装备类、consumable-消耗品、material-材料 */
+    category?: string;
+    /** 模板唯一码（精确匹配） */
+    code?: string;
+    current?: number;
+    /** id */
+    id?: number;
+    /** 使用等级需求 */
+    levelReq?: number;
+    /** 物品名称（模糊搜索） */
+    name?: string;
+    pageSize?: number;
+    /** 稀有度等级（1-8，数字越高越稀有） */
+    rarity?: number;
+    sortField?: string;
+    sortOrder?: string;
+    /** 是否可叠加（0-不可叠加，1-可叠加） */
+    stackable?: number;
+    /** 子类型，例如 weapon 武器、head 头盔、foot 鞋子、hand 手套 */
+    subType?: string;
+  };
+
+  type ItemTemplateVO = {
+    baseAttack?: number;
+    baseDefense?: number;
+    baseHp?: number;
+    baseSpeed?: number;
+    category?: string;
+    code?: string;
+    description?: string;
+    equipSlot?: string;
+    icon?: string;
+    id?: number;
+    levelReq?: number;
+    mainAttr?: Record<string, any>;
+    name?: string;
+    purchasable?: number;
+    purchasePoint?: number;
+    rarity?: number;
+    removePoint?: number;
+    stackable?: number;
+    subType?: string;
+  };
+
+  type ItemUnequipRequest = {
+    equipSlot?: string;
+  };
+
+  type joinLuckyBagUsingPOSTParams = {
+    /** 福袋ID */
+    luckyBagId: string;
+  };
+
+  type joinRoomUsingPOSTParams = {
+    /** roomId */
+    roomId: string;
+  };
+
+  type LandDTO = {
+    /** 是否可以偷菜（false 表示已偷过、未成熟或无可偷积分） */
+    canSteal?: boolean;
+    /** 作物名称 */
+    cropName?: string;
+    /** 收获时间 */
+    harvestTime?: string;
+    /** 地块ID */
+    id?: number;
+    /** 地块索引 */
+    landIndex?: number;
+    /** 是否锁定（0-未锁定，1-已锁定） */
+    locked?: number;
+    /** 种植的作物ID */
+    plantedCropId?: number;
+    /** 种植时间 */
+    plantedTime?: string;
+    /** 地块状态（0-空闲，1-种植中，2-已成熟） */
+    status?: number;
+  };
+
+  type linuxDoCallbackUsingGETParams = {
+    /** code */
+    code?: string;
+    /** state */
+    state?: string;
+  };
+
+  type listByPetIdUsingGETParams = {
+    /** 宠物ID */
+    petId: number;
+  };
+
+  type listDrawRecordsUsingGETParams = {
+    current?: number;
+    pageSize?: number;
+    sortField?: string;
+    sortOrder?: string;
+    turntableId?: number;
+  };
+
+  type listMyFollowersUsingGETParams = {
+    current?: number;
+    pageSize?: number;
+    sortField?: string;
+    sortOrder?: string;
+  };
+
+  type listMyFollowingUsingGETParams = {
+    current?: number;
+    pageSize?: number;
+    sortField?: string;
+    sortOrder?: string;
+  };
+
+  type listMyPointsRecordsBySourceUsingGETParams = {
+    /** current */
+    current?: number;
+    /** pageSize */
+    pageSize?: number;
+    /** sourceType */
+    sourceType: string;
+  };
+
+  type listMyPointsRecordsUsingGETParams = {
+    /** current */
+    current?: number;
+    /** pageSize */
+    pageSize?: number;
+  };
+
+  type listPetSkinsUsingGETParams = {
+    current?: number;
+    name?: string;
+    pageSize?: number;
+    sortField?: string;
+    sortOrder?: string;
+  };
+
+  type listPropsPageUsingGETParams = {
+    current?: number;
+    name?: string;
+    pageSize?: number;
+    sortField?: string;
+    sortOrder?: string;
+    type?: string;
+  };
+
+  type listRedeemCodePageUsingGETParams = {
+    code?: string;
+    current?: number;
+    pageSize?: number;
+    rewardType?: number;
+    sortField?: string;
+    sortOrder?: string;
+    status?: number;
+    type?: number;
+  };
+
+  type listReportPageUsingGETParams = {
+    /** 举报类型：1-聊天记录，2-帖子，3-鱼小圈 */
+    reportType?: number;
+    /** 举报人用户ID */
+    reporterId?: number;
+    /** 处理状态：0-待处理，1-已处理，2-已驳回 */
+    status?: number;
+    /** 被举报用户ID */
+    targetUserId?: number;
+    current?: number;
+    pageSize?: number;
+    sortField?: string;
+    sortOrder?: string;
+  };
+
+  type listTurntablesUsingGETParams = {
+    current?: number;
+    pageSize?: number;
+    sortField?: string;
+    sortOrder?: string;
+    type?: number;
+  };
+
+  type listUserPointsRecordsUsingGETParams = {
+    /** current */
+    current?: number;
+    /** pageSize */
+    pageSize?: number;
+    /** userId */
+    userId: number;
+  };
+
+  type listUserTitlesByUserIdUsingGETParams = {
+    /** userId */
+    userId: number;
+  };
+
   type LoginUserVO = {
     avatarFramerUrl?: string;
     bindPlatforms?: PlatformBindVO[];
     createTime?: string;
     email?: string;
+    followerCount?: number;
+    followingCount?: number;
     id?: number;
     lastSignInDate?: string;
     level?: number;
+    momentsBgUrl?: string;
     points?: number;
     titleId?: number;
     titleIdList?: string;
@@ -515,6 +2549,67 @@ declare namespace API {
     userName?: string;
     userProfile?: string;
     userRole?: string;
+    vip?: boolean;
+  };
+
+  type LotteryWinnerVO = {
+    /** 用户头像 */
+    userAvatar?: string;
+    /** 用户ID */
+    userId?: number;
+    /** 用户昵称 */
+    userName?: string;
+  };
+
+  type LuckyBag = {
+    createTime?: string;
+    creatorAvatar?: string;
+    creatorId?: number;
+    creatorName?: string;
+    /** 开奖时间 */
+    drawTime?: string;
+    durationSeconds?: number;
+    expireTime?: string;
+    id?: string;
+    /** 当前用户是否已参与 */
+    joined?: boolean;
+    name?: string;
+    participantCount?: number;
+    status?: number;
+    totalAmount?: number;
+    type?: number;
+    winnerCount?: number;
+  };
+
+  type MakeUpSignInRequest = {
+    /** 补签日期，格式 yyyy-MM-dd */
+    signDate: string;
+  };
+
+  type MapStringString_ = true;
+
+  type MarketIndexVO = {
+    changePercent?: string;
+    changeValue?: number;
+    currentValue?: number;
+    indexCode?: string;
+    indexName?: string;
+  };
+
+  type markScriptUserUsingPOSTParams = {
+    /** true=标记为脚本，false=取消标记 */
+    mark: boolean;
+    /** 目标用户ID */
+    userId: number;
+  };
+
+  type MediaItem = {
+    /** 视频封面，仅 video 类型有效 */
+    cover?: string;
+    /** 类型：image / video */
+    type?: string;
+    /** 资源 URL */
+    url?: string;
   };
 
   type Message = {
@@ -522,12 +2617,14 @@ declare namespace API {
     id?: string;
     mentionedUsers?: Sender[];
     quotedMessage?: Message;
+    roomId?: string;
     sender?: Sender;
     timestamp?: string;
   };
 
   type MessageQueryRequest = {
     current?: number;
+    messageId?: number;
     pageSize?: number;
     roomId?: number;
     sortField?: string;
@@ -654,6 +2751,184 @@ declare namespace API {
     viewName?: string;
   };
 
+  type MomentsAddRequest = {
+    /** 部分可见的用户ID列表（visibility=2时有效） */
+    allowList?: number[];
+    /** 不给谁看的用户ID列表（visibility=3时有效） */
+    blockList?: number[];
+    /** 文字内容 */
+    content?: string;
+    /** 位置信息 */
+    location?: string;
+    /** 媒体资源列表（图片/视频） */
+    mediaJson?: MediaItem[];
+    /** 可见范围：0-所有朋友，1-仅自己，2-部分可见，3-不给谁看 */
+    visibility?: number;
+  };
+
+  type MomentsCommentAddRequest = {
+    /** 评论内容 */
+    content: string;
+    /** 动态ID */
+    momentId: number;
+    /** 父评论ID，为空表示顶级评论 */
+    parentId?: number;
+    /** 被回复的用户ID，为空表示直接评论动态 */
+    replyUserId?: number;
+  };
+
+  type MomentsCommentQueryRequest = {
+    current?: number;
+    /** 动态ID */
+    momentId: number;
+    pageSize?: number;
+    sortField?: string;
+    sortOrder?: string;
+  };
+
+  type MomentsCommentTopRequest = {
+    /** 评论ID */
+    commentId: number;
+    /** 是否置顶：true-置顶，false-取消置顶 */
+    top: boolean;
+  };
+
+  type MomentsCommentVO = {
+    /** 子评论列表（仅顶级评论携带） */
+    children?: MomentsCommentVO[];
+    /** 评论内容 */
+    content?: string;
+    /** 评论时间 */
+    createTime?: string;
+    /** 评论ID */
+    id?: number;
+    /** 是否置顶：0-否，1-是 */
+    isTop?: number;
+    /** 动态ID */
+    momentId?: number;
+    /** 父评论ID，为空表示顶级评论 */
+    parentId?: number;
+    /** 被回复的用户ID */
+    replyUserId?: number;
+    /** 被回复的用户昵称 */
+    replyUserName?: string;
+    /** 评论者头像 */
+    userAvatar?: string;
+    /** 评论者用户ID */
+    userId?: number;
+    /** 评论者昵称 */
+    userName?: string;
+  };
+
+  type MomentsLikeRequest = {
+    /** 动态ID */
+    momentId: number;
+  };
+
+  type MomentsLotteryRequest = {
+    /** 动态ID */
+    momentId: number;
+    /** 抽奖人数（1-100） */
+    winnerCount: number;
+  };
+
+  type MomentsLotteryVO = {
+    /** 评论ID（系统自动发布的抽奖结果评论） */
+    commentId?: number;
+    /** 动态ID */
+    momentId?: number;
+    /** 中奖用户列表 */
+    winners?: LotteryWinnerVO[];
+  };
+
+  type MomentsQueryRequest = {
+    current?: number;
+    pageSize?: number;
+    sortField?: string;
+    sortOrder?: string;
+    /** 指定查看某个用户的动态，为空则查看好友动态 */
+    userId?: number;
+  };
+
+  type MomentsRewardRequest = {
+    /** 动态ID */
+    momentId: number;
+    /** 打赏积分数量（消耗 usedPoints） */
+    points: number;
+  };
+
+  type MomentsTopRequest = {
+    /** 动态ID */
+    momentId: number;
+    /** 是否置顶：true-置顶，false-取消置顶 */
+    top: boolean;
+  };
+
+  type MomentsUpdateRequest = {
+    /** 部分可见的用户ID列表（visibility=2时有效） */
+    allowList?: number[];
+    /** 不给谁看的用户ID列表（visibility=3时有效） */
+    blockList?: number[];
+    /** 文字内容 */
+    content?: string;
+    /** 动态ID */
+    id: number;
+    /** 位置信息 */
+    location?: string;
+    /** 媒体资源列表（图片/视频） */
+    mediaJson?: MediaItem[];
+    /** 可见范围：0-所有朋友，1-仅自己，2-部分可见，3-不给谁看 */
+    visibility?: number;
+  };
+
+  type MomentsVO = {
+    /** 评论数 */
+    commentNum?: number;
+    /** 文字内容 */
+    content?: string;
+    /** 发布时间 */
+    createTime?: string;
+    /** 动态ID */
+    id?: number;
+    /** 是否置顶：0-否，1-是 */
+    isTop?: number;
+    /** 点赞数 */
+    likeNum?: number;
+    /** 点赞用户名称，逗号拼接 */
+    likeUserNames?: string;
+    /** 当前登录用户是否已点赞 */
+    liked?: boolean;
+    /** 位置信息 */
+    location?: string;
+    /** 媒体资源列表（图片/视频） */
+    mediaJson?: MediaItem[];
+    /** 发布者头像 */
+    userAvatar?: string;
+    /** 发布者用户ID */
+    userId?: number;
+    /** 发布者昵称 */
+    userName?: string;
+    /** 可见范围：0-所有朋友，1-仅自己，2-部分可见，3-不给谁看 */
+    visibility?: number;
+  };
+
+  type MonthSignInVO = {
+    /** 连续签到天数 */
+    continuousDays?: number;
+    /** 当前可用积分 */
+    currentPoints?: number;
+    /** 本月每天签到数据列表 */
+    days?: DaySignInVO[];
+    /** 月份（1-12） */
+    month?: number;
+    /** 剩余补签数量 */
+    remainMakeUpCount?: number;
+    /** 累计签到天数 */
+    totalSignInDays?: number;
+    /** 年份 */
+    year?: number;
+  };
+
   type NewUserDataWebRequest = {
     beginTime?: string;
     endTime?: string;
@@ -665,9 +2940,51 @@ declare namespace API {
     newUserCount?: number;
   };
 
+  type nextRoundUsingPOSTParams = {
+    /** roomId */
+    roomId: string;
+  };
+
+  type OAuth2TokenVO = {
+    /** 访问令牌 */
+    access_token?: string;
+    /** 过期时间（秒） */
+    expires_in?: number;
+    /** 授权范围 */
+    scope?: string;
+    /** 令牌类型 */
+    token_type?: string;
+  };
+
+  type OAuth2UserInfoVO = {
+    /** 用户头像 */
+    avatar?: string;
+    /** 用户 ID */
+    id?: string;
+    /** 用户昵称 */
+    name?: string;
+    /** 用户名 */
+    username?: string;
+  };
+
   type OrderItem = {
     asc?: boolean;
     column?: string;
+  };
+
+  type OtherUserPetVO = {
+    createTime?: string;
+    equipStats?: PetEquipStatsVO;
+    equippedItems?: Record<string, any>;
+    exp?: number;
+    hunger?: number;
+    level?: number;
+    mood?: number;
+    name?: string;
+    petId?: number;
+    petUrl?: string;
+    skins?: PetSkinVO[];
+    userId?: number;
   };
 
   type PageAvatarFrameVO_ = {
@@ -678,6 +2995,58 @@ declare namespace API {
     orders?: OrderItem[];
     pages?: number;
     records?: AvatarFrameVO[];
+    searchCount?: boolean;
+    size?: number;
+    total?: number;
+  };
+
+  type PageCommentNodeVO_ = {
+    countId?: string;
+    current?: number;
+    maxLimit?: number;
+    optimizeCountSql?: boolean;
+    orders?: OrderItem[];
+    pages?: number;
+    records?: CommentNodeVO[];
+    searchCount?: boolean;
+    size?: number;
+    total?: number;
+  };
+
+  type PageCommentVO_ = {
+    countId?: string;
+    current?: number;
+    maxLimit?: number;
+    optimizeCountSql?: boolean;
+    orders?: OrderItem[];
+    pages?: number;
+    records?: CommentVO[];
+    searchCount?: boolean;
+    size?: number;
+    total?: number;
+  };
+
+  type PageDataSourceCookieVO_ = {
+    countId?: string;
+    current?: number;
+    maxLimit?: number;
+    optimizeCountSql?: boolean;
+    orders?: OrderItem[];
+    pages?: number;
+    records?: DataSourceCookieVO[];
+    searchCount?: boolean;
+    size?: number;
+    total?: number;
+  };
+
+  type PageDonationDetailRecordsVO_ = {
+    countId?: string;
+    current?: number;
+    maxLimit?: number;
+    optimizeCountSql?: boolean;
+    orders?: OrderItem[];
+    pages?: number;
+    records?: DonationDetailRecordsVO[];
     searchCount?: boolean;
     size?: number;
     total?: number;
@@ -709,6 +3078,19 @@ declare namespace API {
     total?: number;
   };
 
+  type PageDrawRecordVO_ = {
+    countId?: string;
+    current?: number;
+    maxLimit?: number;
+    optimizeCountSql?: boolean;
+    orders?: OrderItem[];
+    pages?: number;
+    records?: DrawRecordVO[];
+    searchCount?: boolean;
+    size?: number;
+    total?: number;
+  };
+
   type PageEmoticonFavour_ = {
     countId?: string;
     current?: number;
@@ -722,6 +3104,71 @@ declare namespace API {
     total?: number;
   };
 
+  type PageEventRemindVO_ = {
+    countId?: string;
+    current?: number;
+    maxLimit?: number;
+    optimizeCountSql?: boolean;
+    orders?: OrderItem[];
+    pages?: number;
+    records?: EventRemindVO[];
+    searchCount?: boolean;
+    size?: number;
+    total?: number;
+  };
+
+  type PageIndexTransactionVO_ = {
+    countId?: string;
+    current?: number;
+    maxLimit?: number;
+    optimizeCountSql?: boolean;
+    orders?: OrderItem[];
+    pages?: number;
+    records?: IndexTransactionVO[];
+    searchCount?: boolean;
+    size?: number;
+    total?: number;
+  };
+
+  type PageItemInstances_ = {
+    countId?: string;
+    current?: number;
+    maxLimit?: number;
+    optimizeCountSql?: boolean;
+    orders?: OrderItem[];
+    pages?: number;
+    records?: ItemInstances[];
+    searchCount?: boolean;
+    size?: number;
+    total?: number;
+  };
+
+  type PageItemInstanceVO_ = {
+    countId?: string;
+    current?: number;
+    maxLimit?: number;
+    optimizeCountSql?: boolean;
+    orders?: OrderItem[];
+    pages?: number;
+    records?: ItemInstanceVO[];
+    searchCount?: boolean;
+    size?: number;
+    total?: number;
+  };
+
+  type PageItemTemplateVO_ = {
+    countId?: string;
+    current?: number;
+    maxLimit?: number;
+    optimizeCountSql?: boolean;
+    orders?: OrderItem[];
+    pages?: number;
+    records?: ItemTemplateVO[];
+    searchCount?: boolean;
+    size?: number;
+    total?: number;
+  };
+
   type PageMockInterview_ = {
     countId?: string;
     current?: number;
@@ -730,6 +3177,45 @@ declare namespace API {
     orders?: OrderItem[];
     pages?: number;
     records?: MockInterview[];
+    searchCount?: boolean;
+    size?: number;
+    total?: number;
+  };
+
+  type PageMomentsCommentVO_ = {
+    countId?: string;
+    current?: number;
+    maxLimit?: number;
+    optimizeCountSql?: boolean;
+    orders?: OrderItem[];
+    pages?: number;
+    records?: MomentsCommentVO[];
+    searchCount?: boolean;
+    size?: number;
+    total?: number;
+  };
+
+  type PageMomentsVO_ = {
+    countId?: string;
+    current?: number;
+    maxLimit?: number;
+    optimizeCountSql?: boolean;
+    orders?: OrderItem[];
+    pages?: number;
+    records?: MomentsVO[];
+    searchCount?: boolean;
+    size?: number;
+    total?: number;
+  };
+
+  type PagePetSkinVO_ = {
+    countId?: string;
+    current?: number;
+    maxLimit?: number;
+    optimizeCountSql?: boolean;
+    orders?: OrderItem[];
+    pages?: number;
+    records?: PetSkinVO[];
     searchCount?: boolean;
     size?: number;
     total?: number;
@@ -761,6 +3247,45 @@ declare namespace API {
     total?: number;
   };
 
+  type PagePropsVO_ = {
+    countId?: string;
+    current?: number;
+    maxLimit?: number;
+    optimizeCountSql?: boolean;
+    orders?: OrderItem[];
+    pages?: number;
+    records?: PropsVO[];
+    searchCount?: boolean;
+    size?: number;
+    total?: number;
+  };
+
+  type PageRedeemCodeVO_ = {
+    countId?: string;
+    current?: number;
+    maxLimit?: number;
+    optimizeCountSql?: boolean;
+    orders?: OrderItem[];
+    pages?: number;
+    records?: RedeemCodeVO[];
+    searchCount?: boolean;
+    size?: number;
+    total?: number;
+  };
+
+  type PageReportVO_ = {
+    countId?: string;
+    current?: number;
+    maxLimit?: number;
+    optimizeCountSql?: boolean;
+    orders?: OrderItem[];
+    pages?: number;
+    records?: ReportVO[];
+    searchCount?: boolean;
+    size?: number;
+    total?: number;
+  };
+
   type PageRequest = {
     current?: number;
     pageSize?: number;
@@ -781,6 +3306,32 @@ declare namespace API {
     total?: number;
   };
 
+  type PageTags_ = {
+    countId?: string;
+    current?: number;
+    maxLimit?: number;
+    optimizeCountSql?: boolean;
+    orders?: OrderItem[];
+    pages?: number;
+    records?: Tags[];
+    searchCount?: boolean;
+    size?: number;
+    total?: number;
+  };
+
+  type PageTagsVO_ = {
+    countId?: string;
+    current?: number;
+    maxLimit?: number;
+    optimizeCountSql?: boolean;
+    orders?: OrderItem[];
+    pages?: number;
+    records?: TagsVO[];
+    searchCount?: boolean;
+    size?: number;
+    total?: number;
+  };
+
   type PageUser_ = {
     countId?: string;
     current?: number;
@@ -789,6 +3340,58 @@ declare namespace API {
     orders?: OrderItem[];
     pages?: number;
     records?: User[];
+    searchCount?: boolean;
+    size?: number;
+    total?: number;
+  };
+
+  type PageUserFollowVO_ = {
+    countId?: string;
+    current?: number;
+    maxLimit?: number;
+    optimizeCountSql?: boolean;
+    orders?: OrderItem[];
+    pages?: number;
+    records?: UserFollowVO[];
+    searchCount?: boolean;
+    size?: number;
+    total?: number;
+  };
+
+  type PageUserTitle_ = {
+    countId?: string;
+    current?: number;
+    maxLimit?: number;
+    optimizeCountSql?: boolean;
+    orders?: OrderItem[];
+    pages?: number;
+    records?: UserTitle[];
+    searchCount?: boolean;
+    size?: number;
+    total?: number;
+  };
+
+  type PageUserVip_ = {
+    countId?: string;
+    current?: number;
+    maxLimit?: number;
+    optimizeCountSql?: boolean;
+    orders?: OrderItem[];
+    pages?: number;
+    records?: UserVip[];
+    searchCount?: boolean;
+    size?: number;
+    total?: number;
+  };
+
+  type PageUserVipVO_ = {
+    countId?: string;
+    current?: number;
+    maxLimit?: number;
+    optimizeCountSql?: boolean;
+    orders?: OrderItem[];
+    pages?: number;
+    records?: UserVipVO[];
     searchCount?: boolean;
     size?: number;
     total?: number;
@@ -807,9 +3410,277 @@ declare namespace API {
     total?: number;
   };
 
+  type PageVO_ = {
+    countId?: string;
+    current?: number;
+    maxLimit?: number;
+    optimizeCountSql?: boolean;
+    orders?: OrderItem[];
+    pages?: number;
+    records?: VO[];
+    searchCount?: boolean;
+    size?: number;
+    total?: number;
+  };
+
+  type PageWordLibrary_ = {
+    countId?: string;
+    current?: number;
+    maxLimit?: number;
+    optimizeCountSql?: boolean;
+    orders?: OrderItem[];
+    pages?: number;
+    records?: WordLibrary[];
+    searchCount?: boolean;
+    size?: number;
+    total?: number;
+  };
+
   type parseWebPageUsingGETParams = {
     /** url */
     url: string;
+  };
+
+  type patPetUsingPOSTParams = {
+    /** petId */
+    petId: number;
+  };
+
+  type PayCreateRequest = {
+    /** 用户备注信息（可选） */
+    remark?: string;
+    /** 支付成功后跳转地址（可选） */
+    returnUrl?: string;
+    /** 订单金额（元） */
+    totalFee: number;
+    /** 支付类型：1-赞助摸鱼岛 */
+    type: number;
+  };
+
+  type payNotifyUsingPOSTParams = {
+    /** 支付渠道 APPID */
+    appid?: string;
+    /** 备注/附加数据 */
+    attach?: string;
+    /** 签名 */
+    hash?: string;
+    /** 随机字符串 */
+    nonce_str?: string;
+    /** 虎皮椒内部订单号 */
+    open_order_id?: string;
+    /** 订单标题 */
+    order_title?: string;
+    /** 插件 ID */
+    plugins?: string;
+    /** 订单状态：OD-已支付，CD-已退款，RD-退款中，UD-退款失败 */
+    status?: string;
+    /** 时间戳 */
+    time?: string;
+    /** 订单支付金额（元） */
+    total_fee?: number;
+    /** 商户订单号 */
+    trade_order_id?: string;
+    /** 支付平台交易号 */
+    transaction_id?: string;
+  };
+
+  type PayOrderVO = {
+    /** 订单ID */
+    id?: number;
+    /** 支付跳转链接（手机端） */
+    payUrl?: string;
+    /** 订单状态 */
+    status?: string;
+    /** 订单标题 */
+    title?: string;
+    /** 订单金额（元） */
+    totalFee?: number;
+    /** 商户订单号 */
+    tradeOrderId?: string;
+    /** 支付二维码地址（PC端） */
+    urlQrcode?: string;
+  };
+
+  type PetAutoFeedConfigRequest = {
+    enabled?: number;
+    foodCode?: string;
+    petId?: number;
+    triggerThreshold?: number;
+  };
+
+  type PetAutoFeedConfigVO = {
+    createTime?: string;
+    enabled?: number;
+    foodCode?: string;
+    foodIcon?: string;
+    foodName?: string;
+    id?: number;
+    petId?: number;
+    remainingQuantity?: number;
+    triggerThreshold?: number;
+    updateTime?: string;
+  };
+
+  type PetBattleInfoVO = {
+    myPet?: PetInfo1;
+    opponentPet?: PetInfo1;
+  };
+
+  type PetBattleResultVO = {
+    /** 当前攻击方类型：MY_PET-我的宠物攻击，OPPONENT_PET-对手宠物攻击 */
+    attackerType?: string;
+    /** 扣血量 */
+    damage?: number;
+    /** 是否格挡 */
+    isBlock?: boolean;
+    /** 是否连击 */
+    isCombo?: boolean;
+    /** 是否暴击 */
+    isCritical?: boolean;
+    /** 是否闪避 */
+    isDodge?: boolean;
+    /** 是否普通攻击 */
+    isNormalAttack?: boolean;
+    /** 吸血回复量 */
+    lifestealHeal?: number;
+    /** 我的宠物剩余血量 */
+    myPetRemainingHealth?: number;
+    /** 对手宠物剩余血量 */
+    opponentPetRemainingHealth?: number;
+  };
+
+  type PetEquipForgeDetailVO = {
+    entry1?: EquipEntry;
+    entry2?: EquipEntry;
+    entry3?: EquipEntry;
+    entry4?: EquipEntry;
+    /** 装备等级，武器为 null */
+    equipLevel?: number;
+    /** 装备位置：1-武器 2-手套 3-鞋子 4-头盔 5-项链 6-翅膀 */
+    equipSlot?: number;
+    /** 装备位置名称，如：武器、手套、鞋子等 */
+    equipSlotName?: string;
+    /** 记录ID */
+    id?: number;
+    /** 是否已达最高等级 */
+    maxLevel?: boolean;
+    /** 本次升级所需积分（已达最高等级时为 0） */
+    nextUpgradeCost?: number;
+    /** 宠物ID */
+    petId?: number;
+    /** 本次升级成功概率（百分比，已达最高等级时为 0） */
+    successRate?: number;
+  };
+
+  type PetEquipForgeVO = {
+    entry1?: EquipEntry;
+    entry2?: EquipEntry;
+    entry3?: EquipEntry;
+    entry4?: EquipEntry;
+    /** 装备等级，武器为 null */
+    equipLevel?: number;
+    /** 装备位置：1-武器 2-手套 3-鞋子 4-头盔 5-项链 6-翅膀 */
+    equipSlot?: number;
+    /** 装备位置名称，如：武器、手套、鞋子等 */
+    equipSlotName?: string;
+    /** 记录ID */
+    id?: number;
+    /** 宠物ID */
+    petId?: number;
+  };
+
+  type PetEquipStatsVO = {
+    blockRate?: number;
+    blockResistance?: number;
+    comboRate?: number;
+    comboResistance?: number;
+    critRate?: number;
+    critResistance?: number;
+    dodgeRate?: number;
+    dodgeResistance?: number;
+    lifesteal?: number;
+    lifestealResistance?: number;
+    speed?: number;
+    totalBaseAttack?: number;
+    totalBaseDefense?: number;
+    totalBaseHp?: number;
+  };
+
+  type PetInfo = {
+    attack?: number;
+    avatar?: string;
+    equippedItems?: Record<string, any>;
+    health?: number;
+    level?: number;
+    name?: string;
+    petId?: number;
+  };
+
+  type PetInfo1 = {
+    attack?: number;
+    avatar?: string;
+    equippedItems?: Record<string, any>;
+    health?: number;
+    level?: number;
+    name?: string;
+    petId?: number;
+    userId?: number;
+  };
+
+  type PetRankVO = {
+    exp?: number;
+    level?: number;
+    name?: string;
+    petId?: number;
+    petUrl?: string;
+    rank?: number;
+    userAvatar?: string;
+    userId?: number;
+    userName?: string;
+  };
+
+  type PetSkinExchangeRequest = {
+    skinId?: number;
+  };
+
+  type PetSkinSetRequest = {
+    skinId?: number;
+  };
+
+  type PetSkinVO = {
+    description?: string;
+    name?: string;
+    owned?: boolean;
+    points?: number;
+    skinId?: number;
+    url?: string;
+  };
+
+  type PetVO = {
+    createTime?: string;
+    equipStats?: PetEquipStatsVO;
+    equippedItems?: Record<string, any>;
+    exp?: number;
+    hunger?: number;
+    level?: number;
+    mood?: number;
+    name?: string;
+    petId?: number;
+    petUrl?: string;
+    skins?: PetSkinVO[];
+    userId?: number;
+  };
+
+  type PlantItem = {
+    /** 作物ID */
+    cropId: number;
+    /** 地块ID */
+    landId: number;
+  };
+
+  type PlantRequest = {
+    /** 种植项列表（地块ID + 作物ID） */
+    items: PlantItem[];
   };
 
   type PlatformBindVO = {
@@ -820,26 +3691,32 @@ declare namespace API {
 
   type Post = {
     content?: string;
+    coverImage?: string;
     createTime?: string;
     favourNum?: number;
     id?: number;
     isDelete?: number;
+    isFeatured?: number;
+    summary?: string;
     tags?: string;
     thumbNum?: number;
     title?: string;
     updateTime?: string;
     userId?: number;
+    viewNum?: number;
   };
 
   type PostAddRequest = {
     content?: string;
+    coverImage?: string;
     tags?: string[];
     title?: string;
   };
 
   type PostEditRequest = {
     content?: string;
-    id?: number;
+    coverImage?: string;
+    id?: string;
     tags?: string[];
     title?: string;
   };
@@ -857,13 +3734,15 @@ declare namespace API {
     userId?: number;
   };
 
+  type PostFeaturedRequest = {
+    id?: number;
+    isFeatured?: number;
+  };
+
   type PostQueryRequest = {
     content?: string;
     current?: number;
-    favourUserId?: number;
-    id?: number;
-    notId?: number;
-    orTags?: string[];
+    isFeatured?: number;
     pageSize?: number;
     searchText?: string;
     sortField?: string;
@@ -873,30 +3752,77 @@ declare namespace API {
     userId?: number;
   };
 
+  type PostRandomThumbRequest = {
+    postId?: number;
+    randomIndex?: number;
+  };
+
+  type PostRewardTokenVO = {
+    rewardToken?: string;
+  };
+
   type PostThumbAddRequest = {
     postId?: number;
   };
 
   type PostUpdateRequest = {
     content?: string;
-    id?: number;
+    coverImage?: string;
+    id?: string;
     tags?: string[];
     title?: string;
   };
 
   type PostVO = {
+    commentNum?: number;
     content?: string;
+    coverImage?: string;
     createTime?: string;
     favourNum?: number;
     hasFavour?: boolean;
     hasThumb?: boolean;
     id?: number;
+    isFeatured?: number;
+    summary?: string;
     tagList?: string[];
+    thumbComment?: CommentVO;
     thumbNum?: number;
     title?: string;
     updateTime?: string;
     user?: UserVO;
     userId?: number;
+    viewNum?: number;
+  };
+
+  type PropsPurchaseRequest = {
+    propsId?: number;
+  };
+
+  type PropsVO = {
+    createTime?: string;
+    description?: string;
+    frameId?: number;
+    imgUrl?: string;
+    name?: string;
+    points?: number;
+    type?: string;
+  };
+
+  type purchaseItemUsingPOSTParams = {
+    /** quantity */
+    quantity: number;
+    /** templateId */
+    templateId: number;
+  };
+
+  type queryOrderUsingGETParams = {
+    /** tradeOrderId */
+    tradeOrderId: string;
+  };
+
+  type quitRoomUsingPOSTParams = {
+    /** roomId */
+    roomId: string;
   };
 
   type recordGuessSuccessUsingPOSTParams = {
@@ -904,8 +3830,53 @@ declare namespace API {
     heroId?: number;
   };
 
+  type RedeemCodeAddRequest = {
+    batchCount?: number;
+    code?: string;
+    description?: string;
+    expireTime?: string;
+    maxUseCount?: number;
+    rewardCount?: number;
+    rewardType?: number;
+    rewardValue?: number;
+    targetUserId?: number;
+    type?: number;
+  };
+
+  type RedeemCodeUseRequest = {
+    code?: string;
+  };
+
+  type RedeemCodeUseResultVO = {
+    code?: string;
+    message?: string;
+    rewardCount?: number;
+    rewardType?: number;
+    rewardTypeName?: string;
+    rewardValue?: number;
+  };
+
+  type RedeemCodeVO = {
+    code?: string;
+    createTime?: string;
+    description?: string;
+    expireTime?: string;
+    id?: number;
+    maxUseCount?: number;
+    rewardCount?: number;
+    rewardType?: number;
+    rewardTypeName?: string;
+    rewardValue?: number;
+    status?: number;
+    targetUserId?: number;
+    type?: number;
+    typeName?: string;
+    usedCount?: number;
+  };
+
   type RedPacket = {
     amountPerPacket?: number;
+    answer?: string;
     count?: number;
     createTime?: string;
     creatorAvatar?: string;
@@ -922,9 +3893,101 @@ declare namespace API {
     type?: number;
   };
 
+  type removeActiveRoomUsingPOSTParams = {
+    /** roomId */
+    roomId?: string;
+  };
+
+  type removeRoomUsingPOSTParams = {
+    /** roomId */
+    roomId: string;
+  };
+
+  type removeTitleFromUserUsingPOSTParams = {
+    /** titleId */
+    titleId: number;
+    /** userId */
+    userId: number;
+  };
+
   type renderAuthUsingGETParams = {
     /** source */
     source: string;
+  };
+
+  type ReportAddRequest = {
+    /** 补充说明 */
+    description?: string;
+    /** 举报原因类型：1-18 */
+    reasonType: number;
+    /** 举报类型：1-聊天记录，2-帖子，3-鱼小圈 */
+    reportType: number;
+    /** 被举报对象ID */
+    targetId: number;
+    /** 被举报用户ID */
+    targetUserId?: number;
+  };
+
+  type ReportHandleRequest = {
+    /** 处理备注 */
+    handleRemark?: string;
+    /** 举报ID */
+    id: number;
+    /** 处理状态：1-已处理，2-已驳回 */
+    status: number;
+  };
+
+  type ReportReasonOptionVO = {
+    /** 原因描述 */
+    text?: string;
+    /** 原因类型值 */
+    value?: number;
+  };
+
+  type ReportVO = {
+    chatMessage?: RoomMessageVo;
+    /** 创建时间 */
+    createTime?: string;
+    /** 补充说明 */
+    description?: string;
+    /** 处理备注 */
+    handleRemark?: string;
+    /** 处理时间 */
+    handleTime?: string;
+    /** 处理人ID */
+    handlerId?: number;
+    /** 举报ID */
+    id?: number;
+    /** 举报原因类型 */
+    reasonType?: number;
+    /** 举报原因描述 */
+    reasonTypeText?: string;
+    /** 举报类型 */
+    reportType?: number;
+    /** 举报类型描述 */
+    reportTypeText?: string;
+    /** 举报人用户ID */
+    reporterId?: number;
+    reporterUser?: UserVO;
+    /** 处理状态 */
+    status?: number;
+    /** 处理状态描述 */
+    statusText?: string;
+    /** 被举报对象ID */
+    targetId?: number;
+    targetUser?: UserVO;
+    /** 被举报用户ID */
+    targetUserId?: number;
+  };
+
+  type resetSecretUsingPOSTParams = {
+    /** id */
+    id: number;
+  };
+
+  type resolveUsingGETParams = {
+    /** dataSourceKey */
+    dataSourceKey?: string;
   };
 
   type Response = {
@@ -967,6 +4030,7 @@ declare namespace API {
     country?: string;
     id?: string;
     isAdmin?: boolean;
+    isVip?: boolean;
     level?: number;
     name?: string;
     points?: number;
@@ -989,9 +4053,75 @@ declare namespace API {
     frameId: number;
   };
 
+  type SignInStatusVO = {
+    /** 当前连续签到天数 */
+    continuousDays?: number;
+    /** 可补签的日期列表 */
+    makeUpAvailableDates?: string[];
+    /** 本月已补签次数 */
+    makeUpCount?: number;
+    /** 本月最大补签次数 */
+    maxMakeUpCount?: number;
+    /** 今日是否已签到 */
+    todaySigned?: boolean;
+    /** 本周期签到状态列表（索引0对应第1天） */
+    weekStatus?: boolean[];
+  };
+
+  type SignInVO = {
+    /** 本次签到获得的基础积分 */
+    basePoints?: number;
+    /** 连续签到额外奖励积分 */
+    bonusPoints?: number;
+    /** 当前连续签到天数 */
+    continuousDays?: number;
+    /** 下一天连续签到奖励积分预告 */
+    nextDayBonus?: number;
+    /** 签到类型：1-正常签到，2-补签 */
+    signType?: number;
+    /** 本次签到总积分 */
+    totalPoints?: number;
+    /** 本周期签到状态列表（索引0对应第1天） */
+    weekStatus?: boolean[];
+  };
+
   type SimpleHeroVO = {
     cname?: string;
     id?: number;
+  };
+
+  type SingleEquipStatsVO = {
+    baseAttack?: number;
+    baseDefense?: number;
+    baseHp?: number;
+    baseSpeed?: number;
+    blockRate?: number;
+    blockResistance?: number;
+    comboRate?: number;
+    comboResistance?: number;
+    critRate?: number;
+    critResistance?: number;
+    dodgeRate?: number;
+    dodgeResistance?: number;
+    lifesteal?: number;
+    lifestealResistance?: number;
+  };
+
+  type startGameUsingPOST1Params = {
+    /** roomId */
+    roomId: string;
+  };
+
+  type startGameUsingPOSTParams = {
+    /** roomId */
+    roomId: string;
+  };
+
+  type StealRequest = {
+    /** 地块ID（与 landIds 二选一） */
+    landId?: number;
+    /** 地块ID列表（批量偷菜，与 landId 二选一） */
+    landIds?: number[];
   };
 
   type streamChatDemoUsingGETParams = {
@@ -999,14 +4129,98 @@ declare namespace API {
     prompt: string;
   };
 
+  type Tags = {
+    color?: string;
+    createTime?: string;
+    icon?: string;
+    id?: number;
+    isDelete?: number;
+    sort?: number;
+    tagsName?: string;
+    type?: number;
+    updateTime?: string;
+  };
+
+  type TagsAddRequest = {
+    color?: string;
+    icon?: string;
+    sort?: number;
+    tagsName?: string;
+    type?: number;
+  };
+
+  type TagsQueryRequest = {
+    current?: number;
+    id?: number;
+    pageSize?: number;
+    sortField?: string;
+    sortOrder?: string;
+    tagsName?: string;
+    type?: number;
+  };
+
+  type TagsUpdateRequest = {
+    color?: string;
+    icon?: string;
+    id?: number;
+    sort?: number;
+    tagsName?: string;
+    type?: number;
+  };
+
+  type TagsVO = {
+    color?: string;
+    icon?: string;
+    id?: number;
+    sort?: number;
+    tagsName?: string;
+    type?: number;
+  };
+
+  type TaskDTO = {
+    /** 是否已领取奖励（0-未领取，1-已领取） */
+    claimed?: number;
+    /** 是否已完成（0-未完成，1-已完成） */
+    completed?: number;
+    /** 当前进度次数 */
+    currentCount?: number;
+    /** 任务描述 */
+    description?: string;
+    /** 任务ID */
+    id?: number;
+    /** 任务名称 */
+    name?: string;
+    /** 奖励经验 */
+    rewardExp?: number;
+    /** 目标次数 */
+    targetCount?: number;
+    /** 任务类型 */
+    type?: string;
+  };
+
+  type toggleAutoFeedUsingPOSTParams = {
+    /** enabled */
+    enabled: number;
+    /** petId */
+    petId: number;
+  };
+
+  type toggleFollowUsingGETParams = {
+    /** 被关注用户ID */
+    followUserId: string;
+  };
+
   type TokenLoginUserVo = {
     avatarFramerUrl?: string;
     bindPlatforms?: PlatformBindVO[];
     createTime?: string;
     email?: string;
+    followerCount?: number;
+    followingCount?: number;
     id?: number;
     lastSignInDate?: string;
     level?: number;
+    momentsBgUrl?: string;
     points?: number;
     saTokenInfo?: SaTokenInfo;
     titleId?: number;
@@ -1017,6 +4231,133 @@ declare namespace API {
     userName?: string;
     userProfile?: string;
     userRole?: string;
+    vip?: boolean;
+  };
+
+  type tokenUsingPOSTParams = {
+    /** client_id */
+    client_id: string;
+    /** client_secret */
+    client_secret: string;
+    /** code */
+    code: string;
+    /** grant_type */
+    grant_type?: string;
+    /** redirect_uri */
+    redirect_uri: string;
+  };
+
+  type TournamentChallengeResultVO = {
+    /** 是否胜利 */
+    isWin?: boolean;
+    /** 挑战成功后我的排名（失败则为原排名，无排名为null） */
+    myRank?: number;
+    /** 被挑战者的userId（目标坑位有人时） */
+    opponentUserId?: number;
+    /** 对战回合详情 */
+    rounds?: PetBattleResultVO[];
+    /** 挑战的目标位数 */
+    targetRank?: number;
+  };
+
+  type TournamentRankVO = {
+    /** 宠物等级 */
+    petLevel?: number;
+    /** 宠物名称 */
+    petName?: string;
+    /** 宠物图片 */
+    petUrl?: string;
+    /** 名次 */
+    rank?: number;
+    /** 用户头像 */
+    userAvatar?: string;
+    /** 用户ID */
+    userId?: number;
+    /** 用户昵称 */
+    userName?: string;
+  };
+
+  type TowerClimbResultVO = {
+    /** 本次战斗回合详情 */
+    battleRounds?: BattleResultVO[];
+    /** 挑战层数 */
+    floor?: number;
+    /** 历史最高通关层数 */
+    maxFloor?: number;
+    /** 宠物剩余血量 */
+    petHpLeft?: number;
+    /** 获得积分奖励 */
+    rewardPoints?: number;
+    /** 是否胜利 */
+    win?: boolean;
+  };
+
+  type TowerFloorMonsterVO = {
+    /** 怪物攻击力 */
+    attack?: number;
+    /** 怪物头像 */
+    avatarUrl?: string;
+    /** 格挡率 */
+    blockRate?: number;
+    /** 连击率 */
+    comboRate?: number;
+    /** 暴击率 */
+    critRate?: number;
+    /** 闪避率 */
+    dodgeRate?: number;
+    /** 层数 */
+    floor?: number;
+    /** 怪物血量 */
+    health?: number;
+    /** 吸血率 */
+    lifesteal?: number;
+    /** 怪物名称 */
+    name?: string;
+    /** 通关奖励积分 */
+    rewardPoints?: number;
+  };
+
+  type TowerProgressVO = {
+    /** 历史最高通关层数 */
+    maxFloor?: number;
+    /** 下一层挑战层数（maxFloor + 1） */
+    nextFloor?: number;
+    nextMonster?: TowerFloorMonsterVO;
+  };
+
+  type TowerRankVO = {
+    /** 历史最高通关层数 */
+    maxFloor?: number;
+    /** 名次 */
+    rank?: number;
+    /** 用户头像 */
+    userAvatar?: string;
+    /** 用户ID */
+    userId?: number;
+    /** 用户昵称 */
+    userName?: string;
+  };
+
+  type TurntablePrizeVO = {
+    icon?: string;
+    id?: number;
+    name?: string;
+    prizeId?: number;
+    prizeType?: number;
+    probability?: number;
+    quality?: number;
+    qualityName?: string;
+  };
+
+  type TurntableVO = {
+    costPoints?: number;
+    createTime?: string;
+    guaranteeCount?: number;
+    id?: number;
+    name?: string;
+    prizeList?: TurntablePrizeVO[];
+    type?: number;
+    userProgress?: UserProgressVO;
   };
 
   type unbindUsingDELETEParams = {
@@ -1024,9 +4365,109 @@ declare namespace API {
     source: string;
   };
 
+  type UndercoverGuessRequest = {
+    guessWord?: string;
+    roomId?: string;
+  };
+
+  type UndercoverPlayerDetailVO = {
+    guessCount?: number;
+    isEliminated?: boolean;
+    remainingGuessCount?: number;
+    userAvatar?: string;
+    userId?: number;
+    userName?: string;
+    voteCount?: number;
+  };
+
+  type UndercoverPlayerVO = {
+    guessCount?: number;
+    isEliminated?: boolean;
+    remainingGuessCount?: number;
+    role?: string;
+    userId?: number;
+    word?: string;
+  };
+
+  type UndercoverRoomCreateRequest = {
+    /** 平民词 */
+    civilianWord?: string;
+    /** 持续时间秒 */
+    duration?: number;
+    /** 游戏模式：1-常规模式(默认)，2-卧底猜词模式 */
+    gameMode?: number;
+    /** 房间最大人数 */
+    maxPlayers?: number;
+    /** 卧底词 */
+    undercoverWord?: string;
+  };
+
+  type UndercoverRoomJoinRequest = {
+    roomId?: string;
+  };
+
+  type UndercoverRoomQuitRequest = {
+    roomId?: string;
+  };
+
+  type UndercoverRoomVO = {
+    createTime?: string;
+    creatorAvatar?: string;
+    creatorId?: number;
+    creatorName?: string;
+    duration?: number;
+    eliminatedIds?: number[];
+    gameMode?: number;
+    gameResult?: string;
+    maxPlayers?: number;
+    orderedParticipantIds?: number[];
+    participantIds?: number[];
+    participants?: UndercoverPlayerDetailVO[];
+    remainingTime?: number;
+    role?: string;
+    roomId?: string;
+    startTime?: string;
+    status?: 'WAITING' | 'PLAYING' | 'ENDED';
+    votes?: UndercoverVoteVO[];
+    word?: string;
+  };
+
+  type UndercoverVoteRequest = {
+    roomId?: string;
+    targetId?: number;
+  };
+
+  type UndercoverVoteVO = {
+    targetAvatar?: string;
+    targetId?: number;
+    targetName?: string;
+    voteTime?: string;
+    voterAvatar?: string;
+    voterId?: number;
+    voterName?: string;
+  };
+
   type unmuteUserUsingPOSTParams = {
     /** userId */
     userId: number;
+  };
+
+  type UpdateFundRequest = {
+    /** 基金代码 */
+    code: string;
+    /** 成本净值 */
+    cost?: number;
+    /** 基金名称 */
+    name?: string;
+    /** 持有份额 */
+    shares?: number;
+    /** 用户ID */
+    userId: number;
+  };
+
+  type UpdatePetNameRequest = {
+    name?: string;
+    petId?: number;
   };
 
   type uploadFileByMinioUsingPOSTParams = {
@@ -1044,6 +4485,7 @@ declare namespace API {
     email?: string;
     id?: number;
     isDelete?: number;
+    momentsBgUrl?: string;
     mpOpenId?: string;
     titleId?: number;
     titleIdList?: string;
@@ -1062,6 +4504,26 @@ declare namespace API {
     userAvatar?: string;
     userName?: string;
     userRole?: string;
+  };
+
+  type UserAiAvatar = {
+    avatarName?: string;
+    createTime?: string;
+    enabled?: number;
+    id?: number;
+    isDelete?: number;
+    systemPrompt?: string;
+    updateTime?: string;
+    userId?: number;
+  };
+
+  type UserAiAvatarSaveRequest = {
+    /** 分身名称 */
+    avatarName: string;
+    /** 是否启用分身：0-关闭，1-开启 */
+    enabled: number;
+    /** 分身系统提示词 */
+    systemPrompt?: string;
   };
 
   type UserBindEmailRequest = {
@@ -1112,6 +4574,23 @@ declare namespace API {
     email?: string;
   };
 
+  type UserFollowVO = {
+    /** 用户头像框地址 */
+    avatarFramerUrl?: string;
+    /** 关注时间 */
+    followTime?: string;
+    /** 是否互相关注 */
+    isMutual?: boolean;
+    /** 用户头像 */
+    userAvatar?: string;
+    /** 用户ID */
+    userId?: string;
+    /** 用户昵称 */
+    userName?: string;
+    /** 用户简介 */
+    userProfile?: string;
+  };
+
   type userLoginByGithubUsingPOSTParams = {
     auth_code?: string;
     authorization_code?: string;
@@ -1141,6 +4620,13 @@ declare namespace API {
     remainingTime?: string;
   };
 
+  type UserProgressVO = {
+    guaranteeCount?: number;
+    lastDrawTime?: string;
+    smallFailCount?: number;
+    totalDrawCount?: number;
+  };
+
   type UserQueryRequest = {
     createTimeRange?: string[];
     current?: number;
@@ -1166,15 +4652,59 @@ declare namespace API {
     userPassword?: string;
   };
 
+  type UserRemark = {
+    content?: string;
+    createTime?: string;
+    id?: number;
+    isDelete?: number;
+    updateTime?: string;
+    userId?: number;
+  };
+
+  type UserRemarkAddRequest = {
+    /** Remark content */
+    content: string;
+  };
+
+  type UserRewardVO = {
+    createTime?: string;
+    id?: number;
+    rewardToken?: string;
+    userAvatar?: string;
+    userName?: string;
+    userProfile?: string;
+    userRole?: string;
+  };
+
   type UserTitle = {
     createTime?: string;
     isDelete?: number;
     name?: string;
     titleId?: number;
+    titleImg?: string;
     updateTime?: string;
   };
 
+  type UserTitleAddRequest = {
+    name?: string;
+  };
+
+  type UserTitleQueryRequest = {
+    current?: number;
+    name?: string;
+    pageSize?: number;
+    sortField?: string;
+    sortOrder?: string;
+    titleId?: number;
+  };
+
+  type UserTitleUpdateRequest = {
+    name?: string;
+    titleId?: number;
+  };
+
   type UserUpdateMyRequest = {
+    momentsBgUrl?: string;
     userAvatar?: string;
     userName?: string;
     userProfile?: string;
@@ -1188,9 +4718,64 @@ declare namespace API {
     userRole?: string;
   };
 
-  type UserVO = {
+  type UserVip = {
+    cardNo?: string;
     createTime?: string;
     id?: number;
+    isDelete?: number;
+    type?: number;
+    updateTime?: string;
+    userId?: number;
+    validDays?: string;
+  };
+
+  type UserVipAddRequest = {
+    cardNo?: string;
+    type?: number;
+    userId?: number;
+    validDays?: string;
+  };
+
+  type UserVipQueryRequest = {
+    cardNo?: string;
+    createTimeEnd?: string;
+    createTimeStart?: string;
+    current?: number;
+    id?: number;
+    pageSize?: number;
+    sortField?: string;
+    sortOrder?: string;
+    type?: number;
+    updateTimeEnd?: string;
+    updateTimeStart?: string;
+    userId?: number;
+  };
+
+  type UserVipUpdateRequest = {
+    cardNo?: string;
+    id?: number;
+    type?: number;
+    userId?: number;
+    validDays?: string;
+  };
+
+  type UserVipVO = {
+    cardNo?: string;
+    createTime?: string;
+    id?: number;
+    isExpired?: boolean;
+    type?: number;
+    user?: UserVO;
+    userId?: number;
+    validDays?: string;
+  };
+
+  type UserVO = {
+    createTime?: string;
+    followerCount?: number;
+    followingCount?: number;
+    id?: number;
+    momentsBgUrl?: string;
     userAvatar?: string;
     userName?: string;
     userProfile?: string;
@@ -1202,6 +4787,54 @@ declare namespace API {
   };
 
   type VO = {
+    /** 变动后总积分 */
+    afterPoints?: number;
+    /** 变动后已用积分 */
+    afterUsedPoints?: number;
+    /** 变动前总积分 */
+    beforePoints?: number;
+    /** 变动前已用积分 */
+    beforeUsedPoints?: number;
+    /** 变动积分数量 */
+    changePoints?: number;
+    /** 变动类型：1-增加，2-扣除 */
+    changeType?: number;
+    /** 变动类型文本 */
+    changeTypeText?: string;
+    /** 创建时间 */
+    createTime?: string;
+    /** 描述/备注 */
+    description?: string;
+    /** 记录ID */
+    id?: number;
+    /** 来源ID */
+    sourceId?: string;
+    /** 来源类型 */
+    sourceType?: string;
+    /** 来源类型文本 */
+    sourceTypeText?: string;
+    /** 用户ID */
+    userId?: number;
+  };
+
+  type VO2 = {
+    /** 中奖积分 */
+    amount?: number;
+    /** 记录ID */
+    id?: string;
+    /** 福袋ID */
+    luckyBagId?: string;
+    /** 用户头像 */
+    userAvatar?: string;
+    /** 用户ID */
+    userId?: number;
+    /** 用户昵称 */
+    userName?: string;
+    /** 中奖时间 */
+    winTime?: string;
+  };
+
+  type VO3 = {
     /** 抢到的金额 */
     amount?: number;
     /** 抢红包时间 */
@@ -1218,9 +4851,71 @@ declare namespace API {
     userName?: string;
   };
 
+  type VoteAddRequest = {
+    options?: string[];
+    singleChoice?: boolean;
+    title?: string;
+  };
+
+  type VoteOptionVO = {
+    count?: number;
+    index?: number;
+    percentage?: number;
+    text?: string;
+  };
+
+  type VoteRecordRequest = {
+    optionIndexes?: number[];
+    voteId?: string;
+  };
+
+  type VoteVO = {
+    hasVoted?: boolean;
+    options?: VoteOptionVO[];
+    remainingSeconds?: number;
+    singleChoice?: boolean;
+    title?: string;
+    totalCount?: number;
+    userVotedOptions?: number[];
+    voteId?: string;
+  };
+
   type WebParseVO = {
     description?: string;
     favicon?: string;
     title?: string;
+  };
+
+  type WordLibrary = {
+    category?: string;
+    createTime?: string;
+    id?: number;
+    updateTime?: string;
+    word?: string;
+    wordType?: string;
+  };
+
+  type WordLibraryAddRequest = {
+    category?: string;
+    word?: string;
+    wordType?: string;
+  };
+
+  type WordLibraryQueryRequest = {
+    category?: string;
+    current?: number;
+    id?: number;
+    pageSize?: number;
+    sortField?: string;
+    sortOrder?: string;
+    word?: string;
+    wordType?: string;
+  };
+
+  type WordLibraryUpdateRequest = {
+    category?: string;
+    id?: number;
+    word?: string;
+    wordType?: string;
   };
 }

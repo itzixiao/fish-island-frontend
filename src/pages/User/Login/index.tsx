@@ -7,7 +7,6 @@ import { Helmet, history, useModel } from '@umijs/max';
 import { message, Tabs } from 'antd';
 import React, { useState } from 'react';
 import Settings from '../../../../config/defaultSettings';
-import {Link} from "umi";
 
 // 此页面仅用于 /user/login 路径的登录功能，主注册逻辑位于 /components/RightContent/AvatarDropDown。
 const Login: React.FC = () => {
@@ -51,6 +50,21 @@ const Login: React.FC = () => {
     }
   };
 
+  // LinuxDo 第三方登录
+  const handleLinuxDoLogin = async () => {
+    try {
+      const res = await getLinuxDoAuthUrlUsingGet();
+      if (res.code === 0 && res.data) {
+        // 跳转到 LinuxDo 授权页面
+        window.location.href = res.data;
+      } else {
+        message.error('获取 LinuxDo 授权链接失败');
+      }
+    } catch (error: any) {
+      message.error(`LinuxDo 登录失败：${error.message}`);
+    }
+  };
+
   return (
     <div className={containerClassName}>
       <Helmet>
@@ -69,7 +83,7 @@ const Login: React.FC = () => {
             minWidth: 280,
             maxWidth: '75vw',
           }}
-          logo={<img alt="logo" style={{ height: '100%' }} src="https://api.oss.cqbo.com/moyu/moyu.png" />}
+          logo={<img alt="logo" style={{ height: '100%' }} src="https://oss.cqbo.com/moyu/moyu.png" />}
           title="摸鱼岛"
           subTitle={'加入摸鱼岛一起来摸吧'}
           initialValues={{
@@ -123,14 +137,7 @@ const Login: React.FC = () => {
             </>
           )}
 
-          <div
-            style={{
-              marginBottom: 24,
-              textAlign: 'right',
-            }}
-          >
-            <Link to="/user/register">新用户注册</Link>
-          </div>
+
         </LoginForm>
       </div>
       <Footer />

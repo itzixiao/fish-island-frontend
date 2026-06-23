@@ -118,6 +118,9 @@ function App() {
   // App组件中的状态定义部分添加新的状态变量
   const [forceBoardFlip, setForceBoardFlip] = useState<boolean>(false);
 
+  // 添加移动消息去重机制
+  const processedMoves = useRef<Set<string>>(new Set());
+
   // 同步更新ref中的棋盘状态
   useEffect(() => {
     boardRef.current = board;
@@ -1004,6 +1007,10 @@ const handleMoveSelect = useCallback(
     console.log(`使用游戏类型 ${receivedGameType} 创建初始棋盘`);
     const newBoard = createInitialBoard(receivedGameType as GameType);
     setBoard(newBoard);
+    
+    // 清理已处理的移动记录
+    processedMoves.current.clear();
+    
     saveGameState();
   };
 
@@ -1049,6 +1056,10 @@ const handleMoveSelect = useCallback(
       content: `房间创建成功啦 (${receivedGameType === 'hidden' ? '揭棋模式' : '普通模式'})`,
     });
     setGameStarted(true);
+    
+    // 清理已处理的移动记录
+    processedMoves.current.clear();
+    
     saveGameState();
   };
 
@@ -1148,6 +1159,26 @@ const handleMoveSelect = useCallback(
     // 确保isHiddenPiece是布尔值
     const isHidden = isHiddenPiece === true;
 
+    // 生成移动的唯一标识
+    const moveId = `${player}-${pieceType}-${from.row}-${from.col}-${to.row}-${to.col}`;
+    
+    // 检查是否已经处理过这个移动
+    if (processedMoves.current.has(moveId)) {
+      console.log('[接收] 检测到重复移动消息，忽略:', moveId);
+      return;
+    }
+    
+    // 记录已处理的移动
+    processedMoves.current.add(moveId);
+    
+    // 限制已处理移动的数量，避免内存泄漏
+    if (processedMoves.current.size > 100) {
+      const firstMove = processedMoves.current.values().next().value;
+      if (firstMove) {
+        processedMoves.current.delete(firstMove);
+      }
+    }
+
     // 如果收到暗棋移动请求，但当前不是揭棋模式，强制更新游戏类型
     if (isHidden && gameType !== 'hidden') {
       console.log('[接收] 警告: 收到暗棋移动请求，但当前游戏类型是:', gameType);
@@ -1172,6 +1203,13 @@ const handleMoveSelect = useCallback(
     // 获取源位置的棋子
     const sourcePiece = newBoard[from.row] && newBoard[from.row][from.col];
     console.log('[接收] 源位置棋子:', sourcePiece ? JSON.stringify(sourcePiece) : '无');
+
+    // 检查是否是重复消息：如果源位置没有棋子，但目标位置已经有相同玩家的棋子，则忽略
+    const targetPiece = newBoard[to.row][to.col];
+    if (!sourcePiece && targetPiece && targetPiece.player === player) {
+      console.log('[接收] 检测到重复消息，源位置无棋子但目标位置已有相同玩家的棋子，忽略此消息');
+      return;
+    }
 
     // 清除源位置
     if (sourcePiece && sourcePiece.player === player) {
@@ -1214,17 +1252,16 @@ const handleMoveSelect = useCallback(
           
           console.log('[接收] 强制翻转后的棋子:', JSON.stringify(movedPiece));
           newBoard[to.row][to.col] = movedPiece;
-          return;
+        } else {
+          // 在目标位置放置移动的棋子，保留原来的属性并添加唯一标识
+          const movedPiece = {
+            ...originalPiece,
+            id: `${player}-${pieceType}-${from.row}-${from.col}-${to.row}-${to.col}`,
+          };
+          
+          console.log('[接收] 移动后的棋子:', JSON.stringify(movedPiece));
+          newBoard[to.row][to.col] = movedPiece;
         }
-        
-        // 在目标位置放置移动的棋子，保留原来的属性并添加唯一标识
-        const movedPiece = {
-          ...originalPiece,
-          id: `${player}-${pieceType}-${from.row}-${from.col}-${to.row}-${to.col}`,
-        };
-        
-        console.log('[接收] 移动后的棋子:', JSON.stringify(movedPiece));
-        newBoard[to.row][to.col] = movedPiece;
       }
     } else {
       console.log(`[接收] 源位置(${from.row},${from.col})没有找到对应的棋子，创建新棋子`);
@@ -1283,6 +1320,7 @@ const handleMoveSelect = useCallback(
         是否为暗棋: currentBoard[to.row][to.col] && (currentBoard[to.row][to.col] as any).isHidden ? '是' : '否'
       });
     }, 100);
+
     // 更新移动历史
     setMoveHistory((prev) => [
       ...prev,
@@ -1328,8 +1366,15 @@ const handleMoveSelect = useCallback(
     // 计算下一个回合的玩家
     const nextPlayer = player === 'red' ? 'black' : 'red';
 
-    // 检查将军状态
+    // 检查将军状态 - 只有在棋盘状态正确时才检查
+    console.log('[接收] 检查将军状态，当前棋盘状态:', {
+      nextPlayer,
+      gameType,
+      boardState: JSON.stringify(newBoard)
+    });
+    
     const checkStatus = isInCheck(newBoard, nextPlayer, false, gameType);
+    console.log('[接收] 将军检查结果:', checkStatus);
 
     if (checkStatus.inCheck) {
       // 设置将军特效
@@ -1340,8 +1385,9 @@ const handleMoveSelect = useCallback(
         setCheckPosition(generalPos);
       }
 
-      // 检查是否将死
+      // 检查是否将死 - 只有在确实被将军时才检查将死
       if (isCheckmate(newBoard, nextPlayer, false, gameType)) {
+        console.log('[接收] 检测到将死，游戏结束');
         setWinInfo({
           winner: player,
           reason: 'checkmate',
@@ -1596,6 +1642,9 @@ const handleMoveSelect = useCallback(
     setChatInputValue('');
     setRoomId('');
     setShowGameEndModal(false);
+    
+    // 清理已处理的移动记录
+    processedMoves.current.clear();
   };
 
   // 添加继续游戏函数
@@ -1737,6 +1786,9 @@ const handleMoveSelect = useCallback(
     setChatInputValue('');
     setRoomId('');
 
+    // 清理已处理的移动记录
+    processedMoves.current.clear();
+
     const initialBoard = createInitialBoard(gameType);
 
     // 如果玩家选择黑方，AI先行（仅在单机模式下）
@@ -1799,6 +1851,9 @@ const handleMoveSelect = useCallback(
     // 清除房间相关标记
     setRoomId('');
     localStorage.removeItem('chess_is_joiner');
+
+    // 清理已处理的移动记录
+    processedMoves.current.clear();
 
     messageApi.info('已切换到联机模式，请创建或加入房间');
   };

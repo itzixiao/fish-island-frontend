@@ -27,13 +27,234 @@
     },
     {
       "id": "4",
-      "name": "黄金摸鱼官",
+      "name": "梦幻摸鱼官",
       "description": "赞助榜第三获得的称号"
     },
     {
       "id": "5",
       "name": "摸鱼共建者",
       "description": "代码贡献者获得的称号"
+    },
+    {
+      "id": "6",
+      "name": "摸鱼行刑官",
+      "description": "负责惩罚违规用户的管理员"
+    },
+    {
+      "id": "7",
+      "name": "电玩少女",
+      "description": "游戏区活跃玩家专属称号，像素风格的梦幻少女"
+    },
+    {
+      "id": "8",
+      "name": "摸鱼点子王",
+      "description": "为社区贡献创意和点子的用户专属称号"
+    },
+    {
+      "id": "9",
+      "name": "摸鱼大法师",
+      "description": "精通摸鱼技巧的高级用户专属称号"
+    },
+    {
+      "id": "10",
+      "name": "入机王",
+      "description": "游戏硬核玩家专属称号，拥有超强游戏装备收集能力"
+    },
+    {
+      "id": "11",
+      "name": "汉堡大王",
+      "description": ""
+    },
+    {
+      "id": "12",
+      "name": "摸鱼铲屎官",
+      "description": "宠物排行榜前十名称号"
+    },
+    {
+      "id": "13",
+      "name": "查无此人",
+      "description": "没有名字的专属定制称号",
+      "titleImg": "https://oss.cqbo.com/moyu/title/Yg2oqPCa-badge-查无此人.png"
+
+    },
+    {
+      "id": "14",
+      "name": "喂鱼大师",
+      "description": "喂鱼大师的专属定制称号",
+      "titleImg": "https://oss.cqbo.com/moyu/title/wZdzS3TT-badge-喂鱼大师.png"
+
+    }
+  ,
+    {
+      "id": "15",
+      "name": "恐龙专属称号",
+      "description": "空白专属称号",
+      "titleImg": "https://oss.cqbo.com/moyu/title/恐龙.png"
+
+    },
+    {
+      "id": "16",
+      "name": "摸鱼精灵王",
+      "description": "宠物第一名",
+      "titleImg": "https://oss.cqbo.com/moyu/title/badge-摸鱼精灵王.png"
+
+    },
+    {
+      "id": "17",
+      "name": "云朵摸鱼崽",
+      "description": "宠物第二名",
+      "titleImg": "https://oss.cqbo.com/moyu/title/badge-云朵摸鱼崽.png"
+
+    },
+    {
+      "id": "18",
+      "name": "摸鱼智多星",
+      "description": "宠物第三名",
+      "titleImg": "https://oss.cqbo.com/moyu/title/badge-摸鱼智多星.png"
+
+    },
+    {
+      "id": "19",
+      "name": "犯困嫌疑人",
+      "description": "Auxi 专属",
+      "titleImg": "https://oss.cqbo.com/moyu/title/auxi.jpg"
+
+    },
+    {
+      "id": "20",
+      "name": "闲人一个",
+      "description": "土黑娃专属",
+      "titleImg": "https://oss.cqbo.com/moyu/title/土黑娃.png"
+
+    },
+    {
+      "id": "21",
+      "name": "心转手上层巅峰",
+      "description": "充本順专属",
+      "titleImg": "https://oss.cqbo.com/moyu/title/badge-心转手上层巅峰.png"
+
+    },
+    {
+      "id": "22",
+      "name": "kuzwlu",
+      "description": "kuzwlu专属",
+      "titleImg": "https://oss.cqbo.com/moyu/title/badge-kuzwlu.png"
+
+    },
+    {
+      "id": "23",
+      "name": "中国 NPC",
+      "description": "中国 NPC专属",
+      "titleImg": "https://oss.cqbo.com/moyu/title/npc.png"
+
+    },
+    {
+      "id": "24",
+      "name": "897 福报者",
+      "description": "打螺丝专属",
+      "titleImg": "https://oss.cqbo.com/moyu/title/luosi.png"
+
+    },
+    {
+      "id": "25",
+      "name": "划水新秀",
+      "description": "摸鱼助手专属"
+    },
+    {
+      "id": "26",
+      "name": "牛牛专属",
+      "description": "牛牛专属",
+      "titleImg": "https://oss.cqbo.com/moyu/title/niuniu.png"
+    },
+    {
+      "id": "27",
+      "name": "青丝专属",
+      "description": "青丝专属",
+      "titleImg": "https://oss.cqbo.com/moyu/title/qingsi.png"
+    },
+    {
+      "id": "28",
+      "name": "魔丸专属",
+      "description": "魔丸专属",
+      "titleImg": "https://oss.cqbo.com/moyu/title/28.png"
+    },
+    {
+      "id": "29",
+      "name": "明天专属",
+      "description": "明天专属",
+      "titleImg": "https://oss.cqbo.com/moyu/title/29.png"
+    },
+    {
+      "id": "30",
+      "name": "果盘专属",
+      "description": "果盘专属",
+      "titleImg": "https://oss.cqbo.com/moyu/title/30.png"
+    },
+    {
+      "id": "31",
+      "name": "闪耀永恒岛民",
+      "description": "闪耀永恒岛民",
+      "titleImg": "https://oss.cqbo.com/moyu/title/闪耀永恒岛民.png"
+    },
+    {
+      "id": "32",
+      "name": "瘸子专属",
+      "description": "瘸子专属",
+      "titleImg": "https://oss.cqbo.com/moyu/title/32.png"
+    },
+    {
+      "id": "33",
+      "name": "金牌洗浴技师",
+      "description": "金牌洗浴技师",
+      "titleImg": "https://oss.cqbo.com/moyu/title/33.png"
+    },
+    {
+      "id": "34",
+      "name": "0",
+      "description": "0",
+      "titleImg": "https://oss.cqbo.com/moyu/title/34.png"
+    },
+    {
+      "id": "35",
+      "name": "0",
+      "description": "0",
+      "titleImg": "https://oss.cqbo.com/moyu/title/35.png"
+    },
+    {
+      "id": "36",
+      "name": "0",
+      "description": "0",
+      "titleImg": "https://oss.cqbo.com/moyu/title/36.png"
+    },
+    {
+      "id": "37",
+      "name": "0",
+      "description": "0",
+      "titleImg": "https://oss.cqbo.com/moyu/title/37.png"
+    },
+    {
+      "id": "38",
+      "name": "0",
+      "description": "0",
+      "titleImg": "https://oss.cqbo.com/moyu/title/38.png"
+    },
+    {
+      "id": "39",
+      "name": "0",
+      "description": "0",
+      "titleImg": "https://oss.cqbo.com/moyu/title/39.png"
+    },
+    {
+      "id": "40",
+      "name": "0",
+      "description": "0",
+      "titleImg": "https://oss.cqbo.com/moyu/title/40.png"
+    },
+    {
+      "id": "41",
+      "name": "0",
+      "description": "0",
+      "titleImg": "https://oss.cqbo.com/moyu/title/33.png"
     }
   ]
 }

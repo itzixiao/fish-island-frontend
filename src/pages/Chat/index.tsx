@@ -1,26 +1,49 @@
 import zhData from '@emoji-mart/data/i18n/zh.json';
+import AnnouncementModal from '@/components/AnnouncementModal';
 import EmoticonPicker from '@/components/EmoticonPicker';
+import LuckyBagMessage, { LUCKY_BAG_IMAGE, LuckyBagModal, parseLuckyBagInline } from '@/components/LuckyBagMessage';
 import MessageContent from '@/components/MessageContent';
+import ReportModal, { REPORT_TYPE } from '@/components/ReportModal';
+import RedPacketMessage, { isQuizRedPacket, RED_PACKET_TYPE } from '@/components/RedPacketMessage';
+import RoomInfoCard from '@/components/RoomInfoCard';
+import MoyuPet, { MiniPet } from '@/components/MoyuPet';
+import MomentsSidebar from '@/components/MomentsSidebar';
 import {
   getOnlineUserListUsingGet,
   listMessageVoByPageUsingPost,
 } from '@/services/backend/chatController';
+import {
+  createLuckyBagUsingPost,
+  getActiveLuckyBagsUsingGet,
+} from '@/services/backend/luckyBagController';
 import { uploadFileByMinioUsingPost } from '@/services/backend/fileController';
 import {
   createRedPacketUsingPost,
-  getRedPacketDetailUsingGet,
-  getRedPacketRecordsUsingGet,
-  grabRedPacketUsingPost,
 } from '@/services/backend/redPacketController';
 import { muteUserUsingPost, getUserMuteInfoUsingGet, unmuteUserUsingPost } from '@/services/backend/userMuteController';
+import { getRemarkUsingGet, saveRemarkUsingPost } from '@/services/backend/userRemarkController';
+import { generateAnnualReportUsingGet, getUserVoByIdUsingGet } from '@/services/backend/userController';
+import { isFollowingUsingGet, toggleFollowUsingGet, listMyFollowersUsingGet, listMyFollowingUsingGet } from '@/services/backend/userFollowController';
+import {
+  getActiveVoteIdsUsingGet,
+  getVoteResultUsingGet,
+  voteUsingPost1,
+  createVoteUsingPost,
+  deleteVoteUsingPost,
+} from '@/services/backend/voteController';
 import { wsService } from '@/services/websocket';
 import { useModel } from '@@/exports';
+import html2canvas from 'html2canvas';
 // ... 其他 imports ...
 import {
+  BugOutlined,
+  EnvironmentOutlined,
   CloseOutlined,
+  CopyOutlined,
   CustomerServiceOutlined,
   DeleteOutlined,
   GiftOutlined,
+  RedEnvelopeOutlined,
   PaperClipOutlined,
   PauseOutlined,
   PictureOutlined,
@@ -30,7 +53,12 @@ import {
   SendOutlined,
   SmileOutlined,
   SoundOutlined,
-  CalendarOutlined,
+  TeamOutlined,
+  EllipsisOutlined,
+  FileImageOutlined,
+  RocketOutlined,
+  MenuUnfoldOutlined,
+  EyeInvisibleOutlined,
 } from '@ant-design/icons';
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
@@ -39,6 +67,7 @@ import {
   Alert,
   Avatar,
   Button,
+  Checkbox,
   Empty,
   Input,
   message,
@@ -48,10 +77,25 @@ import {
   Radio,
   Spin,
   Tabs,
+  Badge,
+  Switch,
+  Tooltip,
 } from 'antd';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FixedSizeList as List } from 'react-window';
 import styles from './index.less';
+import { externalImageProps, UNDERCOVER_NOTIFICATION } from '@/constants';
+import eventBus from '@/utils/eventBus';
+import { joinRoomUsingPost } from '@/services/backend/drawGameController';
+import { getLevelEmoji, generateUniqueShortId, getTitleTagProperties } from '@/utils/titleUtils';
+import { navigateToUserFarm } from '@/utils/farmNavigate';
+import { activateFloatingChat } from '@/components/FloatingChat';
+
+// 添加样式定义
+const additionalStyles = {};
+
+// 合并样式
+Object.assign(styles, additionalStyles);
 
 interface Message {
   id: string;
@@ -72,6 +116,8 @@ interface User {
   avatar: string;
   level: number;
   isAdmin: boolean;
+  vip?: boolean;
+  isVip?: boolean;  // 兼容后端可能使用的字段
   status?: string;
   points?: number;
   region?: string;
@@ -79,6 +125,9 @@ interface User {
   avatarFramerUrl?: string;
   titleId?: number;
   titleIdList?: string;
+  momentsBgUrl?: string;
+  followerCount?: number;
+  followingCount?: number;
 }
 
 interface Title {
@@ -87,28 +136,189 @@ interface Title {
   description: string;
 }
 
-// 添加歌曲类型定义
-interface Song {
-  id: string;
-  name: string;
-  artist: string;
-  url: string;
-  cover: string;
-  album?: string;
+// 添加用户备注类型
+interface UserRemark {
+  userId: string;
+  remark: string;
 }
 
-// 添加APlayer声明
-declare global {
-  interface Window {
-    APlayer: any;
-  }
+// MessageItem props 类型
+interface MessageItemProps {
+  msg: Message;
+  currentUser: any;
+  notifications: Message[];
+  styles: Record<string, string>;
+  UserInfoCard: React.FC<{ user: User }>;
+  handleSelectMention: (user: User) => void;
+  handleViewUserDetail: (user: User) => void;
+  getUserDisplayName: (user: User) => string;
+  getAdminTag: (isAdmin: boolean, level: number, titleId?: number) => React.ReactNode;
+  renderMessageContent: (content: string) => React.ReactNode;
+  handleRevokeMessage: (messageId: string) => void;
+  handleQuoteMessage: (message: Message) => void;
+  handleReportMessage: (message: Message) => void;
+  /** 复读该消息的其他用户列表（连续2条及以上相同内容时填充） */
+  repeatUsers?: User[];
+  /** 一键复读回调 */
+  onRepeat: (content: string) => void;
 }
+
+const MessageItem = React.memo<MessageItemProps>(({
+  msg,
+  currentUser,
+  notifications,
+  styles,
+  UserInfoCard,
+  handleSelectMention,
+  handleViewUserDetail,
+  getUserDisplayName,
+  getAdminTag,
+  renderMessageContent,
+  handleRevokeMessage,
+  handleQuoteMessage,
+  handleReportMessage,
+  repeatUsers,
+  onRepeat,
+}) => {
+  const isSelf = currentUser?.id && String(msg.sender.id) === String(currentUser.id);
+  const isMentioned = notifications.some((n) => n.id === msg.id);
+  const canRevoke = isSelf || currentUser?.userRole === 'admin';
+
+  // 判断当前用户是否已复读过该消息（原发送者或已在复读列表中）
+  const hasRepeated = isSelf || (
+    currentUser?.id &&
+    repeatUsers?.some((u) => String(u.id) === String(currentUser.id))
+  );
+
+  return (
+    <div
+      id={`message-${msg.id}`}
+      className={`${styles.messageItem} ${isSelf ? styles.self : ''} ${isMentioned ? styles.mentioned : ''}`}
+    >
+      <div className={styles.messageHeader}>
+        <div
+          className={styles.avatar}
+          onClick={() => handleSelectMention(msg.sender)}
+          style={{ cursor: 'pointer' }}
+        >
+          <Popover
+            content={<UserInfoCard user={msg.sender} />}
+            trigger="hover"
+            placement="top"
+          >
+            <div className={styles.avatarWithFrame}>
+              <Avatar src={msg.sender.avatar} size={32} />
+              {msg.sender.avatarFramerUrl && (
+                <img
+                  {...externalImageProps}
+                  src={msg.sender.avatarFramerUrl}
+                  className={styles.avatarFrame}
+                  alt="avatar-frame"
+                />
+              )}
+            </div>
+          </Popover>
+        </div>
+        <div className={styles.senderInfo}>
+          <span
+            className={styles.senderName}
+            onClick={() => handleViewUserDetail(msg.sender)}
+            style={{ cursor: 'pointer' }}
+          >
+            {getUserDisplayName(msg.sender)}
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0px' }}>
+              {getAdminTag(msg.sender.isAdmin, msg.sender.level, msg.sender.titleId)}
+            </span>
+            <span className={styles.levelBadge}>
+              {getLevelEmoji(msg.sender.level)} {msg.sender.level}
+            </span>
+          </span>
+        </div>
+      </div>
+      <div className={styles.messageContent}>
+        {msg.quotedMessage && (
+          <div className={styles.quotedMessage}>
+            <div className={styles.quotedMessageHeader}>
+              <span
+                className={styles.quotedMessageSender}
+                onClick={() => msg.quotedMessage && handleViewUserDetail(msg.quotedMessage.sender)}
+                style={{ cursor: 'pointer' }}
+              >
+                {getUserDisplayName(msg.quotedMessage.sender)}
+              </span>
+              <span className={styles.quotedMessageTime}>
+                {new Date(msg.quotedMessage.timestamp).toLocaleTimeString()}
+              </span>
+            </div>
+            <div className={styles.quotedMessageContent}>
+              {renderMessageContent(msg.quotedMessage.content)}
+            </div>
+          </div>
+        )}
+        {renderMessageContent(msg.content)}
+      </div>
+      <div className={styles.messageFooter}>
+        <span className={styles.timestamp}>
+          {new Date(msg.timestamp).toLocaleTimeString()}
+        </span>
+        {canRevoke ? (
+          <Popconfirm
+            title="确定要撤回这条消息吗？"
+            onConfirm={() => handleRevokeMessage(msg.id)}
+            okText="确定"
+            cancelText="取消"
+          >
+            <span className={styles.revokeText}>撤回</span>
+          </Popconfirm>
+        ) : null}
+        <span className={styles.quoteText} onClick={() => handleQuoteMessage(msg)}>
+          引用
+        </span>
+        {!isSelf && (
+          <span className={styles.reportText} onClick={() => handleReportMessage(msg)}>
+            举报
+          </span>
+        )}
+        {!/\[redpacket\]/i.test(msg.content) && !/\[luckybag\]/i.test(msg.content) && (
+          <Tooltip title={hasRepeated ? '你已经复读过啦' : ''} placement="top">
+            <span
+              className={`${styles.repeatText} ${hasRepeated ? styles.repeatTextDisabled : ''}`}
+              onClick={() => {
+                if (hasRepeated) return;
+                onRepeat(msg.content);
+              }}
+              style={hasRepeated ? { cursor: 'not-allowed', opacity: 0.4 } : {}}
+            >
+              复读
+            </span>
+          </Tooltip>
+        )}
+      </div>
+      {/* 复读用户头像区域：连续2条及以上相同内容时显示 */}
+      {repeatUsers && repeatUsers.length > 0 && (
+        <div className={styles.repeatUsers}>
+          <span className={styles.repeatLabel}>🔁 {repeatUsers.length} 人复读</span>
+          {repeatUsers.map((user) => (
+            <Tooltip key={user.id} title={getUserDisplayName(user)} placement="top">
+              <div
+                className={styles.repeatAvatar}
+                onClick={() => handleSelectMention(user)}
+              >
+                <Avatar src={user.avatar} size={20} />
+              </div>
+            </Tooltip>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+});
 
 const ChatRoom: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [workdayType, setWorkdayType] = useState<'single' | 'double' | 'mixed'>('double');
   const [currentWeekType, setCurrentWeekType] = useState<'big' | 'small'>('big');
-  const [inputValue, setInputValue] = useState('');
+  // inputValue state 已移除，改用非受控 inputRef.current.value 直接读写，避免打字触发全量重渲染
   const [isEmojiPickerVisible, setIsEmojiPickerVisible] = useState(false);
   const [isEmoticonPickerVisible, setIsEmoticonPickerVisible] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -119,22 +329,99 @@ const ChatRoom: React.FC = () => {
   const [onlineUsers, setOnlineUsers] = useState<User[]>([]);
   const [isNearBottom, setIsNearBottom] = useState(true);
   const isManuallyClosedRef = useRef(false);
+  const isAutoScrollingRef = useRef(false); // 添加自动滚动标记
+  const [expandedImages, setExpandedImages] = useState<Set<string>>(new Set()); // 添加展开图片的状态
+
+  // 读取布局模式，top 模式下需要额外减去 header 高度避免出现滚动条
+  const getLayoutMode = (): 'side' | 'top' | 'mix' => {
+    const savedConfig = localStorage.getItem('siteConfig');
+    if (savedConfig) {
+      const { layoutMode } = JSON.parse(savedConfig);
+      if (layoutMode === 'side' || layoutMode === 'top' || layoutMode === 'mix') return layoutMode;
+    }
+    // 未保存过设置时，读取 defaultSettings 的默认布局（top）
+    return 'top';
+  };
+  const getLayoutOffset = () => {
+    const mode = getLayoutMode();
+    return mode === 'top' || mode === 'mix' ? '163px' : '85px';
+  };
+  const getShowFishCircle = (): boolean => {
+    const savedConfig = localStorage.getItem('siteConfig');
+    if (savedConfig) {
+      const { showFishCircle } = JSON.parse(savedConfig);
+      // 未设置过时默认显示
+      return showFishCircle !== false;
+    }
+    return true;
+  };
+  const getFishCirclePosition = (): 'left' | 'right' => {
+    const savedConfig = localStorage.getItem('siteConfig');
+    if (savedConfig) {
+      const { fishCirclePosition } = JSON.parse(savedConfig);
+      if (fishCirclePosition === 'left' || fishCirclePosition === 'right') return fishCirclePosition;
+    }
+    return 'left';
+  };
+  const getShowChatPet = (): boolean => {
+    const savedConfig = localStorage.getItem('siteConfig');
+    if (savedConfig) {
+      const { showChatPet } = JSON.parse(savedConfig);
+      return showChatPet !== false;
+    }
+    return true;
+  };
+  const getChatPetSize = (): number => {
+    const savedConfig = localStorage.getItem('siteConfig');
+    if (savedConfig) {
+      const { chatPetSize } = JSON.parse(savedConfig);
+      return typeof chatPetSize === 'number' ? chatPetSize : 100;
+    }
+    return 100;
+  };
+  const [layoutMode, setLayoutMode] = useState<'side' | 'top' | 'mix'>(getLayoutMode);
+  const [chatHeightOffset, setChatHeightOffset] = useState<string>(getLayoutOffset);
+  const [showFishCircle, setShowFishCircle] = useState<boolean>(getShowFishCircle);
+  const [fishCirclePosition, setFishCirclePosition] = useState<'left' | 'right'>(getFishCirclePosition);
+  const [showChatPet, setShowChatPet] = useState<boolean>(getShowChatPet);
+  const [chatPetSize, setChatPetSize] = useState<number>(getChatPetSize);
+
+  useEffect(() => {
+    const handleSiteConfigChange = () => {
+      setLayoutMode(getLayoutMode());
+      setChatHeightOffset(getLayoutOffset());
+      setShowFishCircle(getShowFishCircle());
+      setFishCirclePosition(getFishCirclePosition());
+      setShowChatPet(getShowChatPet());
+      setChatPetSize(getChatPetSize());
+    };
+    window.addEventListener('siteConfigChange', handleSiteConfigChange);
+    return () => {
+      window.removeEventListener('siteConfigChange', handleSiteConfigChange);
+    };
+  }, []);
 
   // 分页相关状态
-  const [current, setCurrent] = useState<number>(1);
-  const [total, setTotal] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(false);
   const [hasMore, setHasMore] = useState<boolean>(true);
   const pageSize = 10;
   const [loadedMessageIds] = useState<Set<string>>(new Set());
   const loadingRef = useRef(false); // 添加loadingRef防止重复请求
+  const messagesRef = useRef<Message[]>([]);
 
   const [announcement, setAnnouncement] = useState<string>(
-    '欢迎来到摸鱼聊天室！🎉 这里是一个充满快乐的地方~。致谢：感谢 yovvis 大佬赞助的服务器资源🌟，域名9月份过期，请移步新域名：<a href="https://yucoder.cn/" target="_blank" rel="noopener noreferrer">https://yucoder.cn/</a>',
+    '欢迎来到摸鱼聊天室！🎉 这里是一个充满快乐的地方~。致谢服务商：<a href="https://crash.work/" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; text-decoration: none; margin-left: 4px;"><img src="/img/posuiyun.png" alt="破碎工坊云" style="height: 20px; vertical-align: middle; margin-right: 4px;" /></a>',
   );
   const [showAnnouncement, setShowAnnouncement] = useState<boolean>(true);
+  const [isAnnouncementModalVisible, setIsAnnouncementModalVisible] = useState(false);
+  const [isAnnualReportModalVisible, setIsAnnualReportModalVisible] = useState(false);
+  const [annualReportHtml, setAnnualReportHtml] = useState<string>('');
+  const [isLoadingAnnualReport, setIsLoadingAnnualReport] = useState(false);
 
   const [isComponentMounted, setIsComponentMounted] = useState(true);
+  const [isPageVisible, setIsPageVisible] = useState(!document.hidden);
+  const pageHiddenTimeRef = useRef<number | null>(null);
+  const visibilityTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [uploading, setUploading] = useState(false);
 
@@ -143,6 +430,8 @@ const ChatRoom: React.FC = () => {
   const [pendingImageUrl, setPendingImageUrl] = useState<string | null>(null);
 
   const [quotedMessage, setQuotedMessage] = useState<Message | null>(null);
+  const [reportModalVisible, setReportModalVisible] = useState(false);
+  const [reportTarget, setReportTarget] = useState<Message | null>(null);
 
   const [notifications, setNotifications] = useState<Message[]>([]);
 
@@ -151,31 +440,87 @@ const ChatRoom: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [userIpInfo, setUserIpInfo] = useState<{ region: string; country: string } | null>(null);
 
-  const inputRef = useRef<any>(null); // 添加输入框的ref
+  const inputRef = useRef<HTMLTextAreaElement>(null); // 输入框原生 ref，非受控模式
 
   const [isMentionListVisible, setIsMentionListVisible] = useState(false);
   const [mentionListPosition, setMentionListPosition] = useState({ top: 0, left: 0 });
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [mentionSearchText, setMentionSearchText] = useState('');
   const mentionListRef = useRef<HTMLDivElement>(null);
+  // 添加防抖引用
+  const mentionDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const annualReportRef = useRef<HTMLDivElement | null>(null);
+
+  // 导出摸鱼年终报告为图片
+  const handleExportAnnualReportImage = async () => {
+    if (!annualReportHtml) {
+      message.error('报告内容还没有加载完成，请稍后再试~');
+      return;
+    }
+
+    try {
+      setIsExportingAnnualReportImage(true);
+
+      // 在屏幕外创建一个隐藏容器，避免被 Modal 头部等元素遮挡
+      const container = document.createElement('div');
+      container.style.position = 'fixed';
+      container.style.left = '-9999px';
+      container.style.top = '0';
+      container.style.width = '750px'; // 固定宽度，保证版式稳定
+      container.style.padding = '24px 0 32px';
+      container.style.background = '#E7F5FF'; // 和年报背景接近
+      container.style.zIndex = '-1';
+      container.innerHTML = annualReportHtml;
+
+      document.body.appendChild(container);
+
+      // 等待一帧，确保样式和图片加载
+      await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+
+      const canvas = await html2canvas(container, {
+        useCORS: true,
+        backgroundColor: '#E7F5FF',
+        scale: 2,
+        scrollX: 0,
+        scrollY: 0,
+      });
+
+      document.body.removeChild(container);
+
+      const dataUrl = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.href = dataUrl;
+      link.download = 'moyu-annual-report.png';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('导出年终报告图片失败:', error);
+      message.error('导出图片失败，请稍后重试~');
+    } finally {
+      setIsExportingAnnualReportImage(false);
+    }
+  };
 
   const [isRedPacketModalVisible, setIsRedPacketModalVisible] = useState(false);
-  const [redPacketAmount, setRedPacketAmount] = useState<number>(0);
-  const [redPacketCount, setRedPacketCount] = useState<number>(1);
+  const [redPacketAmount, setRedPacketAmount] = useState<number>(100);
+  const [redPacketCount, setRedPacketCount] = useState<number>(10);
   const [redPacketMessage, setRedPacketMessage] = useState<string>('恭喜发财，大吉大利！');
-  const [redPacketType, setRedPacketType] = useState<number>(1); // 1-随机红包 2-平均红包
+  const [redPacketType, setRedPacketType] = useState<number>(RED_PACKET_TYPE.RANDOM);
+  const [redPacketAnswer, setRedPacketAnswer] = useState<string>('');
   // 添加发红包防抖相关的状态
   const [isRedPacketSending, setIsRedPacketSending] = useState(false);
   const redPacketDebounceRef = useRef<NodeJS.Timeout | null>(null);
 
-  // 添加红包记录相关状态
-  const [isRedPacketRecordsVisible, setIsRedPacketRecordsVisible] = useState(false);
-  const [redPacketRecords, setRedPacketRecords] = useState<API.VO[]>([]);
-  const [currentRedPacketId, setCurrentRedPacketId] = useState<string>('');
-  const [redPacketDetail, setRedPacketDetail] = useState<API.RedPacket | null>(null);
-  const [redPacketDetailsMap, setRedPacketDetailsMap] = useState<Map<string, API.RedPacket | null>>(
-    new Map(),
-  );
+  const [isLuckyBagModalVisible, setIsLuckyBagModalVisible] = useState(false);
+  const [luckyBagAmount, setLuckyBagAmount] = useState<number>(50);
+  const [luckyBagWinnerCount, setLuckyBagWinnerCount] = useState<number>(5);
+  const [luckyBagName, setLuckyBagName] = useState<string>('快来参与福袋吧');
+  const [luckyBagType, setLuckyBagType] = useState<number>(1);
+  const [luckyBagDuration, setLuckyBagDuration] = useState<number>(180);
+  const [isLuckyBagSending, setIsLuckyBagSending] = useState(false);
+  const luckyBagDebounceRef = useRef<NodeJS.Timeout | null>(null);
+
   const [isMusicSearchVisible, setIsMusicSearchVisible] = useState(false);
   const [searchKey, setSearchKey] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -193,6 +538,21 @@ const ChatRoom: React.FC = () => {
 
   const [isUserDetailModalVisible, setIsUserDetailModalVisible] = useState<boolean>(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [isFollowing, setIsFollowing] = useState<boolean>(false);
+  const [followLoading, setFollowLoading] = useState<boolean>(false);
+  const [isHoveringFollow, setIsHoveringFollow] = useState<boolean>(false);
+  // 关注/粉丝列表弹窗
+  const [followListVisible, setFollowListVisible] = useState<boolean>(false);
+  const [followListType, setFollowListType] = useState<'following' | 'followers'>('following');
+  const [followListData, setFollowListData] = useState<API.UserFollowVO[]>([]);
+  const [followListLoading, setFollowListLoading] = useState<boolean>(false);
+  const [followListToggleLoadingId, setFollowListToggleLoadingId] = useState<string | null>(null);
+  const [followListHoverId, setFollowListHoverId] = useState<string | null>(null);
+
+  const [isRoomInfoVisible, setIsRoomInfoVisible] = useState<boolean>(false);
+  const [undercoverNotification, setUndercoverNotification] = useState<string>(UNDERCOVER_NOTIFICATION.NONE);
+
+  const [isSpeedMode, setIsSpeedMode] = useState<boolean>(false);
 
   // 添加搜索音乐的函数
   const handleMusicSearch = async () => {
@@ -319,32 +679,77 @@ const ChatRoom: React.FC = () => {
   // 添加一个状态来记录最新消息的时间戳
   const [lastMessageTimestamp, setLastMessageTimestamp] = useState<number>(Date.now());
 
+  // 添加用户列表显示隐藏状态，从localStorage获取初始值
+  const [isUserListVisible, setIsUserListVisible] = useState<boolean>(() => {
+    const saved = localStorage.getItem('chat_userlist_visible');
+    return saved !== null ? JSON.parse(saved) : true;
+  });
+
   // 添加防抖相关的状态和引用
   const [newMessageCount, setNewMessageCount] = useState<number>(0);
   const newMessageTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const [isLoadingMoyu, setIsLoadingMoyu] = useState(false);
+
+  const [isExportingAnnualReportImage, setIsExportingAnnualReportImage] = useState(false);
+
+  // 添加用户备注相关状态
+  const [userRemarks, setUserRemarks] = useState<Record<string, string>>({});
+  const [isRemarkModalVisible, setIsRemarkModalVisible] = useState(false);
+  const [remarkValue, setRemarkValue] = useState('');
+  const [remarkUserId, setRemarkUserId] = useState<string | null>(null);
+
+  // 添加投票相关状态
+  const [activeVotes, setActiveVotes] = useState<string[]>([]);
+  const [activeVoteDetails, setActiveVoteDetails] = useState<API.VoteVO[]>([]);
+  const [currentVote, setCurrentVote] = useState<API.VoteVO | null>(null);
+  const [isVoteModalVisible, setIsVoteModalVisible] = useState(false);
+  const [isVoteListModalVisible, setIsVoteListModalVisible] = useState(false);
+  const [voteLoading, setVoteLoading] = useState(false);
+  const [selectedVoteOptions, setSelectedVoteOptions] = useState<number[]>([]);
+
+  // 创建投票相关状态
+  const [isCreateVoteModalVisible, setIsCreateVoteModalVisible] = useState(false);
+  const [voteTitle, setVoteTitle] = useState('');
+  const [voteOptions, setVoteOptions] = useState<string[]>(['', '']);
+  const [isSingleChoice, setIsSingleChoice] = useState(true);
+  const [createVoteLoading, setCreateVoteLoading] = useState(false);
+
+  // 福袋相关状态
+  const [activeLuckyBags, setActiveLuckyBags] = useState<API.LuckyBag[]>([]);
+  const [isLuckyBagListModalVisible, setIsLuckyBagListModalVisible] = useState(false);
+  const [selectedLuckyBagId, setSelectedLuckyBagId] = useState<string | null>(null);
 
   const scrollToBottom = () => {
     const container = messageContainerRef.current;
     if (!container) return;
 
+    // 标记正在进行自动滚动
+    isAutoScrollingRef.current = true;
+
     // 使用 requestAnimationFrame 确保在下一帧执行滚动
     requestAnimationFrame(() => {
+      // 使用性能更好的方式计算滚动位置
+      const scrollTarget = container.scrollHeight - container.clientHeight;
+
       container.scrollTo({
-        top: container.scrollHeight,
-        behavior: 'smooth',
+        top: scrollTarget,
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
       });
 
-      // 添加二次检查，处理可能的延迟加载情况
-      setTimeout(() => {
-        if (container.scrollTop + container.clientHeight < container.scrollHeight) {
+      // 添加二次检查，处理可能的延迟加载情况，但减少不必要的重复滚动
+      const checkScrollPosition = () => {
+        if (container.scrollTop + container.clientHeight < container.scrollHeight - 20) {
           container.scrollTo({
-            top: container.scrollHeight,
-            behavior: 'smooth',
+            top: container.scrollHeight - container.clientHeight,
+            behavior: 'auto', // 二次滚动使用即时滚动，避免动画叠加
           });
         }
-      }, 100);
+        // 滚动完成后重置标记
+        isAutoScrollingRef.current = false;
+      };
+
+      // 使用 requestAnimationFrame 代替 setTimeout，性能更好
+      setTimeout(checkScrollPosition, 100);
     });
   };
 
@@ -395,7 +800,11 @@ const ChatRoom: React.FC = () => {
       const headerHeight = 40;
       const padding = 20;
       const newHeight = Math.max(containerHeight - headerHeight - padding, 200);
+      console.log('计算列表高度:', { containerHeight, headerHeight, padding, newHeight });
       setListHeight(newHeight);
+    } else {
+      console.log('userListRef.current 不存在，使用默认高度');
+      setListHeight(400); // 设置一个默认高度
     }
   }, []);
 
@@ -427,9 +836,14 @@ const ChatRoom: React.FC = () => {
     };
   }, [updateListHeight]);
 
+  // 排序后的在线用户列表，用 useMemo 缓存，避免 UserItem 每次渲染都重新排序
+  const sortedOnlineUsers = useMemo(
+    () => [...onlineUsers].sort((a, b) => (b.points || 0) - (a.points || 0)),
+    [onlineUsers],
+  );
+
   const UserItem = ({ index, style }: { index: number; style: React.CSSProperties }) => {
-    const sortedUsers = [...onlineUsers].sort((a, b) => (b.points || 0) - (a.points || 0));
-    const user = sortedUsers[index];
+    const user = sortedOnlineUsers[index];
 
     return (
       <div
@@ -438,13 +852,15 @@ const ChatRoom: React.FC = () => {
         onClick={() => handleSelectMention(user)}
         style={{ ...style, cursor: 'pointer' }}
       >
-        <div className={styles.avatarWrapper}>
-          <Popover content={<UserInfoCard user={user} />} trigger="hover" placement="right">
-            <div className={styles.avatarWithFrame}>
-              <Avatar src={user.avatar} size={28} />
-            </div>
-          </Popover>
-        </div>
+        {!isSpeedMode && (
+          <div className={styles.avatarWrapper}>
+            <Popover content={<UserInfoCard user={user} />} trigger="hover" placement="right">
+              <div className={styles.avatarWithFrame}>
+                <Avatar src={user.avatar} size={28} />
+              </div>
+            </Popover>
+          </div>
+        )}
         <div className={styles.userInfo}>
           <div className={styles.userName}>{user.name}</div>
           <div className={styles.userStatus}>{user.status}</div>
@@ -496,66 +912,78 @@ const ChatRoom: React.FC = () => {
   }, []);
 
   // 获取在线用户列表
-  const fetchOnlineUsers = async () => {
+  // 机器人用户（固定置顶）
+  const BOT_USER: User = {
+    id: '-1',
+    name: '摸鱼助手',
+    avatar:
+      'https://oss.cqbo.com/moyu/user_avatar/1/hYskW0jH-34eaba5c-3809-45ef-a3bd-dd01cf97881b_478ce06b6d869a5a11148cf3ee119bac.gif',
+    level: 1,
+    isAdmin: false,
+    status: '在线',
+    points: 9999,
+    region: '鱼塘',
+    country: '摸鱼岛',
+    avatarFramerUrl: '',
+    titleId: 0,
+    titleIdList: '',
+  };
+
+  const fetchOnlineUsers = async (isIncremental = false) => {
     try {
       const response = await getOnlineUserListUsingGet();
-      if (response.data) {
-        const onlineUsersList = response.data.map((user) => ({
-          id: String(user.id),
-          name: user.name || '未知用户',
-          avatar: user.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
-          level: user.level || 1,
-          isAdmin: user.isAdmin || false,
-          status: '在线',
-          points: user.points || 0,
-          avatarFramerUrl: user.avatarFramerUrl,
-          titleId: user.titleId,
-          titleIdList: user.titleIdList,
-        }));
+      if (!response.data) return;
 
-        // 添加机器人用户
-        const botUser = {
-          id: '-1',
-          name: '摸鱼助手',
+      const freshList: User[] = response.data.map((user) => ({
+        id: String(user.id),
+        name: user.name || '未知用户',
+        avatar: user.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
+        level: user.level || 1,
+        isAdmin: user.isAdmin || false,
+        status: '在线',
+        points: user.points || 0,
+        avatarFramerUrl: user.avatarFramerUrl,
+        titleId: user.titleId,
+        titleIdList: user.titleIdList,
+      }));
+
+      // 确保当前用户在列表中
+      if (
+        currentUser?.id &&
+        !freshList.some((u) => u.id === String(currentUser.id))
+      ) {
+        freshList.push({
+          id: String(currentUser.id),
+          name: currentUser.userName || '未知用户',
           avatar:
-            'https://api.oss.cqbo.com/moyu/user_avatar/1/hYskW0jH-34eaba5c-3809-45ef-a3bd-dd01cf97881b_478ce06b6d869a5a11148cf3ee119bac.gif',
-          level: 1,
-          isAdmin: false,
+            currentUser.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
+          level: currentUser.level || 1,
+          isAdmin: currentUser.userRole === 'admin',
           status: '在线',
-          points: 9999,
-          region: '鱼塘',
-          country: '摸鱼岛',
-          avatarFramerUrl: '',
-          titleId: 0,
-          titleIdList: '',
-        };
-        onlineUsersList.unshift(botUser);
+          points: currentUser.points || 0,
+          avatarFramerUrl: currentUser.avatarFramerUrl,
+          titleId: currentUser.titleId,
+          titleIdList: currentUser.titleIdList,
+        });
+      }
 
-        // 如果当前用户已登录且不在列表中，将其添加到列表
-        if (
-          currentUser?.id &&
-          !onlineUsersList.some((user) => user.id === String(currentUser.id))
-        ) {
-          onlineUsersList.push({
-            id: String(currentUser.id),
-            name: currentUser.userName || '未知用户',
-            avatar:
-              currentUser.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
-            level: currentUser.level || 1,
-            isAdmin: currentUser.userRole === 'admin',
-            status: '在线',
-            points: currentUser.points || 0,
-            avatarFramerUrl: currentUser.avatarFramerUrl,
-            titleId: currentUser.titleId,
-            titleIdList: currentUser.titleIdList,
-          });
-        }
-
-        setOnlineUsers(onlineUsersList);
+      if (!isIncremental) {
+        // 首次加载：直接设置完整列表（机器人置顶）
+        setOnlineUsers([BOT_USER, ...freshList]);
+      } else {
+        // 增量更新：与当前列表做 diff，保留机器人，新增/移除真实用户
+        setOnlineUsers((prev) => {
+          const freshIds = new Set(freshList.map((u) => u.id));
+          // 保留机器人 + 仍在线的用户
+          const retained = prev.filter((u) => u.id === '-1' || freshIds.has(u.id));
+          const retainedIds = new Set(retained.map((u) => u.id));
+          // 追加新上线的用户
+          const added = freshList.filter((u) => !retainedIds.has(u.id));
+          return [...retained, ...added];
+        });
       }
     } catch (error) {
       console.error('获取在线用户列表失败:', error);
-      messageApi.error('获取在线用户列表失败');
     }
   };
   // 修改 useEffect 来监听消息变化并自动滚动
@@ -563,20 +991,92 @@ const ChatRoom: React.FC = () => {
     // 只有在以下情况才自动滚动到底部：
     // 1. 是当前用户发送的消息
     // 2. 用户已经在查看最新消息（在底部附近）
+    // 3. 不是由于加载历史消息导致的变化
 
-    if (isNearBottom) {
+    if (isNearBottom && !loadingRef.current) {
+      // 添加短暂延迟，避免与其他滚动机制冲突
       setTimeout(() => {
         scrollToBottom();
       }, 100);
     }
   }, [messages]); // 监听消息数组变化
-  // 初始化时获取在线用户列表
+  // 初始化时获取在线用户列表（仅在列表可见时）
   useEffect(() => {
-    fetchOnlineUsers();
-  }, []);
+    if (isUserListVisible) {
+      // 首次加载，全量拉取
+      fetchOnlineUsers(false);
+      // 延迟计算高度，确保DOM已经渲染
+      setTimeout(() => {
+        updateListHeight();
+      }, 100);
 
-  const loadHistoryMessages = async (page: number, isFirstLoad = false) => {
+      // 每 10 秒增量刷新一次在线用户列表
+      const timer = setInterval(() => {
+        fetchOnlineUsers(true);
+      }, 10000);
+
+      return () => clearInterval(timer);
+    }
+  }, [isUserListVisible, updateListHeight]);
+
+  // 监听用户列表显示状态变化，保存到localStorage
+  useEffect(() => {
+    localStorage.setItem('chat_userlist_visible', JSON.stringify(isUserListVisible));
+  }, [isUserListVisible]);
+
+  // 创建用户对象的工具函数
+  const createUserFromRecord = (userRecord: any, defaultRegion: string = '未知地区'): User => {
+    return {
+      id: String(userRecord?.id || ''),
+      name: userRecord?.name || '未知用户',
+      avatar: userRecord?.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
+      level: userRecord?.level || 1,
+      points: userRecord?.points || 0,
+      isAdmin: userRecord?.isAdmin || false,
+      isVip: userRecord?.isVip || userRecord?.vip || false,
+      region: userRecord?.region || defaultRegion,
+      country: userRecord?.country,
+      avatarFramerUrl: userRecord?.avatarFramerUrl,
+      titleId: userRecord?.titleId,
+      titleIdList: userRecord?.titleIdList,
+    };
+  };
+
+  // 创建消息对象的工具函数（从后端记录）
+  const createMessageFromRecord = (record: any): Message | null => {
+    const messageId = String(record.messageWrapper?.message?.id);
+
+    // 如果消息ID为空，返回null
+    if (!messageId) return null;
+
+    const senderRecord = record.messageWrapper?.message?.sender;
+    const quotedMessageRecord = record.messageWrapper?.message?.quotedMessage;
+
+    // 创建引用消息（如果存在）
+    const quotedMessage = quotedMessageRecord ? {
+      id: String(quotedMessageRecord.id),
+      content: quotedMessageRecord.content || '',
+      sender: createUserFromRecord(quotedMessageRecord.sender),
+      timestamp: new Date(quotedMessageRecord.timestamp || Date.now()),
+    } : undefined;
+
+    // 创建并返回消息对象
+    return {
+      id: messageId,
+      content: record.messageWrapper?.message?.content || '',
+      sender: createUserFromRecord(senderRecord, '未知地区'),
+      timestamp: new Date(record.messageWrapper?.message?.timestamp || Date.now()),
+      quotedMessage,
+      region: userIpInfo?.region || '未知地区',
+      country: userIpInfo?.country,
+      workdayType,
+      currentWeekType,
+    };
+  };
+
+  const loadHistoryMessages = async (isFirstLoad = false, cursorMessageId?: number) => {
     if (!hasMore || loadingRef.current) return;
+    if (!isFirstLoad && cursorMessageId == null) return;
 
     try {
       loadingRef.current = true;
@@ -586,19 +1086,28 @@ const ChatRoom: React.FC = () => {
       const container = messageContainerRef.current;
       const oldScrollHeight = container?.scrollHeight || 0;
 
-      const response = await listMessageVoByPageUsingPost({
-        current: page,
+      const requestBody: API.MessageQueryRequest = {
         pageSize,
         roomId: -1,
         sortField: 'createTime',
         sortOrder: 'desc',
-      });
+      };
+
+      if (isFirstLoad) {
+        requestBody.current = 1;
+      } else {
+        requestBody.messageId = cursorMessageId;
+      }
+
+      const response = await listMessageVoByPageUsingPost(requestBody);
 
       if (response.data?.records) {
+        const rawRecords = response.data.records;
+
         // 创建一个临时集合来跟踪当前请求中的消息ID
         const currentRequestMessageIds = new Set();
 
-        const historyMessages = response.data.records
+        const historyMessages = rawRecords
           .map((record) => {
             const messageId = String(record.messageWrapper?.message?.id);
 
@@ -610,55 +1119,10 @@ const ChatRoom: React.FC = () => {
             // 将消息ID添加到当前请求的集合中
             currentRequestMessageIds.add(messageId);
 
-            return {
-              id: messageId,
-              content: record.messageWrapper?.message?.content || '',
-              sender: {
-                id: String(record.userId),
-                name: record.messageWrapper?.message?.sender?.name || '未知用户',
-                avatar:
-                  record.messageWrapper?.message?.sender?.avatar ||
-                  'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
-                level: record.messageWrapper?.message?.sender?.level || 1,
-                points: record.messageWrapper?.message?.sender?.points || 0,
-                isAdmin: record.messageWrapper?.message?.sender?.isAdmin || false,
-                region: record.messageWrapper?.message?.sender?.region || '未知地区',
-                country: record.messageWrapper?.message?.sender?.country,
-                avatarFramerUrl: record.messageWrapper?.message?.sender?.avatarFramerUrl,
-                titleId: record.messageWrapper?.message?.sender?.titleId,
-                titleIdList: record.messageWrapper?.message?.sender?.titleIdList,
-              },
-              timestamp: new Date(record.messageWrapper?.message?.timestamp || Date.now()),
-              quotedMessage: record.messageWrapper?.message?.quotedMessage
-                ? {
-                    id: String(record.messageWrapper.message.quotedMessage.id),
-                    content: record.messageWrapper.message.quotedMessage.content || '',
-                    sender: {
-                      id: String(record.messageWrapper.message.quotedMessage.sender?.id),
-                      name: record.messageWrapper.message.quotedMessage.sender?.name || '未知用户',
-                      avatar:
-                        record.messageWrapper.message.quotedMessage.sender?.avatar ||
-                        'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
-                      level: record.messageWrapper.message.quotedMessage.sender?.level || 1,
-                      points: record.messageWrapper.message.quotedMessage.sender?.points || 0,
-                      isAdmin: record.messageWrapper.message.quotedMessage.sender?.isAdmin || false,
-                      region:
-                        record.messageWrapper?.message.quotedMessage?.sender?.region || '未知地区',
-                      avatarFramerUrl:
-                        record.messageWrapper?.message.quotedMessage?.sender?.avatarFramerUrl,
-                      titleId: record.messageWrapper?.message.quotedMessage?.sender?.titleId,
-                      titleIdList:
-                        record.messageWrapper?.message.quotedMessage?.sender?.titleIdList,
-                    },
-                    timestamp: new Date(
-                      record.messageWrapper.message.quotedMessage.timestamp || Date.now(),
-                    ),
-                  }
-                : undefined,
-              region: userIpInfo?.region || '未知地区',
-            };
+            // 使用工具函数创建消息对象
+            return createMessageFromRecord(record);
           })
-          .filter(Boolean); // 过滤掉null值
+          .filter(Boolean) as Message[]; // 使用类型断言
 
         // 将新消息的ID添加到已加载集合中
         historyMessages.forEach((msg) => loadedMessageIds.add(msg.id));
@@ -672,25 +1136,20 @@ const ChatRoom: React.FC = () => {
         // 处理历史消息，确保正确的时间顺序（旧消息在上，新消息在下）
         if (isFirstLoad) {
           // 首次加载时，反转消息顺序，使最旧的消息在上面
-          setMessages(historyMessages.reverse());
-        } else {
+          const orderedMessages = historyMessages.reverse() as Message[];
+          messagesRef.current = orderedMessages;
+          setMessages(orderedMessages);
+        } else if (historyMessages.length > 0) {
           // 加载更多历史消息时，新的历史消息应该在当前消息的上面
-          // 只有在有新消息时才更新状态
-          if (historyMessages.length > 0) {
-            setMessages((prev) => [...historyMessages.reverse(), ...prev]);
-          }
+          setMessages((prev) => {
+            const next = [...(historyMessages.reverse() as Message[]), ...prev];
+            messagesRef.current = next;
+            return next;
+          });
         }
 
-        setTotal(response.data.total || 0);
-
-        // 更新是否还有更多消息
-        const currentTotal = loadedMessageIds.size;
-        setHasMore(currentTotal < (response.data.total || 0));
-
-        // 只有在成功加载新消息时才更新页码
-        if (historyMessages.length > 0) {
-          setCurrent(page);
-        }
+        // 游标分页：返回条数不足 pageSize 时表示没有更多历史消息
+        setHasMore(rawRecords.length >= pageSize);
 
         // 如果是首次加载，将滚动条设置到底部
         if (isFirstLoad) {
@@ -701,8 +1160,15 @@ const ChatRoom: React.FC = () => {
           // 保持滚动位置
           requestAnimationFrame(() => {
             if (container) {
+              // 防止自动滚动检测干扰
+              isAutoScrollingRef.current = true;
               const newScrollHeight = container.scrollHeight;
               container.scrollTop = newScrollHeight - oldScrollHeight;
+
+              // 重置标记
+              setTimeout(() => {
+                isAutoScrollingRef.current = false;
+              }, 100);
             }
           });
         }
@@ -718,6 +1184,9 @@ const ChatRoom: React.FC = () => {
 
   // 检查是否在底部
   const checkIfNearBottom = () => {
+    // 如果正在自动滚动，不更新状态
+    if (isAutoScrollingRef.current) return;
+
     const container = messageContainerRef.current;
     if (!container) return;
 
@@ -730,26 +1199,34 @@ const ChatRoom: React.FC = () => {
 
   // 修改滚动处理函数
   const handleScroll = () => {
+    // 如果是自动滚动触发的，不执行其他逻辑
+    if (isAutoScrollingRef.current) return;
+
     const container = messageContainerRef.current;
     if (!container || loadingRef.current || !hasMore) return;
 
     // 检查是否在底部
     checkIfNearBottom();
 
-    // 当滚动到顶部时加载更多
+    // 当滚动到顶部时，使用游标分页加载更早的历史消息
     if (container.scrollTop === 0) {
-      // 更新当前页码，加载下一页
-      const nextPage = current + 1;
-      if (hasMore) {
-        loadHistoryMessages(nextPage);
+      const oldestId = messagesRef.current[0]?.id;
+      const cursorMessageId = oldestId ? Number(oldestId) : undefined;
+      if (cursorMessageId != null && !Number.isNaN(cursorMessageId)) {
+        loadHistoryMessages(false, cursorMessageId);
       }
     }
   };
 
   // 初始化时加载历史消息
   useEffect(() => {
-    loadHistoryMessages(1, true);
+    loadHistoryMessages(true);
   }, []);
+
+  // 同步 messagesRef，供滚动加载时读取当前最早消息游标
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
 
   // 添加滚动监听
   useEffect(() => {
@@ -758,7 +1235,7 @@ const ChatRoom: React.FC = () => {
       container.addEventListener('scroll', handleScroll);
       return () => container.removeEventListener('scroll', handleScroll);
     }
-  }, [loadingRef.current, hasMore, current]);
+  }, [hasMore]);
 
   // 处理图片上传
   const handleImageUpload = async (file: File) => {
@@ -900,41 +1377,7 @@ const ChatRoom: React.FC = () => {
   };
 
   // 处理文件上传
-  const handleFileUpload = async (file: File) => {
-    try {
-      setUploadingFile(true);
-
-      // 调用后端上传接口
-      const res = await uploadFileByMinioUsingPost(
-        { biz: 'user_file' }, // 业务标识参数
-        {}, // body 参数
-        file, // 文件参数
-        {
-          // 其他选项
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        },
-      );
-
-      if (!res.data) {
-        throw new Error('文件上传失败');
-      }
-
-      // 获取文件的访问URL
-      const fileUrl = res.data;
-      console.log('文件上传地址：', fileUrl);
-      setPendingFileUrl(fileUrl);
-
-      messageApi.success('文件上传成功');
-    } catch (error) {
-      messageApi.error(`文件上传失败：${error}`);
-    } finally {
-      setUploadingFile(false);
-    }
-  };
-
-  // 移除待发送的文件
+// 移除待发送的文件
   const handleRemoveFile = () => {
     setPendingFileUrl(null);
   };
@@ -970,70 +1413,101 @@ const ChatRoom: React.FC = () => {
 
   // 修改 handleChatMessage 函数
   const handleChatMessage = (data: any) => {
-    const otherUserMessage = data.data.message;
-    const messageTimestamp = new Date(otherUserMessage.timestamp).getTime();
+    const incomingMessage = data.data.message;
+    const messageTimestamp = new Date(incomingMessage.timestamp).getTime();
+    const isSelf = incomingMessage.sender.id === String(currentUser?.id);
+    // 判断是否是真正的新消息（时间戳大于当前最新消息的时间戳）
+    const isNewMessage = messageTimestamp > lastMessageTimestamp;
 
-    // 只处理其他用户的消息
-    if (otherUserMessage.sender.id !== String(currentUser?.id)) {
-      // 判断是否是真正的新消息（时间戳大于当前最新消息的时间戳）
-      const isNewMessage = messageTimestamp > lastMessageTimestamp;
+    setMessages((prev) => {
+      // 添加新消息，确保 vip 和 isVip 字段都存在
+      const processedMessage = {
+        ...incomingMessage,
+        sender: {
+          ...incomingMessage.sender,
+          vip: incomingMessage.sender.vip || incomingMessage.sender.isVip || false,
+          isVip: incomingMessage.sender.isVip || incomingMessage.sender.vip || false
+        }
+      };
 
-      setMessages((prev) => {
-        // 添加新消息
-        const newMessages = [...prev, { ...otherUserMessage }];
+      if (prev.some((m) => m.id === processedMessage.id)) return prev;
 
-        // 检查是否在底部
-        const container = messageContainerRef.current;
-        if (container) {
-          const threshold = 30; // 30px的阈值
-          const distanceFromBottom =
-            container.scrollHeight - container.scrollTop - container.clientHeight;
-          const isNearBottom = distanceFromBottom <= threshold;
-
-          // 只有在不在底部且是真正的新消息时，才累计新消息数量
-          if (!isNearBottom && isNewMessage) {
-            setNewMessageCount((prev) => prev + 1);
-
-            // 清除之前的定时器
-            if (newMessageTimerRef.current) {
-              clearTimeout(newMessageTimerRef.current);
-            }
-
-            // 设置新的定时器，1秒后显示合并的提示
-            newMessageTimerRef.current = setTimeout(() => {
-              showNewMessageNotification(newMessageCount + 1);
-              setNewMessageCount(0);
-            }, 1000);
-          }
-
-          // 只有在底部时才限制消息数量
-          if (isNearBottom && newMessages.length > 25) {
-            return newMessages.slice(-25);
+      let newMessages: Message[];
+      if (isSelf) {
+        let optimisticIndex = -1;
+        for (let i = prev.length - 1; i >= 0; i--) {
+          if (
+            String(prev[i].sender.id) === String(currentUser?.id) &&
+            prev[i].content === processedMessage.content
+          ) {
+            optimisticIndex = i;
+            break;
           }
         }
-        return newMessages;
-      });
-
-      // 如果是新消息，更新最新消息时间戳
-      if (isNewMessage) {
-        setLastMessageTimestamp(messageTimestamp);
-        handleMentionNotification(otherUserMessage);
+        if (optimisticIndex !== -1) {
+          newMessages = [...prev];
+          newMessages[optimisticIndex] = processedMessage;
+        } else {
+          newMessages = [...prev, processedMessage];
+        }
+      } else {
+        newMessages = [...prev, processedMessage];
       }
 
-      // 实时检查是否在底部
+      // 检查是否在底部
       const container = messageContainerRef.current;
       if (container) {
-        const threshold = 30;
+        const threshold = 30; // 30px的阈值
         const distanceFromBottom =
           container.scrollHeight - container.scrollTop - container.clientHeight;
-        if (distanceFromBottom <= threshold) {
-          setTimeout(scrollToBottom, 100);
-          // 如果滚动到底部，清除新消息计数和定时器
-          setNewMessageCount(0);
+        const isNearBottom = distanceFromBottom <= threshold;
+
+        // 只有在不在底部且是真正的新消息时，才累计新消息数量
+        if (!isSelf && !isNearBottom && isNewMessage) {
+          setNewMessageCount((prev) => prev + 1);
+
+          // 清除之前的定时器
           if (newMessageTimerRef.current) {
             clearTimeout(newMessageTimerRef.current);
-            newMessageTimerRef.current = null;
           }
+
+          // 设置新的定时器，1秒后显示合并的提示
+          newMessageTimerRef.current = setTimeout(() => {
+            showNewMessageNotification(newMessageCount + 1);
+            setNewMessageCount(0);
+          }, 1000);
+        }
+
+        // 只有在底部时才限制消息数量
+        if (isNearBottom && newMessages.length > 25) {
+          return newMessages.slice(-25);
+        }
+      }
+      return newMessages;
+    });
+
+    // 如果是新消息，更新最新消息时间戳
+    if (isNewMessage) {
+      setLastMessageTimestamp(messageTimestamp);
+      if (!isSelf) {
+        handleMentionNotification(incomingMessage);
+      }
+    }
+
+    // 实时检查是否在底部
+    const container = messageContainerRef.current;
+    if (container) {
+      const threshold = 30;
+      const distanceFromBottom =
+        container.scrollHeight - container.scrollTop - container.clientHeight;
+      if (distanceFromBottom <= threshold && !isAutoScrollingRef.current) {
+        // 避免重复滚动，添加防抖
+        setTimeout(scrollToBottom, 100);
+        // 如果滚动到底部，清除新消息计数和定时器
+        setNewMessageCount(0);
+        if (newMessageTimerRef.current) {
+          clearTimeout(newMessageTimerRef.current);
+          newMessageTimerRef.current = null;
         }
       }
     }
@@ -1041,20 +1515,6 @@ const ChatRoom: React.FC = () => {
 
   const handleUserMessageRevoke = (data: any) => {
     setMessages((prev) => prev.filter((msg) => msg.id !== data.data));
-    setTotal((prev) => Math.max(0, prev - 1));
-  };
-
-  const handleUserOnline = (data: any) => {
-    setOnlineUsers((prev) => [
-      ...prev,
-      ...data.data.filter(
-        (newUser: { id: string }) => !prev.some((user) => user.id === newUser.id),
-      ),
-    ]);
-  };
-
-  const handleUserOffline = (data: any) => {
-    setOnlineUsers((prev) => prev.filter((user) => user.id !== data.data));
   };
 
   // 修改 WebSocket 连接逻辑
@@ -1073,8 +1533,6 @@ const ChatRoom: React.FC = () => {
       // 添加消息处理器
       wsService.addMessageHandler('chat', handleChatMessage);
       wsService.addMessageHandler('userMessageRevoke', handleUserMessageRevoke);
-      wsService.addMessageHandler('userOnline', handleUserOnline);
-      wsService.addMessageHandler('userOffline', handleUserOffline);
 
       // 连接WebSocket
       wsService.connect(token);
@@ -1085,11 +1543,42 @@ const ChatRoom: React.FC = () => {
         // 移除消息处理器
         wsService.removeMessageHandler('chat', handleChatMessage);
         wsService.removeMessageHandler('userMessageRevoke', handleUserMessageRevoke);
-        wsService.removeMessageHandler('userOnline', handleUserOnline);
-        wsService.removeMessageHandler('userOffline', handleUserOffline);
       };
     }
   }, [currentUser?.id]);
+
+  // 创建新消息对象的工具函数
+  const createNewMessage = (content: string, mentionedUsers: User[] = [], quotedMsg: Message | null = null): Message => {
+    if (!currentUser) {
+      throw new Error('用户未登录');
+    }
+
+    return {
+      id: `${Date.now()}`,
+      content,
+      sender: {
+        id: String(currentUser.id),
+        name: currentUser.userName || '游客',
+        avatar: currentUser.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
+        level: currentUser.level || 1,
+        points: currentUser.points || 0,
+        isAdmin: currentUser.userRole === 'admin',
+        isVip: currentUser.vip,
+        region: userIpInfo?.region || '未知地区',
+        country: userIpInfo?.country || '未知国家',
+        avatarFramerUrl: currentUser.avatarFramerUrl,
+        titleId: currentUser.titleId,
+        titleIdList: currentUser.titleIdList,
+      },
+      timestamp: new Date(),
+      quotedMessage: quotedMsg || undefined,
+      mentionedUsers: mentionedUsers.length > 0 ? mentionedUsers : undefined,
+      region: userIpInfo?.region || '未知地区',
+      country: userIpInfo?.country || '未知国家',
+      workdayType,
+      currentWeekType,
+    };
+  };
 
   // 修改 handleSend 函数
   const handleSend = (customContent?: string) => {
@@ -1122,7 +1611,7 @@ const ChatRoom: React.FC = () => {
       return;
     }
 
-    let content = customContent || inputValue;
+    let content = customContent || inputRef.current?.value || '';
 
     // 检查是否包含 iframe 标签
     const iframeRegex = /\<iframe.*?\>.*?\<\/iframe\>/gi;
@@ -1174,28 +1663,8 @@ const ChatRoom: React.FC = () => {
       }
     }
 
-    const newMessage: Message = {
-      id: `${Date.now()}`,
-      content: content,
-      sender: {
-        id: String(currentUser.id),
-        name: currentUser.userName || '游客',
-        avatar: currentUser.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
-        level: currentUser.level || 1,
-        points: currentUser.points || 0,
-        isAdmin: currentUser.userRole === 'admin',
-        region: userIpInfo?.region || '未知地区',
-        country: userIpInfo?.country || '未知国家',
-        avatarFramerUrl: currentUser.avatarFramerUrl,
-        titleId: currentUser.titleId,
-        titleIdList: currentUser.titleIdList,
-      },
-      timestamp: new Date(),
-      quotedMessage: quotedMessage || undefined,
-      mentionedUsers: mentionedUsers.length > 0 ? mentionedUsers : undefined,
-      region: userIpInfo?.region || '未知地区',
-      country: userIpInfo?.country || '未知国家',
-    };
+    // 使用工具函数创建消息对象
+    const newMessage = createNewMessage(content, mentionedUsers, quotedMessage);
 
     // 使用全局 WebSocket 服务发送消息
     wsService.send({
@@ -1211,11 +1680,13 @@ const ChatRoom: React.FC = () => {
 
     // 更新消息列表
     setMessages((prev) => [...prev, newMessage]);
-    setTotal((prev) => prev + 1);
     setHasMore(true);
 
     // 清空输入框、预览图片、文件和引用消息
-    setInputValue('');
+    if (inputRef.current) {
+      inputRef.current.value = '';
+      inputRef.current.style.height = 'auto';
+    }
     setPendingImageUrl(null);
     setPendingFileUrl(null);
     setQuotedMessage(null);
@@ -1226,7 +1697,9 @@ const ChatRoom: React.FC = () => {
     setLastSendContentTime(now);
 
     // 滚动到底部
-    setTimeout(scrollToBottom, 100);
+    setTimeout(() => {
+      scrollToBottom();
+    }, 100);
 
     // 如果功能菜单是打开的，则关闭
     closeMobileToolbar();
@@ -1238,7 +1711,7 @@ const ChatRoom: React.FC = () => {
   };
 
   // 添加撤回消息的处理函数
-  const handleRevokeMessage = (messageId: string) => {
+  const handleRevokeMessage = useCallback((messageId: string) => {
     wsService.send({
       type: 2,
       userId: -1,
@@ -1249,72 +1722,63 @@ const ChatRoom: React.FC = () => {
     });
 
     messageApi.info('消息已撤回');
-  };
+  }, [messageApi]);
 
   // 处理@输入
   const handleMentionInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     let value = e.target.value;
 
-    // 过滤掉 ``` 字符
-    value = value.replace(/```/g, '');
+    // 过滤掉 ``` 字符，直接写回 DOM，不触发 setState
+    if (value.includes('```')) {
+      value = value.replace(/```/g, '');
+      e.target.value = value;
+    }
 
-    // 更新输入值
-    setInputValue(value);
-
-    // 更新是否显示发送按钮的状态
-    const hasContent = value.trim().length > 0;
-    setShouldShowSendButton(hasContent);
+    // textarea 自动撑高（模拟 autoSize）
+    const ta = e.target;
+    ta.style.height = 'auto';
+    ta.style.height = `${Math.min(ta.scrollHeight, 120)}px`;
 
     // 如果输入框有内容并且功能面板显示中，则关闭功能面板
-    if (hasContent && isMobileToolbarVisible) {
+    if (value.trim().length > 0 && isMobileToolbarVisible) {
       closeMobileToolbar();
     }
 
-    // 检查是否输入了#摸鱼日历
-    if (value === '#摸鱼日历') {
-      fetchMoyuCalendar();
-      setInputValue(''); // 清空输入框，因为这是触发词
-      setShouldShowSendButton(false); // 重置发送按钮状态
-      return;
+    // 在防抖外同步读取位置，防止 e.target 在回调里失效
+    // （已改为 CSS bottom: 100% 定位，无需坐标计算）
+
+    // 使用防抖处理@功能，减少频繁计算
+    if (mentionDebounceRef.current) {
+      clearTimeout(mentionDebounceRef.current);
     }
 
-    // 原有的@功能处理逻辑保持不变
-    const lastAtPos = value.lastIndexOf('@');
-    if (lastAtPos !== -1) {
-      const searchText = value.slice(lastAtPos + 1);
-      setMentionSearchText(searchText);
+    mentionDebounceRef.current = setTimeout(() => {
+      // @功能处理逻辑
+      const lastAtPos = value.lastIndexOf('@');
+      if (lastAtPos !== -1) {
+        const searchText = value.slice(lastAtPos + 1);
+        setMentionSearchText(searchText);
 
-      // 过滤在线用户，添加安全检查
-      const filtered = onlineUsers.filter((user) => {
-        if (!user || !user.name) return false;
-        return user.name.toLowerCase().includes(searchText.toLowerCase());
-      });
-      setFilteredUsers(filtered);
+        if (!searchText.trim()) {
+          setFilteredUsers(onlineUsers.slice(0, 10));
+        } else {
+          const searchTextLower = searchText.toLowerCase();
+          const filtered = onlineUsers.filter((user) => {
+            if (!user || !user.name) return false;
+            return user.name.toLowerCase().includes(searchTextLower);
+          }).slice(0, 10);
+          setFilteredUsers(filtered);
+        }
 
-      // 获取输入框位置
-      const textarea = e.target;
-      const rect = textarea.getBoundingClientRect();
-      const cursorPos = textarea.selectionStart;
-      const lineHeight = parseInt(getComputedStyle(textarea).lineHeight);
-      const lines = value.slice(0, cursorPos).split('\n');
-      const currentLine = lines[lines.length - 1];
-      const currentLinePos = currentLine.length;
-
-      // 根据过滤结果数量调整位置
-      const itemHeight = 40; // 每个选项的高度
-      const maxItems = 3; // 最多显示3条数据时紧贴显示
-      const listHeight = Math.min(filtered.length, maxItems) * itemHeight;
-      const topOffset = filtered.length <= maxItems ? -listHeight : -200; // 数据较少时紧贴输入框
-
-      setMentionListPosition({
-        top: rect.top + topOffset,
-        left: rect.left + currentLinePos * 8, // 8是字符的近似宽度
-      });
-
-      setIsMentionListVisible(true);
-    } else {
-      setIsMentionListVisible(false);
-    }
+        if (onlineUsers.length > 0) {
+          setIsMentionListVisible(true);
+        } else {
+          setIsMentionListVisible(false);
+        }
+      } else {
+        setIsMentionListVisible(false);
+      }
+    }, 150);
   };
 
   // 点击空白处隐藏成员列表
@@ -1332,40 +1796,81 @@ const ChatRoom: React.FC = () => {
   }, []);
 
   // 选择@成员
-  const handleSelectMention = (user: User) => {
-    const value = inputValue;
-    const lastAtPos = value.lastIndexOf('@');
-    if (lastAtPos !== -1) {
-      // 如果已经输入了@，则替换当前@后面的内容
-      const newValue =
-        value.slice(0, lastAtPos) +
-        `@${user.name} ` +
-        value.slice(lastAtPos + mentionSearchText.length + 1);
-      setInputValue(newValue);
-    } else {
-      // 如果没有输入@，则在当前光标位置插入@用户名
-      const cursorPos = inputRef.current?.selectionStart || 0;
-      const newValue = value.slice(0, cursorPos) + `@${user.name} ` + value.slice(cursorPos);
-      setInputValue(newValue);
+  const handleSelectMention = useCallback((user: User) => {
+    // 清理防抖计时器
+    if (mentionDebounceRef.current) {
+      clearTimeout(mentionDebounceRef.current);
+      mentionDebounceRef.current = null;
     }
+
+    // 直接操作 DOM，不触发 setState
+    const textarea = inputRef.current;
+    if (textarea) {
+      const currentValue = textarea.value;
+      const lastAtPos = currentValue.lastIndexOf('@');
+      if (lastAtPos !== -1) {
+        textarea.value =
+          currentValue.slice(0, lastAtPos) +
+          `@${user.name} ` +
+          currentValue.slice(lastAtPos + mentionSearchText.length + 1);
+      } else {
+        const cursorPos = textarea.selectionStart || 0;
+        textarea.value =
+          currentValue.slice(0, cursorPos) + `@${user.name} ` + currentValue.slice(cursorPos);
+      }
+    }
+
     setIsMentionListVisible(false);
     setMentionSearchText('');
-    // 让输入框获得焦点
-    setTimeout(() => {
-      inputRef.current?.focus();
-    }, 0);
-  };
 
-  // 添加一个生成简短唯一标识符的函数
-  const generateUniqueShortId = (userId: string): string => {
-    // 如果是数字ID，转换为16进制并取前4位
-    if (/^\d+$/.test(userId)) {
-      const hex = parseInt(userId).toString(16).toUpperCase();
-      return `#${hex.padStart(4, '0').slice(0, 4)}`;
+    requestAnimationFrame(() => {
+      inputRef.current?.focus();
+    });
+  }, [mentionSearchText]);
+
+  // Using utility function from titleUtils
+
+  // getAdminTag 用 useCallback 包裹，避免每次渲染都生成新引用导致 MessageItem memo 失效
+  const getAdminTag = useCallback((isAdmin: boolean, level: number, titleId?: number) => {
+    const { tagText, tagEmoji, tagClass: baseTagClass, titleImg } = getTitleTagProperties(isAdmin, level, titleId);
+    const tagClass = styles[baseTagClass];
+
+    if (titleId !== undefined && titleId != 0) {
+      const titles: Title[] = require('@/config/titles.json').titles;
+      const title = titles.find((t: Title) => String(t.id) === String(titleId));
+
+      if (title) {
+        if (titleImg) {
+          return (
+            <span className={styles.titleImageContainer}>
+              <img
+                {...externalImageProps}
+                src={titleImg}
+                alt={title.name}
+                className={styles.titleImage}
+              />
+              <span className={styles.titleSweepLight}></span>
+              <span className={styles.titleStar1}>✨</span>
+              <span className={styles.titleStar2}>✨</span>
+            </span>
+          );
+        }
+        return (
+          <span className={`${styles.adminTag} ${tagClass}`}>
+            {tagEmoji}
+            <span className={styles.adminText}>{title.name}</span>
+          </span>
+        );
+      }
     }
-    // 如果是字符串ID，取前4个字符，不足则补0
-    return `#${userId.slice(0, 4).padEnd(4, '0').toUpperCase()}`;
-  };
+
+    return (
+      <span className={`${styles.adminTag} ${tagClass}`}>
+        {tagEmoji}
+        <span className={styles.adminText}>{tagText}</span>
+      </span>
+    );
+  }, []); // styles 和 getTitleTagProperties 都是稳定引用，无需列入依赖
 
   const UserInfoCard: React.FC<{ user: User }> = ({ user }) => {
     // 从 titleIdList 字符串解析称号 ID 数组
@@ -1383,20 +1888,18 @@ const ChatRoom: React.FC = () => {
 
     // 优先显示用户选中的称号
     const defaultTitle = user.titleId
-      ? allTitles.find((titleElement) => {
-          // 检查是否是管理员称号
-          if (
-            user.titleId === -1 &&
-            titleElement.props?.children?.[1]?.props?.children === '管理员'
-          ) {
+      ? allTitles.find((titleElement, index) => {
+          // 如果是等级称号(index=0)且titleId=0，则匹配
+          if (user.titleId === 0 && index === 0) {
             return true;
           }
-          // 检查其他称号
-          const titles = require('@/config/titles.json').titles;
-          const titleConfig = titles.find((t: Title) => String(t.id) === String(user.titleId));
-          return (
-            titleConfig && titleConfig.name === titleElement.props?.children?.[1]?.props?.children
-          );
+
+          // 对于其他称号，通过titleId直接匹配
+          if (index > 0 && userTitleIds[index - 1] === user.titleId) {
+            return true;
+          }
+
+          return false;
         }) || allTitles[0]
       : allTitles[0];
     // 其他称号
@@ -1421,6 +1924,7 @@ const ChatRoom: React.FC = () => {
                 <Avatar src={user.avatar} size={48} />
                 {user.avatarFramerUrl && (
                   <img
+                    {...externalImageProps}
                     src={user.avatarFramerUrl}
                     className={styles.avatarFrame}
                     alt="avatar-frame"
@@ -1432,14 +1936,22 @@ const ChatRoom: React.FC = () => {
           </div>
           <div className={styles.userInfoCardTitle}>
             <div className={styles.userInfoCardNameRow}>
-              <span className={styles.userInfoCardName}>{user.name}</span>
+              <span className={styles.userInfoCardName}>
+                {userRemarks[user.id] || user.name}
+                {userRemarks[user.id] && (
+                  <span className={styles.originalName}>({user.name})</span>
+                )}
+              </span>
               <span className={styles.userInfoCardLevel}>
                 <span className={styles.levelEmoji}>{getLevelEmoji(user.level)}</span>
                 <span className={styles.levelText}>{user.level}</span>
               </span>
             </div>
             <div className={styles.titlesContainer}>
-              {defaultTitle}
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0px' }}>
+                {defaultTitle}
+                {(user.vip || user.isVip) && <span className={styles.vipBadge}>V</span>}
+              </span>
               {otherTitles.length > 0 && (
                 <Popover
                   content={
@@ -1498,144 +2010,36 @@ const ChatRoom: React.FC = () => {
   };
 
   // 在 return 语句之前添加引用消息的处理函数
-  const handleQuoteMessage = (message: Message) => {
+  const handleQuoteMessage = useCallback((message: Message) => {
     setQuotedMessage(message);
-    // 让输入框获得焦点
     setTimeout(() => {
       inputRef.current?.focus();
     }, 0);
-  };
+  }, []);
 
-  const getLevelEmoji = (level: number) => {
-    switch (level) {
-      case 7:
-        return '👑'; // 最高级
-      case 6:
-        return '💫';
-      case 5:
-        return '🏖';
-      case 4:
-        return '🎣';
-      case 3:
-        return '⭐';
-      case 2:
-        return '🐣';
-      case 1:
-        return '💦';
-      default:
-        return '💦'; // 默认显示
+  const handleReportMessage = useCallback((msg: Message) => {
+    if (!/^\d+$/.test(msg.id)) {
+      messageApi.warning('该消息暂不支持举报');
+      return;
     }
-  };
+    setReportTarget(msg);
+    setReportModalVisible(true);
+  }, [messageApi]);
 
-  // 新增管理员标识函数
-  const getAdminTag = (isAdmin: boolean, level: number, titleId?: number) => {
-    // 如果有特定的称号ID且不是0（0表示使用等级称号）
-    if (titleId !== undefined && titleId != 0) {
-      // 从 titles.json 中获取对应的称号
-      const titles: Title[] = require('@/config/titles.json').titles;
-      const title = titles.find((t: Title) => String(t.id) === String(titleId));
+  // Using utility function from titleUtils
 
-      if (title) {
-        let tagEmoji = '';
-        let tagClass = '';
-
-        // 根据不同的称号ID设置不同的样式
-        switch (String(titleId)) {
-          case '-1': // 管理员
-            tagEmoji = '🚀';
-            tagClass = styles.titleTagAdmin;
-            break;
-          case '1': // 天使投资人
-            tagEmoji = '😇';
-            tagClass = styles.titleTagInvestor;
-            break;
-          case '2': // 首席摸鱼官
-            tagEmoji = '🏆';
-            tagClass = styles.titleTagChief;
-            break;
-          case '3': // 白金摸鱼官
-            tagEmoji = '💎';
-            tagClass = styles.titleTagPlatinum;
-            break;
-          case '4': // 黄金摸鱼官
-            tagEmoji = '🌟';
-            tagClass = styles.titleTagGold;
-            break;
-          case '5': // 摸鱼共建者
-            tagEmoji = '🛠️';
-            tagClass = styles.titleTagBuilder;
-            break;
-          default:
-            tagEmoji = '🎯';
-            tagClass = styles.levelTagBeginner;
-        }
-
-        return (
-          <span className={`${styles.adminTag} ${tagClass}`}>
-            {tagEmoji}
-            <span className={styles.adminText}>{title.name}</span>
-          </span>
-        );
-      }
-    }
-
-    // 如果没有特定称号或称号ID为0，则使用原有的等级称号逻辑
-    let tagText = '';
-    let tagEmoji = '';
-    let tagClass = '';
-
-    switch (level) {
-      case 7:
-        tagText = '摸鱼皇帝';
-        tagEmoji = '👑';
-        tagClass = styles.levelTagMaster;
-        break;
-      case 6:
-        tagText = '躺平宗师';
-        tagEmoji = '💫';
-        tagClass = styles.levelTagExpert;
-        break;
-      case 5:
-        tagText = '摆烂大师';
-        tagEmoji = '🏖️';
-        tagClass = styles.levelTagPro;
-        break;
-      case 4:
-        tagText = '摸鱼专家 ';
-        tagEmoji = '🎣';
-        tagClass = styles.levelTagAdvanced;
-        break;
-      case 3:
-        tagText = '水群达人';
-        tagEmoji = '⭐';
-        tagClass = styles.levelTagBeginner;
-        break;
-      case 2:
-        tagText = '摸鱼学徒';
-        tagEmoji = '🐣';
-        tagClass = styles.levelTagNewbie;
-        break;
-      default:
-        tagText = '划水新秀';
-        tagEmoji = '💦';
-        tagClass = styles.levelTagNewbie;
-    }
-
-    return (
-      <span className={`${styles.adminTag} ${tagClass}`}>
-        {tagEmoji}
-        <span className={styles.adminText}>{tagText}</span>
-      </span>
-    );
-  };
+    // getAdminTag 已在上方通过 useCallback 定义
 
   const handleEmojiClick = (emoji: any) => {
-    setInputValue((prev) => prev + emoji.native);
+    if (inputRef.current) {
+      const pos = inputRef.current.selectionStart || inputRef.current.value.length;
+      const cur = inputRef.current.value;
+      inputRef.current.value = cur.slice(0, pos) + emoji.native + cur.slice(pos);
+    }
     setIsEmojiPickerVisible(false);
-    // 让输入框获得焦点
-    setTimeout(() => {
+    requestAnimationFrame(() => {
       inputRef.current?.focus();
-    }, 0);
+    });
   };
 
   const emojiPickerContent = (
@@ -1655,7 +2059,6 @@ const ChatRoom: React.FC = () => {
   const handleEmoticonSelect = (url: string) => {
     // 将图片URL作为消息内容发送
     const imageMessage = `[img]${url}[/img]`;
-    setInputValue(imageMessage);
 
     // 直接使用新的消息内容发送，而不是依赖 inputValue 的状态更新
     if (!wsService.isConnected()) {
@@ -1667,30 +2070,15 @@ const ChatRoom: React.FC = () => {
       return;
     }
 
-    const newMessage: Message = {
-      id: `${Date.now()}`,
-      content: imageMessage,
-      sender: {
-        id: String(currentUser.id),
-        name: currentUser.userName || '游客',
-        avatar: currentUser.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
-        level: currentUser.level || 1,
-        points: currentUser.points || 0, // 确保这里设置了积分
-        isAdmin: currentUser.userRole === 'admin',
-        region: userIpInfo?.region || '未知地区',
-        country: userIpInfo?.country || '未知国家',
-        avatarFramerUrl: currentUser.avatarFramerUrl,
-        titleId: currentUser.titleId,
-        titleIdList: currentUser.titleIdList,
-      },
-      timestamp: new Date(),
-    };
+    // 使用工具函数创建消息对象
+    const newMessage = createNewMessage(imageMessage);
 
-    // 新发送的消息添加到列表末尾
+    // 批量更新状态，减少重渲染次数
     setMessages((prev) => [...prev, newMessage]);
-    // 更新总消息数和分页状态
-    setTotal((prev) => prev + 1);
+    // 更新分页状态
     setHasMore(true);
+    if (inputRef.current) inputRef.current.value = '';
+    setIsEmoticonPickerVisible(false);
 
     // 发送消息到服务器
     wsService.send({
@@ -1704,14 +2092,12 @@ const ChatRoom: React.FC = () => {
       },
     });
 
-    setInputValue('');
-    setIsEmoticonPickerVisible(false);
-    // 发送消息后滚动到底部
-    setTimeout(scrollToBottom, 100);
+    // 使用 requestAnimationFrame 优化滚动性能
+    requestAnimationFrame(scrollToBottom);
   };
 
   // 修改 handleInviteClick 函数
-  const handleInviteClick = (roomId: string, gameType: string) => {
+  const handleInviteClick = async (roomId: string, gameType: string) => {
     switch (gameType) {
       case 'chess':
         localStorage.setItem('piece_join_status', 'new');
@@ -1719,6 +2105,20 @@ const ChatRoom: React.FC = () => {
         break;
       case 'chineseChess':
         history.push(`/game/chineseChess?roomId=${roomId}&mode=online`);
+        break;
+      case 'draw':
+        try {
+          const res = await joinRoomUsingPost({ roomId: roomId });
+          if (res.data && res.code === 0) {
+          message.success('加入房间成功');
+          history.push(`/game/draw/${roomId}`);
+          } else {
+            message.error(res.message || '加入房间失败');
+          }
+        } catch (error) {
+          console.error('加入房间出错:', error);
+          message.error('加入房间失败，请稍后再试');
+        }
         break;
       default:
         break;
@@ -1743,6 +2143,17 @@ const ChatRoom: React.FC = () => {
       return;
     }
 
+    if (isQuizRedPacket(redPacketType)) {
+      if (!redPacketMessage.trim()) {
+        messageApi.error('请输入题目！');
+        return;
+      }
+      if (!redPacketAnswer.trim()) {
+        messageApi.error('请输入正确答案！');
+        return;
+      }
+    }
+
     // 清除之前的防抖计时器
     if (redPacketDebounceRef.current) {
       clearTimeout(redPacketDebounceRef.current);
@@ -1758,31 +2169,15 @@ const ChatRoom: React.FC = () => {
           const response = await createRedPacketUsingPost({
             totalAmount: redPacketAmount,
             count: redPacketCount,
-            type: redPacketType, // 使用选择的红包类型
+            type: redPacketType,
             name: redPacketMessage,
+            ...(isQuizRedPacket(redPacketType) ? { answer: redPacketAnswer.trim() } : {}),
           });
 
           if (response.data) {
             // 发送红包消息
-            const newMessage: Message = {
-              id: `${Date.now()}`,
-              content: `[redpacket]${response.data}[/redpacket]`,
-              sender: {
-                id: String(currentUser.id),
-                name: currentUser.userName || '游客',
-                avatar:
-                  currentUser.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
-                level: currentUser.level || 1,
-                points: currentUser.points || 0,
-                isAdmin: currentUser.userRole === 'admin',
-                region: userIpInfo?.region || '未知地区',
-                country: userIpInfo?.country || '未知国家',
-                avatarFramerUrl: currentUser.avatarFramerUrl,
-                titleId: currentUser.titleId,
-                titleIdList: currentUser.titleIdList,
-              },
-              timestamp: new Date(),
-            };
+            const redPacketContent = `[redpacket]${response.data}[/redpacket]`;
+            const newMessage = createNewMessage(redPacketContent);
 
             wsService.send({
               type: 2,
@@ -1796,7 +2191,6 @@ const ChatRoom: React.FC = () => {
             });
 
             setMessages((prev) => [...prev, newMessage]);
-            setTotal((prev) => prev + 1);
             setHasMore(true);
 
             messageApi.success('红包发送成功！');
@@ -1804,6 +2198,8 @@ const ChatRoom: React.FC = () => {
             setRedPacketAmount(0);
             setRedPacketCount(1);
             setRedPacketMessage('恭喜发财，大吉大利！');
+            setRedPacketType(RED_PACKET_TYPE.RANDOM);
+            setRedPacketAnswer('');
           }
         } catch (error) {
           messageApi.error('红包发送失败！');
@@ -1818,33 +2214,78 @@ const ChatRoom: React.FC = () => {
     }
   };
 
-  // 修改获取红包详情的函数
-  const fetchRedPacketDetail = async (redPacketId: string) => {
-    // 如果已经有缓存，直接返回
-    const cachedDetail = redPacketDetailsMap.get(redPacketId);
-    if (cachedDetail !== undefined) {
-      return cachedDetail;
+  const handleSendLuckyBag = async () => {
+    if (isLuckyBagSending) {
+      messageApi.warning('正在处理福袋发送，请稍候...');
+      return;
+    }
+
+    if (!currentUser?.id) {
+      messageApi.error('请先登录！');
+      return;
+    }
+
+    if (luckyBagAmount < 1 || luckyBagAmount > 100) {
+      messageApi.error('福袋总积分需在 1-100 之间！');
+      return;
+    }
+
+    if (luckyBagWinnerCount <= 0) {
+      messageApi.error('请输入有效的中奖人数！');
+      return;
+    }
+
+    const maxPerWinner = Math.ceil(luckyBagAmount / luckyBagWinnerCount);
+    if (maxPerWinner > 50) {
+      messageApi.error('单人最多可获得 50 积分，请调整总积分或中奖人数！');
+      return;
+    }
+
+    if (luckyBagDuration < 60 || luckyBagDuration > 1800) {
+      messageApi.error('持续时间需在 60-1800 秒之间！');
+      return;
+    }
+
+    if (luckyBagDebounceRef.current) {
+      clearTimeout(luckyBagDebounceRef.current);
     }
 
     try {
-      const response = await getRedPacketDetailUsingGet({ redPacketId });
-      if (response.data) {
-        // 更新缓存
-        const detail = response.data as API.RedPacket;
-        setRedPacketDetailsMap((prev) => new Map(prev).set(redPacketId, detail));
-        return detail;
-      }
-    } catch (error) {
-      console.error('获取红包详情失败:', error);
+      setIsLuckyBagSending(true);
+      luckyBagDebounceRef.current = setTimeout(async () => {
+        try {
+          const response = await createLuckyBagUsingPost({
+            totalAmount: luckyBagAmount,
+            winnerCount: luckyBagWinnerCount,
+            type: luckyBagType,
+            name: luckyBagName,
+            durationSeconds: luckyBagDuration,
+          });
+
+          if (response.code === 0 && response.data) {
+            messageApi.success('福袋发送成功！');
+            setIsLuckyBagModalVisible(false);
+            setLuckyBagAmount(50);
+            setLuckyBagWinnerCount(5);
+            setLuckyBagName('快来参与福袋吧');
+            setLuckyBagType(1);
+            setLuckyBagDuration(180);
+            fetchActiveLuckyBags();
+          } else {
+            messageApi.error(response.message || '福袋发送失败！');
+          }
+        } catch {
+          messageApi.error('福袋发送失败！');
+        } finally {
+          setIsLuckyBagSending(false);
+        }
+      }, 500);
+    } catch {
+      setIsLuckyBagSending(false);
+      messageApi.error('福袋发送失败！');
     }
-    return null;
   };
-  // 添加查看红包记录的处理函数
-  const handleViewRedPacketRecords = async (redPacketId: string) => {
-    setCurrentRedPacketId(redPacketId);
-    setIsRedPacketRecordsVisible(true);
-    await fetchRedPacketRecords(redPacketId);
-  };
+
   // 修改 renderMessageContent 函数，添加红包消息的渲染
 
   // 添加一个全局音频引用
@@ -1886,7 +2327,8 @@ const ChatRoom: React.FC = () => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const renderMessageContent = (content: string) => {
+  // renderMessageContent 用 useCallback 包裹，避免每次渲染都生成新引用导致 MessageItem memo 失效
+  const renderMessageContent = useCallback((content: string) => {
     const musicMatch = /\[music\]([^\[\]]*)\[\/music\]/i.exec(content);
     const coverMatch = /\[cover\]([^\[\]]*)\[\/cover\]/i.exec(content);
     if (musicMatch) {
@@ -1896,7 +2338,7 @@ const ChatRoom: React.FC = () => {
       return (
         <div className={styles.musicMessage}>
           <div className={styles.musicWrapper}>
-            {coverUrl && <img src={coverUrl} alt="album cover" className={styles.musicCover} />}
+            {coverUrl && <img {...externalImageProps} src={coverUrl} alt="album cover" className={styles.musicCover} />}
             <div className={styles.musicContent}>
               <div className={styles.musicInfo}>{musicInfo}</div>
               <audio
@@ -1929,77 +2371,46 @@ const ChatRoom: React.FC = () => {
         </div>
       );
     }
-    // 检查是否是红包消息
-    // const redPacketMatch = content.match(/\[redpacket\](.*?)\[\/redpacket\]/);
-    const redPacketMatch = /\[redpacket\]([^\[\]]*)\[\/redpacket\]/i.exec(content);
-    if (redPacketMatch) {
-      const redPacketId = redPacketMatch[1];
-      const detail = redPacketDetailsMap.get(redPacketId);
-
-      // 如果没有缓存，则获取详情
-      if (!detail) {
-        fetchRedPacketDetail(redPacketId);
-      }
-
+    const audioMatch = /\[audio\]([^\[\]]*)\[\/audio\]/i.exec(content);
+    if (audioMatch) {
+      const audioUrl = audioMatch[1].trim();
+      const audioInfo = content.split('[audio]')[0].trim();
       return (
-        <div className={styles.redPacketMessage}>
-          <div className={styles.redPacketContent}>
-            <GiftOutlined className={styles.redPacketIcon} />
-            <div className={styles.redPacketInfo}>
-              <div className={styles.redPacketTitle}>
-                <span className={styles.redPacketText}>{detail?.name || '红包'}</span>
-                <span className={styles.redPacketStatus}>
-                  {detail?.remainingCount === 0
-                    ? '（已抢完）'
-                    : detail?.status === 2
-                    ? '（已过期）'
-                    : `（剩余${detail?.remainingCount || 0}个）`}
-                </span>
-              </div>
-              <div className={styles.redPacketActions}>
-                <Button
-                  type="primary"
-                  size="small"
-                  onClick={async () => {
-                    try {
-                      const response = await grabRedPacketUsingPost({
-                        redPacketId: redPacketId,
-                      });
-                      if (response.data) {
-                        messageApi.success(`恭喜你抢到 ${response.data} 积分！`);
-                        // 刷新红包记录和详情
-                        await Promise.all([
-                          fetchRedPacketRecords(redPacketId),
-                          fetchRedPacketDetail(redPacketId),
-                        ]);
-                      }
-                    } catch (error) {
-                      messageApi.error('红包已被抢完或已过期！');
-                    }
-                  }}
-                  className={styles.grabRedPacketButton}
-                  disabled={detail?.remainingCount === 0 || detail?.status === 2}
-                >
-                  抢红包
-                </Button>
-                <Button
-                  type="link"
-                  size="small"
-                  onClick={() => handleViewRedPacketRecords(redPacketId)}
-                  className={styles.viewRecordsButton}
-                >
-                  查看记录
-                </Button>
-              </div>
+        <div className={styles.musicMessage}>
+          <div className={styles.musicWrapper}>
+            <div className={styles.musicContent}>
+              {audioInfo ? <div className={styles.musicInfo}>{audioInfo}</div> : null}
+              <audio
+                controls
+                src={audioUrl}
+                style={{ width: '100%', minWidth: '300px' }}
+                preload="metadata"
+              />
             </div>
           </div>
         </div>
       );
     }
+    // 检查是否是红包消息
+    // const redPacketMatch = content.match(/\[redpacket\](.*?)\[\/redpacket\]/);
+    const redPacketMatch = /\[redpacket\]([^\[\]]*)\[\/redpacket\]/i.exec(content);
+    if (redPacketMatch) {
+      return <RedPacketMessage redPacketId={redPacketMatch[1]} />;
+    }
+
+    const luckyBagInline = parseLuckyBagInline(content);
+    if (luckyBagInline) {
+      return (
+        <LuckyBagMessage
+          luckyBagId={luckyBagInline.luckyBagId}
+          prefix={luckyBagInline.prefix || undefined}
+        />
+      );
+    }
 
     // 检查是否是邀请消息
     // const inviteMatch = content.match(/\[invite\/(\w+)\](\d+)\[\/invite\]/);
-    const inviteMatch = /\[invite\/([a-zA-Z0-9_]+)\]([0-9]+)\[\/invite\]/i.exec(content);
+    const inviteMatch = /\[invite\/([a-zA-Z0-9_]+)\]([a-zA-Z0-9_]+)\[\/invite\]/i.exec(content);
     if (inviteMatch) {
       const roomId = inviteMatch[2];
       const gameType = inviteMatch[1];
@@ -2011,18 +2422,21 @@ const ChatRoom: React.FC = () => {
         case 'chineseChess':
           game = '中国象棋';
           break;
+        case 'draw':
+          game = '你画我猜';
+          break;
       }
       return (
         <div className={styles.inviteMessage}>
           <div className={styles.inviteContent}>
-            <span className={styles.inviteText}>🎮 {game}对战邀请</span>
+            <span className={styles.inviteText}>🎮 {game}游戏邀请</span>
             <Button
               type="primary"
               size="small"
               onClick={() => handleInviteClick(roomId, gameType)}
               className={styles.inviteButton}
             >
-              加入对战
+              加入房间
             </Button>
           </div>
         </div>
@@ -2031,39 +2445,50 @@ const ChatRoom: React.FC = () => {
     // const imgMatch = content.match(/\[img\](.*?)\[\/img\]/);
     const imgMatch = /\[img\]([^\[\]]*)\[\/img\]/i.exec(content);
     if (imgMatch) {
-      return (
-        <MessageContent
-          content={content}
-          onImageLoad={() => {
-            // 图片加载完成后,如果是最新消息则滚动到底部
-            const lastMessage = messages[messages.length - 1];
-            const isLatestMessage = lastMessage?.content === content;
-            if (
-              isLatestMessage &&
-              (isNearBottom || lastMessage?.sender.id === String(currentUser?.id))
-            ) {
-              scrollToBottom();
-            }
-          }}
-        />
-      );
+      // 处理图片，根据极速模式决定是否默认渲染
+      const [_, imageUrl] = imgMatch;
+
+      const handleImageClick = () => {
+        setExpandedImages(prev => {
+          const newSet = new Set(prev);
+          newSet.add(imageUrl);
+          return newSet;
+        });
+      };
+
+      // 如果不是极速模式，或者图片已经被展开，则渲染图片
+      if (!isSpeedMode || expandedImages.has(imageUrl)) {
+        return (
+          <MessageContent
+            content={content}
+            onImageLoad={() => {
+              // 图片加载完成后,如果是最新消息则滚动到底部
+              const lastMessage = messages[messages.length - 1];
+              const isLatestMessage = lastMessage?.content === content;
+              if (
+                isLatestMessage &&
+                (isNearBottom || lastMessage?.sender.id === String(currentUser?.id)) &&
+                !isAutoScrollingRef.current // 避免重复滚动
+              ) {
+                // 添加短暂延迟，确保图片已完全渲染
+                setTimeout(scrollToBottom, 200);
+              }
+            }}
+          />
+        );
+      } else {
+        // 极速模式下且图片未展开，显示按钮
+        return (
+          <div className={styles.imageButton} onClick={handleImageClick}>
+            <FileImageOutlined className={styles.imageIcon} />
+            <span>点击展开图片</span>
+          </div>
+        );
+      }
     }
     return <MessageContent content={content} />;
-  };
-
-  // 修改获取红包记录的函数
-  const fetchRedPacketRecords = async (redPacketId: string) => {
-    try {
-      const response = await getRedPacketRecordsUsingGet({ redPacketId });
-      if (response.data) {
-        // 按金额降序排序
-        const sortedRecords = [...response.data].sort((a, b) => (b.amount || 0) - (a.amount || 0));
-        setRedPacketRecords(sortedRecords);
-      }
-    } catch (error) {
-      messageApi.error('获取红包记录失败！');
-    }
-  };
+  }, [handleInviteClick, isSpeedMode, expandedImages, messages, isNearBottom, currentUser,
+      isAutoScrollingRef, scrollToBottom]);
 
   // 在组件卸载时清理定时器
   useEffect(() => {
@@ -2075,247 +2500,58 @@ const ChatRoom: React.FC = () => {
       if (redPacketDebounceRef.current) {
         clearTimeout(redPacketDebounceRef.current);
       }
-    };
-  }, []);
-
-  // 修改获取摸鱼日历的函数
-  const fetchMoyuCalendar = async () => {
-    try {
-      setIsLoadingMoyu(true);
-      const response = await fetch('https://api.vvhan.com/api/moyu?type=json');
-      const data = await response.json();
-      if (data.success) {
-        setPendingImageUrl(data.url);
-      } else {
-        messageApi.error('获取摸鱼日历失败');
-      }
-    } catch (error) {
-      messageApi.error('获取摸鱼日历失败');
-    } finally {
-      setIsLoadingMoyu(false);
-    }
-  };
-
-  // 添加歌单相关状态
-  const [activeTab, setActiveTab] = useState('search');
-  const [playlist, setPlaylist] = useState<Song[]>([]);
-  // 移除未使用的状态
-  const aPlayerContainerRef = useRef<HTMLDivElement>(null);
-  const aPlayerInstanceRef = useRef<any>(null);
-
-  // 添加歌单功能相关的副作用
-  useEffect(() => {
-    // 从localStorage加载歌单
-    const savedPlaylist = localStorage.getItem('music_playlist');
-    if (savedPlaylist) {
-      try {
-        setPlaylist(JSON.parse(savedPlaylist));
-      } catch (error) {
-        console.error('加载歌单失败:', error);
-      }
-    }
-
-    // 加载APlayer依赖
-    const loadAPlayerDependencies = () => {
-      // 检查是否已加载
-      if (document.getElementById('aplayer-css') || document.getElementById('aplayer-js')) {
-        return;
-      }
-
-      // 加载APlayer CSS
-      const link = document.createElement('link');
-      link.id = 'aplayer-css';
-      link.rel = 'stylesheet';
-      link.href = 'https://cdn.jsdelivr.net/npm/aplayer@1.10.1/dist/APlayer.min.css';
-      document.head.appendChild(link);
-
-      // 加载APlayer JS
-      const script = document.createElement('script');
-      script.id = 'aplayer-js';
-      script.src = 'https://cdn.jsdelivr.net/npm/aplayer@1.10.1/dist/APlayer.min.js';
-      script.async = true;
-      document.body.appendChild(script);
-    };
-
-    loadAPlayerDependencies();
-
-    return () => {
-      // 清理APlayer实例
-      if (aPlayerInstanceRef.current) {
-        aPlayerInstanceRef.current.destroy();
-        aPlayerInstanceRef.current = null;
+      if (luckyBagDebounceRef.current) {
+        clearTimeout(luckyBagDebounceRef.current);
       }
     };
   }, []);
 
-  // 添加歌曲到歌单
-  const addToPlaylist = async (music: any) => {
-    try {
-      setAddingToPlaylistId(music.id);
-      setMusicApiError(null);
 
-      const response = await fetch('https://api.kxzjoker.cn/api/163_music', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-        },
-        body: new URLSearchParams({
-          url: music.id,
-          level: 'lossless',
-          type: 'json',
-        }).toString(),
-      });
-
-      if (!response.ok) {
-        throw new Error(`获取音乐链接请求失败: ${response.status}`);
-      }
-
-      const data = await response.json();
-      if (!data.url) {
-        throw new Error('未能获取到音乐链接');
-      }
-
-      const newSong: Song = {
-        id: music.id,
-        name: music.name,
-        artist: music.artists.map((a: any) => a.name).join(','),
-        url: data.url,
-        cover: data.pic,
-        album: music.album.name,
-      };
-
-      setPlaylist((prev) => {
-        // 检查是否已存在
-        if (prev.some((song) => song.id === newSong.id)) {
-          messageApi.info('歌曲已在歌单中');
-          return prev;
-        }
-
-        const updatedPlaylist = [...prev, newSong];
-        // 保存到localStorage
-        localStorage.setItem('music_playlist', JSON.stringify(updatedPlaylist));
-        messageApi.success('已添加到歌单');
-        return updatedPlaylist;
-      });
-    } catch (error) {
-      console.error('添加歌曲失败:', error);
-      setMusicApiError('音乐解析服务暂时不可用，请稍后再试');
-      messageApi.error('添加歌曲失败，音乐API可能暂时不可用');
-    } finally {
-      setAddingToPlaylistId(null);
-    }
-  };
-
-  // 播放歌单中的歌曲
-  const playFromPlaylist = (song: Song) => {
-    // 确保APlayer已加载
-    if (typeof window.APlayer === 'undefined') {
-      messageApi.error('播放器加载中，请稍后再试');
-      return;
-    }
-
-    // 初始化APlayer（如果还没有实例）
-    if (!aPlayerInstanceRef.current && aPlayerContainerRef.current) {
-      aPlayerInstanceRef.current = new window.APlayer({
-        container: aPlayerContainerRef.current,
-        audio: [song],
-        autoplay: true,
-        theme: '#41b883',
-        listFolded: false,
-        listMaxHeight: '200px',
-      });
-    } else if (aPlayerInstanceRef.current) {
-      // 如果已有实例，直接添加并播放歌曲
-      aPlayerInstanceRef.current.list.add(song);
-      // 找到歌曲在列表中的索引
-      const index = aPlayerInstanceRef.current.list.audios.findIndex(
-        (audio: any) => audio.id === song.id,
-      );
-      if (index !== -1) {
-        aPlayerInstanceRef.current.list.switch(index);
-        aPlayerInstanceRef.current.play();
-      }
-    }
-  };
-
-  // 播放整个歌单
-  const playEntirePlaylist = () => {
-    if (playlist.length === 0) {
-      messageApi.info('歌单为空');
-      return;
-    }
-
-    // 确保APlayer已加载
-    if (typeof window.APlayer === 'undefined') {
-      messageApi.error('播放器加载中，请稍后再试');
-      return;
-    }
-
-    // 销毁旧的播放器实例
-    if (aPlayerInstanceRef.current) {
-      aPlayerInstanceRef.current.destroy();
-    }
-
-    // 创建新的播放器实例，包含整个歌单
-    if (aPlayerContainerRef.current) {
-      aPlayerInstanceRef.current = new window.APlayer({
-        container: aPlayerContainerRef.current,
-        audio: playlist,
-        autoplay: true,
-        theme: '#41b883',
-        listFolded: false,
-        listMaxHeight: '200px',
-      });
-    }
-  };
-
-  // 从歌单中移除歌曲
-  const removeFromPlaylist = (songId: string) => {
-    setPlaylist((prev) => {
-      const updatedPlaylist = prev.filter((song) => song.id !== songId);
-      localStorage.setItem('music_playlist', JSON.stringify(updatedPlaylist));
-      return updatedPlaylist;
-    });
-
-    // 如果当前正在播放的歌曲被移除，需要处理播放器
-    if (aPlayerInstanceRef.current) {
-      const currentIndex = aPlayerInstanceRef.current.list.index;
-      const currentAudio = aPlayerInstanceRef.current.list.audios[currentIndex];
-
-      if (currentAudio && currentAudio.id === songId) {
-        // 如果还有下一首歌，切换到下一首，否则停止播放
-        if (aPlayerInstanceRef.current.list.audios.length > 1) {
-          aPlayerInstanceRef.current.skipForward();
-        } else {
-          aPlayerInstanceRef.current.pause();
-        }
-      }
-
-      // 从播放器列表中移除
-      const audioIndex = aPlayerInstanceRef.current.list.audios.findIndex(
-        (audio: any) => audio.id === songId,
-      );
-      if (audioIndex !== -1) {
-        aPlayerInstanceRef.current.list.remove(audioIndex);
-      }
-    }
-  };
 
   // 当搜索关键词变化时重置搜索状态
   const handleSearchKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchKey(e.target.value);
-    if (hasSearched && e.target.value !== searchKey) {
+    const newValue = e.target.value;
+    setSearchKey(newValue);
+    if (hasSearched && newValue !== searchKey) {
       setHasSearched(false); // 如果关键词变化，重置搜索状态
     }
   };
 
   // 添加处理查看用户详情的函数
-  const handleViewUserDetail = async (user: User) => {
-    if (currentUser?.userRole === 'admin') {
-      setSelectedUser(user);
-      setIsUserDetailModalVisible(true);
+  const handleViewUserDetail = useCallback(async (user: User) => {
+    setSelectedUser(user);
+    setIsUserDetailModalVisible(true);
+    setIsFollowing(false);
 
-      // 获取用户禁言状态
+    // 拉取完整用户信息，补充 momentsBgUrl / followerCount / followingCount 等字段
+    try {
+      const voRes = await getUserVoByIdUsingGet({ id: user.id as any });
+      if (voRes.code === 0 && voRes.data) {
+        setSelectedUser((prev) => prev ? {
+          ...prev,
+          momentsBgUrl: voRes.data!.momentsBgUrl,
+          followerCount: voRes.data!.followerCount,
+          followingCount: voRes.data!.followingCount,
+        } : prev);
+      }
+    } catch (e) {
+      // 忽略，不影响弹窗展示
+    }
+
+    // 查询是否已关注（不能关注自己）
+    if (currentUser && String(currentUser.id) !== user.id) {
+      try {
+        const followRes = await isFollowingUsingGet({ followUserId: user.id });
+        if (followRes.code === 0) {
+          setIsFollowing(!!followRes.data);
+        }
+      } catch (e) {
+        // 忽略
+      }
+    }
+
+    // 如果是管理员，获取用户禁言状态
+    if (currentUser?.userRole === 'admin') {
       try {
         const response = await getUserMuteInfoUsingGet({
           userId: user.id // 直接传递字符串 ID
@@ -2331,10 +2567,98 @@ const ChatRoom: React.FC = () => {
         setUserMuteInfo(null);
       }
     }
+  }, [currentUser]);
+
+  // 关注/取消关注
+  const handleToggleFollow = async () => {
+    if (!selectedUser || !currentUser) return;
+    setFollowLoading(true);
+    try {
+      const res = await toggleFollowUsingGet({ followUserId: selectedUser.id });
+      if (res.code === 0) {
+        const nowFollowing = !!res.data;
+        setIsFollowing(nowFollowing);
+        // 前端同步更新对方粉丝数
+        setSelectedUser((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            followerCount: Math.max(0, (prev.followerCount ?? 0) + (nowFollowing ? 1 : -1)),
+          };
+        });
+        messageApi.success(nowFollowing ? '关注成功' : '已取消关注');
+      }
+    } catch (e) {
+      messageApi.error('操作失败，请稍后重试');
+    } finally {
+      setFollowLoading(false);
+    }
+  };
+
+  // 打开关注/粉丝列表（仅支持查看自己的）
+  const handleOpenFollowList = async (type: 'following' | 'followers') => {
+    if (!currentUser || !selectedUser) return;
+    // 只有查看自己的卡片时才能查列表
+    if (String(currentUser.id) !== selectedUser.id) {
+      messageApi.info('暂时只支持查看自己的关注/粉丝列表');
+      return;
+    }
+    setFollowListType(type);
+    setFollowListVisible(true);
+    setFollowListLoading(true);
+    setFollowListData([]);
+    try {
+      const fn = type === 'following' ? listMyFollowingUsingGet : listMyFollowersUsingGet;
+      const res = await fn({ current: 1, pageSize: 50 });
+      if (res.code === 0 && res.data?.records) {
+        setFollowListData(res.data.records);
+      }
+    } catch (e) {
+      messageApi.error('获取列表失败');
+    } finally {
+      setFollowListLoading(false);
+    }
+  };
+
+  const isFollowListItemFollowing = (item: API.UserFollowVO) =>
+    followListType === 'following' ? true : !!item.isMutual;
+
+  const handleFollowListToggle = async (item: API.UserFollowVO) => {
+    if (!item.userId || followListToggleLoadingId) return;
+    setFollowListToggleLoadingId(item.userId);
+    try {
+      const res = await toggleFollowUsingGet({ followUserId: item.userId });
+      if (res.code === 0) {
+        const nowFollowing = !!res.data;
+        messageApi.success(nowFollowing ? '关注成功' : '已取消关注');
+        setFollowListData((prev) => {
+          if (followListType === 'following') {
+            return nowFollowing ? prev : prev.filter((u) => u.userId !== item.userId);
+          }
+          return prev.map((u) =>
+            u.userId === item.userId ? { ...u, isMutual: nowFollowing } : u,
+          );
+        });
+        if (selectedUser && String(currentUser?.id) === selectedUser.id) {
+          setSelectedUser((prev) => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              followingCount: Math.max(0, (prev.followingCount ?? 0) + (nowFollowing ? 1 : -1)),
+            };
+          });
+        }
+      }
+    } catch (e) {
+      messageApi.error('操作失败，请稍后重试');
+    } finally {
+      setFollowListToggleLoadingId(null);
+      setFollowListHoverId(null);
+    }
   };
 
   // 添加禁言用户的函数
-  const handleMuteUser = (userId: string) => {
+  const handleMuteUser = () => {
     // 确保当前用户是管理员
     if (!currentUser || currentUser.userRole !== 'admin') {
       return;
@@ -2458,12 +2782,62 @@ const ChatRoom: React.FC = () => {
 
   // 添加移动端功能面板状态
   const [isMobileToolbarVisible, setIsMobileToolbarVisible] = useState<boolean>(false);
-  const [shouldShowSendButton, setShouldShowSendButton] = useState<boolean>(false);
 
   // 添加切换移动端功能面板的函数
   const toggleMobileToolbar = () => {
     setIsMobileToolbarVisible(!isMobileToolbarVisible);
   };
+
+  // 非受控模式下无法从 state 判断输入框是否有内容，发送按钮始终显示
+  const shouldShowSendButton = pendingImageUrl !== null || pendingFileUrl !== null || true;
+
+  // 用 ref 存储最新的 handleSend，使 onRepeat 的引用保持稳定，避免破坏 MessageItem memo
+  const handleSendRef = useRef<(content?: string) => void>(handleSend);
+  useEffect(() => {
+    handleSendRef.current = handleSend;
+  });
+  const handleRepeat = useCallback((content: string) => {
+    handleSendRef.current(content);
+  }, []);
+
+  // 复读检测：用 useMemo 缓存，避免每次渲染都做 O(n²) 遍历
+  const { repeatMap, skipSet } = useMemo(() => {
+    const rMap = new Map<string, User[]>();
+    const sSet = new Set<string>();
+    for (let i = 0; i < messages.length; i++) {
+      if (sSet.has(messages[i].id)) continue;
+      const baseContent = messages[i].content;
+      if (messages[i].quotedMessage) continue;
+      if (/\[redpacket\]/i.test(baseContent)) continue;
+      if (/\[luckybag\]/i.test(baseContent)) continue;
+      const group: Message[] = [messages[i]];
+      for (let j = i + 1; j < messages.length; j++) {
+        if (messages[j].content === baseContent && !messages[j].quotedMessage) {
+          group.push(messages[j]);
+        } else {
+          break;
+        }
+      }
+      if (group.length >= 3) {
+        const seenUserIds = new Set<string>();
+        const repeatUsers: User[] = [];
+        // 第1条保留显示，第2条也保留显示，从第3条起才隐藏合并
+        for (let k = 1; k < group.length; k++) {
+          if (k >= 2) {
+            sSet.add(group[k].id);
+          }
+          const senderId = String(group[k].sender.id);
+          if (!seenUserIds.has(senderId)) {
+            seenUserIds.add(senderId);
+            repeatUsers.push(group[k].sender);
+          }
+        }
+        rMap.set(messages[i].id, repeatUsers);
+      }
+    }
+    return { repeatMap: rMap, skipSet: sSet };
+  }, [messages]);
+
 
   // 处理移动端功能按钮点击
   const handleMobileToolClick = (action: string) => {
@@ -2480,11 +2854,17 @@ const ChatRoom: React.FC = () => {
       case 'redPacket':
         setIsRedPacketModalVisible(true);
         break;
+      case 'luckyBag':
+        setIsLuckyBagModalVisible(true);
+        break;
       case 'image':
         fileInputRef.current?.click();
         break;
-      case 'calendar':
-        fetchMoyuCalendar();
+      case 'pet':
+        setIsPetModalVisible(true);
+        break;
+      case 'speedMode':
+        toggleSpeedMode(!isSpeedMode);
         break;
       default:
         break;
@@ -2500,11 +2880,516 @@ const ChatRoom: React.FC = () => {
     }
   };
 
+  // 添加摸鱼宠物相关状态
+  const [isPetModalVisible, setIsPetModalVisible] = useState<boolean>(false);
+  const [currentPetUserId, setCurrentPetUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const petUserId = sessionStorage.getItem('openPetUserId');
+    if (petUserId) {
+      sessionStorage.removeItem('openPetUserId');
+      setCurrentPetUserId(petUserId);
+      setIsPetModalVisible(true);
+    }
+  }, []);
+
+  // 处理谁是卧底按钮点击
+  const handleRoomInfoClick = () => {
+    // 点击后清除通知状态
+    setUndercoverNotification(UNDERCOVER_NOTIFICATION.NONE);
+    setIsRoomInfoVisible(true);
+  };
+
+  // 添加处理来自eventBus的显示谁是卧底房间事件
+  useEffect(() => {
+    const handleShowUndercoverRoom = () => {
+      setIsRoomInfoVisible(true);
+    };
+
+    eventBus.on('show_undercover_room', handleShowUndercoverRoom);
+
+    return () => {
+      eventBus.off('show_undercover_room', handleShowUndercoverRoom);
+    };
+  }, []);
+
+  // 添加WebSocket消息处理器来监听房间创建事件
+  useEffect(() => {
+    const handleRefreshRoomMessage = (data: any) => {
+      if (data?.data?.content?.action === 'create') {
+        // 新房间创建，显示小红点通知
+        setUndercoverNotification(UNDERCOVER_NOTIFICATION.NEW_ROOM);
+      }
+    };
+
+    wsService.addMessageHandler('refreshRoom', handleRefreshRoomMessage);
+
+    return () => {
+      wsService.removeMessageHandler('refreshRoom', handleRefreshRoomMessage);
+    };
+  }, []);
+
+  // 切换极速模式
+  const toggleSpeedMode = (checked: boolean) => {
+    setIsSpeedMode(checked);
+    // 保存到本地存储，以便刷新页面后保持设置
+    localStorage.setItem('chat_speed_mode', checked.toString());
+
+    // 如果关闭极速模式，清空已展开图片的状态
+    if (!checked) {
+      setExpandedImages(new Set());
+    }
+
+    messageApi.success(`已${checked ? '开启' : '关闭'}极速模式`);
+  };
+
+  // 清空聊天记录
+  const handleClearMessages = () => {
+    Modal.confirm({
+      title: '确认清空聊天记录',
+      content: '此操作将清空当前页面显示的所有聊天记录，该操作不可撤销。确定要继续吗？',
+      okText: '确认清空',
+      cancelText: '取消',
+      okType: 'danger',
+      onOk: () => {
+        // 清空消息列表
+        setMessages([]);
+        messagesRef.current = [];
+        // 重置分页状态
+        setHasMore(true);
+        // 清空已加载的消息ID集合
+        loadedMessageIds.clear();
+        // 显示成功提示
+        messageApi.success('聊天记录已清空');
+      },
+    });
+  };
+
+  // 从本地存储加载极速模式设置
+  useEffect(() => {
+    const savedSpeedMode = localStorage.getItem('chat_speed_mode');
+    if (savedSpeedMode) {
+      setIsSpeedMode(savedSpeedMode === 'true');
+    }
+  }, []);
+
+  // 加载用户备注 - 从后端获取
+  useEffect(() => {
+    const loadUserRemarks = async () => {
+      try {
+        // 先尝试从后端获取
+        const response = await getRemarkUsingGet();
+        if (response.data?.content) {
+          // 后端返回的是备注内容的JSON字符串，解析它
+          try {
+            const remarksData = JSON.parse(response.data.content);
+            setUserRemarks(remarksData);
+          } catch (e) {
+            console.error('解析后端备注数据失败:', e);
+          }
+        } else {
+          // 后端没有数据，尝试从localStorage迁移
+          const savedRemarks = localStorage.getItem('user_remarks');
+          if (savedRemarks) {
+            try {
+              const localData = JSON.parse(savedRemarks);
+              setUserRemarks(localData);
+              // 将本地数据同步到后端
+              await saveRemarkUsingPost({ content: savedRemarks });
+              console.log('已将本地备注数据迁移到后端');
+            } catch (error) {
+              console.error('迁移本地备注数据失败:', error);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('从后端加载备注失败:', error);
+        // 失败后回退到localStorage
+        const savedRemarks = localStorage.getItem('user_remarks');
+        if (savedRemarks) {
+          try {
+            setUserRemarks(JSON.parse(savedRemarks));
+          } catch (e) {
+            console.error('加载本地备注失败:', e);
+          }
+        }
+      }
+    };
+
+    loadUserRemarks();
+  }, []);
+
+  // 监听页面可见性变化
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      const isVisible = !document.hidden;
+      setIsPageVisible(isVisible);
+
+      if (isVisible) {
+        // 页面变为可见时
+        console.log('页面变为可见');
+
+        // 清除定时器
+        if (visibilityTimeoutRef.current) {
+          clearTimeout(visibilityTimeoutRef.current);
+          visibilityTimeoutRef.current = null;
+        }
+
+        // 检查是否离开超过30秒
+        if (pageHiddenTimeRef.current) {
+          const hiddenDuration = Date.now() - pageHiddenTimeRef.current;
+          const THIRTY_SECONDS = 30 * 1000;
+
+          if (hiddenDuration >= THIRTY_SECONDS) {
+            // 离开超过30秒，执行恢复和重新加载
+            console.log(`页面离开了 ${Math.round(hiddenDuration / 1000)} 秒，重新获取聊天记录`);
+            wsService.resumeMessageProcessing();
+
+            // 清空当前消息列表并重新加载最新消息
+            setMessages([]);
+            messagesRef.current = [];
+            loadedMessageIds.clear();
+            setHasMore(true);
+            loadHistoryMessages(true);
+
+            // 显示恢复提示
+            messageApi.info(`页面离开了 ${Math.round(hiddenDuration / 1000)} 秒，已重新获取最新聊天记录`);
+          } else {
+            // 离开时间不足30秒，只恢复消息处理
+            console.log(`页面离开了 ${Math.round(hiddenDuration / 1000)} 秒，未达到30秒阈值，仅恢复消息处理`);
+            wsService.resumeMessageProcessing();
+          }
+
+          pageHiddenTimeRef.current = null;
+        } else {
+          // 首次加载或其他情况，直接恢复消息处理
+          wsService.resumeMessageProcessing();
+        }
+      } else {
+        // 页面变为不可见时
+        console.log('页面变为不可见，30秒后将暂停消息处理');
+        pageHiddenTimeRef.current = Date.now();
+
+        // 设置30秒延迟暂停消息处理
+        visibilityTimeoutRef.current = setTimeout(() => {
+          console.log('页面离开超过30秒，暂停消息处理');
+          wsService.pauseMessageProcessing();
+        }, 30 * 1000);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      // 清理定时器
+      if (visibilityTimeoutRef.current) {
+        clearTimeout(visibilityTimeoutRef.current);
+        visibilityTimeoutRef.current = null;
+      }
+    };
+  }, []);
+
+  // 保存用户备注 - 保存到后端并更新本地状态
+  const saveUserRemark = async (userId: string, remark: string) => {
+    const newRemarks = { ...userRemarks, [userId]: remark };
+    setUserRemarks(newRemarks);
+    const remarksJson = JSON.stringify(newRemarks);
+    localStorage.setItem('user_remarks', remarksJson);
+    
+    try {
+      // 同步保存到后端
+      await saveRemarkUsingPost({ content: remarksJson });
+    } catch (error) {
+      console.error('保存备注到后端失败:', error);
+    }
+  };
+
+  // 获取用户显示名称
+  const getUserDisplayName = useCallback((user: User) => {
+    return userRemarks[user.id] || user.name;
+  }, [userRemarks]);
+
+  // 打开设置备注弹窗
+  const openRemarkModal = (user: User) => {
+    setRemarkUserId(user.id);
+    setRemarkValue(userRemarks[user.id] || '');
+    setIsRemarkModalVisible(true);
+  };
+
+  // 保存备注
+  const handleSaveRemark = () => {
+    if (remarkUserId) {
+      saveUserRemark(remarkUserId, remarkValue);
+      setIsRemarkModalVisible(false);
+      messageApi.success('备注设置成功');
+    }
+  };
+
+  // 获取活跃福袋列表
+  const fetchActiveLuckyBags = async () => {
+    try {
+      const res = await getActiveLuckyBagsUsingGet();
+      if (res.data && res.data.length > 0) {
+        setActiveLuckyBags(res.data);
+      } else {
+        setActiveLuckyBags([]);
+      }
+    } catch (error) {
+      console.error('获取活跃福袋失败:', error);
+    }
+  };
+
+  // 获取活跃投票列表
+  const fetchActiveVotes = async () => {
+    try {
+      const res = await getActiveVoteIdsUsingGet();
+      if (res.data && res.data.length > 0) {
+        setActiveVotes(res.data);
+        // 获取所有活跃投票的详情
+        const voteDetails = await Promise.all(
+          res.data.map(voteId => fetchVoteResult(voteId))
+        );
+        // 过滤掉获取失败的投票
+        const validVotes = voteDetails.filter(vote => vote !== null) as API.VoteVO[];
+        setActiveVoteDetails(validVotes);
+        // 默认设置第一个为当前投票
+        if (validVotes.length > 0 && !currentVote) {
+          setCurrentVote(validVotes[0]);
+        }
+      } else {
+        setActiveVotes([]);
+        setActiveVoteDetails([]);
+        setCurrentVote(null);
+      }
+    } catch (error) {
+      console.error('获取活跃投票失败:', error);
+    }
+  };
+
+  // 获取投票结果
+  const fetchVoteResult = async (voteId: string): Promise<API.VoteVO | null> => {
+    try {
+      const res = await getVoteResultUsingGet({ voteId });
+      if (res.data) {
+        return res.data;
+      }
+      return null;
+    } catch (error) {
+      console.error('获取投票结果失败:', error);
+      return null;
+    }
+  };
+
+  // 参与投票
+  const handleVote = async (optionIndexes?: number[]) => {
+    if (!currentVote?.voteId) return;
+    const indexesToVote = optionIndexes || selectedVoteOptions;
+    if (indexesToVote.length === 0) {
+      messageApi.error('请至少选择一个选项');
+      return;
+    }
+    try {
+      setVoteLoading(true);
+      const res = await voteUsingPost1({
+        voteId: currentVote.voteId,
+        optionIndexes: indexesToVote,
+      });
+      if (res.data) {
+        messageApi.success('投票成功！');
+        setSelectedVoteOptions([]);
+        // 刷新投票结果
+        const updatedVote = await fetchVoteResult(currentVote.voteId);
+        if (updatedVote) {
+          setCurrentVote(updatedVote);
+        }
+      } else {
+        messageApi.error('投票失败，请重试');
+      }
+    } catch (error) {
+      console.error('投票失败:', error);
+      messageApi.error('投票失败，请稍后重试');
+    } finally {
+      setVoteLoading(false);
+    }
+  };
+
+  // 切换选项选择（用于多选）
+  const toggleVoteOption = (index: number) => {
+    setSelectedVoteOptions(prev => {
+      if (prev.includes(index)) {
+        return prev.filter(i => i !== index);
+      } else {
+        if (currentVote?.singleChoice) {
+          // 单选：只保留当前选项
+          return [index];
+        } else {
+          // 多选：添加选项
+          return [...prev, index];
+        }
+      }
+    });
+  };
+
+  // 创建投票
+  const handleCreateVote = async () => {
+    if (!voteTitle.trim()) {
+      messageApi.error('请输入投票标题');
+      return;
+    }
+    if (voteOptions.length < 2) {
+      messageApi.error('至少需要2个选项');
+      return;
+    }
+    const validOptions = voteOptions.filter(opt => opt.trim());
+    if (validOptions.length < 2) {
+      messageApi.error('至少需要2个非空选项');
+      return;
+    }
+
+    try {
+      setCreateVoteLoading(true);
+      const res = await createVoteUsingPost({
+        title: voteTitle,
+        options: validOptions,
+        singleChoice: isSingleChoice,
+      });
+      if (res.data) {
+        messageApi.success('创建投票成功！扣除100积分');
+        setIsCreateVoteModalVisible(false);
+        // 清空表单
+        setVoteTitle('');
+        setVoteOptions(['', '']);
+        setIsSingleChoice(true);
+        // 刷新投票列表
+        fetchActiveVotes();
+      } else {
+        messageApi.error('创建投票失败，请重试');
+      }
+    } catch (error: any) {
+      console.error('创建投票失败:', error);
+      if (error?.response?.data?.message) {
+        messageApi.error(error.response.data.message);
+      } else {
+        messageApi.error('创建投票失败，积分可能不足（需要100积分）');
+      }
+    } finally {
+      setCreateVoteLoading(false);
+    }
+  };
+
+  // 删除投票
+  const handleDeleteVote = async (voteId: string) => {
+    try {
+      const res = await deleteVoteUsingPost({ voteId });
+      if (res.data) {
+        messageApi.success('删除投票成功！');
+        // 刷新投票列表
+        fetchActiveVotes();
+      } else {
+        messageApi.error('删除投票失败，请重试');
+      }
+    } catch (error: any) {
+      console.error('删除投票失败:', error);
+      if (error?.response?.data?.message) {
+        messageApi.error(error.response.data.message);
+      } else {
+        messageApi.error('删除投票失败，可能没有权限');
+      }
+    }
+  };
+  const addVoteOption = () => {
+    if (voteOptions.length >= 10) {
+      messageApi.warning('最多只能添加10个选项');
+      return;
+    }
+    setVoteOptions([...voteOptions, '']);
+  };
+
+  // 删除投票选项
+  const removeVoteOption = (index: number) => {
+    if (voteOptions.length <= 2) {
+      messageApi.warning('至少需要保留2个选项');
+      return;
+    }
+    const newOptions = voteOptions.filter((_, i) => i !== index);
+    setVoteOptions(newOptions);
+  };
+
+  // 更新投票选项
+  const updateVoteOption = (index: number, value: string) => {
+    const newOptions = [...voteOptions];
+    newOptions[index] = value;
+    setVoteOptions(newOptions);
+  };
+
+  // 组件加载时获取活跃投票和福袋
+  useEffect(() => {
+    fetchActiveVotes();
+    fetchActiveLuckyBags();
+    const interval = setInterval(() => {
+      fetchActiveVotes();
+      fetchActiveLuckyBags();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
-    <div className={styles.chatRoom}>
+    <div
+      className={`${styles.chatPageWrapper} ${!showFishCircle ? styles.chatPageWrapperCentered : ''}`}
+      style={{ '--chat-height-offset': chatHeightOffset } as React.CSSProperties}
+    >
+    {showFishCircle && fishCirclePosition === 'left' && <MomentsSidebar position="left" />}
+    <div
+      className={`${styles.chatRoom} ${isSpeedMode ? styles.speedMode : ''} ${!isUserListVisible ? styles.userListCollapsed : ''}`}
+    >
+        {/* 可拖动宠物组件 */}
+        {showChatPet && (
+          <MiniPet size={chatPetSize} onClick={() => {
+            setCurrentPetUserId(null);
+            setIsPetModalVisible(true);
+          }} />
+        )}
+
+        {/* 左上角福袋入口 */}
+        {activeLuckyBags.length > 0 && (
+          <div
+            className={styles.luckyBagEntry}
+            onClick={() => setIsLuckyBagListModalVisible(true)}
+            role="button"
+            tabIndex={0}
+            title="查看进行中的福袋"
+          >
+            <img src={LUCKY_BAG_IMAGE} alt="福袋" className={styles.luckyBagEntryImage} />
+            <span className={styles.luckyBagEntryBadge}>{activeLuckyBags.length}</span>
+          </div>
+        )}
+
+      {/* 摸鱼宠物组件 */}
+      <MoyuPet
+        visible={isPetModalVisible}
+        onClose={() => {
+          setIsPetModalVisible(false);
+          setCurrentPetUserId(null);
+        }}
+        otherUserId={currentPetUserId ? currentPetUserId as any : undefined}
+        otherUserName={onlineUsers.find(user => user.id === currentPetUserId)?.name}
+      />
+
+      <AnnouncementModal
+        open={isAnnouncementModalVisible}
+        onCancel={() => setIsAnnouncementModalVisible(false)}
+      />
+
+      {/* 房间信息卡片 */}
+      <RoomInfoCard
+        visible={isRoomInfoVisible}
+        onClose={() => setIsRoomInfoVisible(false)}
+      />
+
       {currentMusic && (
         <div className={styles.musicFloatingPlayer}>
-          <img src={currentMusic.cover} alt="cover" className={styles.musicCover} />
+          <img {...externalImageProps} src={currentMusic.cover} alt="cover" className={styles.musicCover} />
           <div className={styles.musicInfo}>
             <div className={styles.musicTitle}>{currentMusic.name}</div>
             <div className={styles.musicArtist}>{currentMusic.artists}</div>
@@ -2535,6 +3420,42 @@ const ChatRoom: React.FC = () => {
             <div className={styles.announcementContent}>
               <SoundOutlined className={styles.announcementIcon} />
               <span dangerouslySetInnerHTML={{ __html: announcement }} />
+              {/* 投票按钮 - 当有活跃投票时显示 */}
+              {activeVotes.length > 0 && (
+                <Button
+                  type="link"
+                  onClick={() => setIsVoteListModalVisible(true)}
+                  style={{ marginLeft: 16, padding: 0 }}
+                >
+                  🗳️ 活跃投票列表 ({activeVotes.length}个)
+                </Button>
+              )}
+              <Button
+                type="link"
+                loading={isLoadingAnnualReport}
+                onClick={async () => {
+                  let hideLoading: VoidFunction | undefined;
+                  try {
+                    setIsLoadingAnnualReport(true);
+                    hideLoading = messageApi.loading('摸鱼年报生成中，请稍候...', 0);
+                    const res = await generateAnnualReportUsingGet();
+                    // 接口直接返回 HTML 字符串
+                    setAnnualReportHtml(res as unknown as string);
+                    setIsAnnualReportModalVisible(true);
+                  } catch (error) {
+                    console.error('生成摸鱼年终报告失败:', error);
+                    message.error('生成摸鱼年终报告失败，请稍后重试~');
+                  } finally {
+                    if (hideLoading) {
+                      hideLoading();
+                    }
+                    setIsLoadingAnnualReport(false);
+                  }
+                }}
+                style={{ marginLeft: 16, padding: 0, display: 'none' }}
+              >
+                ⭐生成你的摸鱼年终报告🐟
+              </Button>
             </div>
           }
           type="info"
@@ -2544,11 +3465,28 @@ const ChatRoom: React.FC = () => {
           className={styles.announcement}
         />
       )}
-      <div className={styles['floating-fish'] + ' ' + styles.fish1}>🐟</div>
-      <div className={styles['floating-fish'] + ' ' + styles.fish2}>🐠</div>
-      <div className={styles['floating-fish'] + ' ' + styles.fish3}>🐡</div>
-      <div className={styles['floating-fish'] + ' ' + styles.bubble1}>💭</div>
-      <div className={styles['floating-fish'] + ' ' + styles.bubble2}>💭</div>
+      <Modal
+        title="你的摸鱼年终报告"
+        open={isAnnualReportModalVisible}
+        onCancel={() => setIsAnnualReportModalVisible(false)}
+        footer={[
+          <Button key="download" type="primary" loading={isExportingAnnualReportImage} onClick={handleExportAnnualReportImage}>
+            导出为图片
+          </Button>,
+          <Button key="close" onClick={() => setIsAnnualReportModalVisible(false)}>
+            关闭
+          </Button>,
+        ]}
+        width={800}
+        bodyStyle={{ maxHeight: '70vh', overflowY: 'auto' }}
+      >
+        <div
+          ref={annualReportRef}
+          // 后端返回的是完整的 HTML 片段
+          dangerouslySetInnerHTML={{ __html: annualReportHtml }}
+        />
+      </Modal>
+
       <div
         className={styles.messageContainer}
         ref={messageContainerRef}
@@ -2565,112 +3503,80 @@ const ChatRoom: React.FC = () => {
             <Spin />
           </div>
         )}
-        {messages.map((msg) => (
-          <div
-            key={msg.id}
-            id={`message-${msg.id}`}
-            className={`${styles.messageItem} ${
-              currentUser?.id && String(msg.sender.id) === String(currentUser.id) ? styles.self : ''
-            } ${notifications.some((n) => n.id === msg.id) ? styles.mentioned : ''}`}
-          >
-            <div className={styles.messageHeader}>
-              <div
-                className={styles.avatar}
-                onClick={() => handleSelectMention(msg.sender)}
-                style={{ cursor: 'pointer' }}
-              >
-                <Popover
-                  content={<UserInfoCard user={msg.sender} />}
-                  trigger="hover"
-                  placement="top"
-                >
-                  <div className={styles.avatarWithFrame}>
-                    <Avatar src={msg.sender.avatar} size={32} />
-                    {msg.sender.avatarFramerUrl && (
-                      <img
-                        src={msg.sender.avatarFramerUrl}
-                        className={styles.avatarFrame}
-                        alt="avatar-frame"
-                      />
-                    )}
-                  </div>
-                </Popover>
-              </div>
-              <div className={styles.senderInfo}>
-                <span
-                  className={styles.senderName}
-                  onClick={() => handleViewUserDetail(msg.sender)}
-                  style={currentUser?.userRole === 'admin' ? { cursor: 'pointer' } : {}}
-                >
-                  {msg.sender.name}
-                  {getAdminTag(msg.sender.isAdmin, msg.sender.level, msg.sender.titleId)}
-                  <span className={styles.levelBadge}>
-                    {getLevelEmoji(msg.sender.level)} {msg.sender.level}
-                  </span>
-                </span>
-              </div>
-            </div>
-            <div className={styles.messageContent}>
-              {msg.quotedMessage && (
-                <div className={styles.quotedMessage}>
-                  <div className={styles.quotedMessageHeader}>
-                    <span
-                      className={styles.quotedMessageSender}
-                      onClick={() => msg.quotedMessage && handleViewUserDetail(msg.quotedMessage.sender)}
-                      style={currentUser?.userRole === 'admin' ? { cursor: 'pointer' } : {}}
-                    >
-                      {msg.quotedMessage.sender.name}
-                    </span>
-                    <span className={styles.quotedMessageTime}>
-                      {new Date(msg.quotedMessage.timestamp).toLocaleTimeString()}
-                    </span>
-                  </div>
-                  <div className={styles.quotedMessageContent}>
-                    {renderMessageContent(msg.quotedMessage.content)}
-                  </div>
-                </div>
-              )}
-              {renderMessageContent(msg.content)}
-            </div>
-            <div className={styles.messageFooter}>
-              <span className={styles.timestamp}>
-                {new Date(msg.timestamp).toLocaleTimeString()}
-              </span>
-              {(currentUser?.id && String(msg.sender.id) === String(currentUser.id)) ||
-              currentUser?.userRole === 'admin' ? (
-                <Popconfirm
-                  title="确定要撤回这条消息吗？"
-                  onConfirm={() => handleRevokeMessage(msg.id)}
-                  okText="确定"
-                  cancelText="取消"
-                >
-                  <span className={styles.revokeText}>撤回</span>
-                </Popconfirm>
-              ) : null}
-              <span className={styles.quoteText} onClick={() => handleQuoteMessage(msg)}>
-                引用
-              </span>
-            </div>
-          </div>
-        ))}
+        {(() => {
+          return messages.map((msg) => {
+            if (skipSet.has(msg.id)) return null;
+            return (
+              <MessageItem
+                key={msg.id}
+                msg={msg}
+                currentUser={currentUser}
+                notifications={notifications}
+                styles={styles}
+                UserInfoCard={UserInfoCard}
+                handleSelectMention={handleSelectMention}
+                handleViewUserDetail={handleViewUserDetail}
+                getUserDisplayName={getUserDisplayName}
+                getAdminTag={getAdminTag}
+                renderMessageContent={renderMessageContent}
+                handleRevokeMessage={handleRevokeMessage}
+                handleQuoteMessage={handleQuoteMessage}
+                handleReportMessage={handleReportMessage}
+                repeatUsers={repeatMap.get(msg.id)}
+                onRepeat={handleRepeat}
+              />
+            );
+          });
+        })()}
         <div ref={messagesEndRef} />
       </div>
 
-      <div className={styles.userList}>
-        <div className={styles.userListHeader}>在线成员 ({onlineUsers.length})</div>
-        <div className={styles.userListContent} ref={userListRef}>
-          <List
-            height={listHeight}
-            itemCount={onlineUsers.length}
-            itemSize={USER_ITEM_HEIGHT}
-            width="100%"
-          >
-            {UserItem}
-          </List>
+      {/* 用户列表隐藏时显示浮动按钮 */}
+      {!isUserListVisible && (
+        <div className={`${styles.userList} ${styles.userListHidden}`}>
+          <div className={styles.userListHeader}>
+            <Button
+              type="text"
+              size="small"
+              onClick={() => setIsUserListVisible(!isUserListVisible)}
+              title="显示用户列表"
+              className={styles.toggleButton}
+            >
+              <MenuUnfoldOutlined style={{ color: '#595959', fontSize: 16 }} />
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
 
-      <div className={styles.inputArea}>
+      {/* 用户列表显示时的正常布局 */}
+      {isUserListVisible && (
+        <div className={styles.userList}>
+          <div className={styles.userListHeader}>
+            <span>在线成员 ({onlineUsers.length})</span>
+            <Button
+              type="text"
+              size="small"
+              onClick={() => setIsUserListVisible(!isUserListVisible)}
+              title="隐藏用户列表"
+              className={styles.toggleButton}
+            >
+              <EyeInvisibleOutlined style={{ color: '#1677ff', fontSize: 14 }} />
+            </Button>
+          </div>
+          <div className={styles.userListContent} ref={userListRef}>
+            <List
+              height={listHeight}
+              itemCount={onlineUsers.length}
+              itemSize={USER_ITEM_HEIGHT}
+              width="100%"
+            >
+              {UserItem}
+            </List>
+          </div>
+        </div>
+      )}
+
+              <div className={styles.inputArea}>
         {quotedMessage && (
           <div className={styles.quotePreview}>
             <div className={styles.quotePreviewContent}>
@@ -2691,6 +3597,7 @@ const ChatRoom: React.FC = () => {
           <div className={styles.imagePreview}>
             <div className={styles.previewWrapper}>
               <img
+                {...externalImageProps}
                 src={pendingImageUrl}
                 alt="预览图片"
                 className={styles.previewImage}
@@ -2724,7 +3631,7 @@ const ChatRoom: React.FC = () => {
             </div>
           </div>
         )}
-        <div className={styles.inputRow}>
+        <div className={styles.inputRow} style={{ position: 'relative' }}>
           <input
             type="file"
             ref={fileInputRef}
@@ -2781,7 +3688,7 @@ const ChatRoom: React.FC = () => {
             placement="topLeft"
             overlayClassName={styles.emojiPopover}
           >
-            <Button icon={<SmileOutlined />} className={styles.emojiButton} />
+            <Button icon={<SmileOutlined />} className={`${styles.emojiButton} ${styles.hideOnMobile}`} />
           </Popover>
           <Popover
             content={<EmoticonPicker onSelect={handleEmoticonSelect} />}
@@ -2793,22 +3700,83 @@ const ChatRoom: React.FC = () => {
           >
             <Button icon={<PictureOutlined />} className={styles.emoticonButton} />
           </Popover>
-          <Button
-            icon={<CustomerServiceOutlined />}
-            className={styles.musicButton}
-            onClick={() => setIsMusicSearchVisible(true)}
-          />
-          {(currentUser?.userRole === 'admin' || (currentUser?.level && currentUser.level >= 6)) && (
-            <Button
-              icon={<GiftOutlined />}
-              className={styles.redPacketButton}
-              onClick={() => setIsRedPacketModalVisible(true)}
-            />
-          )}
-
-          <Input.TextArea
+          {/* 谁是卧底按钮 */}
+          <Popover content="谁是卧底" placement="top">
+            <Badge dot={undercoverNotification === UNDERCOVER_NOTIFICATION.NEW_ROOM} className={styles.roomInfoBadge}>
+              <Button
+                icon={<TeamOutlined />}
+                className={`${styles.roomInfoButton} ${styles.hideOnMobile}`}
+                onClick={handleRoomInfoClick}
+              />
+            </Badge>
+          </Popover>
+          <Popover
+            content={
+              <div className={styles.moreOptionsMenu}>
+                <div className={styles.moreOptionsItem} onClick={() => setIsMusicSearchVisible(true)}>
+                  <CustomerServiceOutlined className={styles.moreOptionsIcon} />
+                  <span>点歌</span>
+                </div>
+                <div className={styles.moreOptionsItem} onClick={() => {
+                  setCurrentPetUserId(null);
+                  setIsPetModalVisible(true);
+                }}>
+                  <BugOutlined className={styles.moreOptionsIcon} />
+                  <span>摸鱼宠物</span>
+                </div>
+                <div className={styles.moreOptionsItem} onClick={() => setIsRedPacketModalVisible(true)}>
+                  <GiftOutlined className={styles.moreOptionsIcon} />
+                  <span>发红包</span>
+                </div>
+                <div className={styles.moreOptionsItem} onClick={() => setIsLuckyBagModalVisible(true)}>
+                  <RedEnvelopeOutlined className={styles.moreOptionsIcon} />
+                  <span>发福袋</span>
+                </div>
+                <div className={styles.moreOptionsItem} onClick={() => fileInputRef.current?.click()}>
+                  <PaperClipOutlined className={styles.moreOptionsIcon} />
+                  <span>上传图片</span>
+                </div>
+                <div className={styles.moreOptionsItem} onClick={() => setIsCreateVoteModalVisible(true)}>
+                  <SoundOutlined className={styles.moreOptionsIcon} />
+                  <span>创建投票</span>
+                </div>
+                <div className={styles.moreOptionsItem}>
+                  <RocketOutlined className={styles.moreOptionsIcon} />
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                    <span style={{ marginRight: '10px' }}>极速模式</span>
+                    <div onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+                      <Switch
+                        checked={isSpeedMode}
+                        onChange={(checked) => toggleSpeedMode(checked)}
+                        size="small"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className={styles.moreOptionsItem} onClick={handleClearMessages}>
+                  <DeleteOutlined className={styles.moreOptionsIcon} />
+                  <span>清空聊天记录</span>
+                </div>
+                <div
+                  className={styles.moreOptionsItem}
+                  onClick={() => {
+                    activateFloatingChat('small');
+                    history.push('/index');
+                  }}
+                >
+                  <MenuUnfoldOutlined className={styles.moreOptionsIcon} />
+                  <span>小屏悬浮聊天</span>
+                </div>
+              </div>
+            }
+            trigger="click"
+            placement="top"
+            overlayClassName={styles.moreOptionsPopover}
+          >
+            <Button icon={<EllipsisOutlined />} className={styles.moreOptionsButton} />
+          </Popover>
+          <textarea
             ref={inputRef}
-            value={inputValue}
             onChange={handleMentionInput}
             onFocus={closeMobileToolbar}
             onKeyDown={(e) => {
@@ -2826,8 +3794,9 @@ const ChatRoom: React.FC = () => {
             placeholder={uploading ? '正在上传图片...' : '输入消息或粘贴图片...'}
             maxLength={200}
             disabled={uploading}
-            autoSize={{ minRows: 1, maxRows: 4 }}
+            rows={1}
             className={`${styles.chatTextArea} ${styles.hidePlaceholderOnMobile}`}
+            style={{ resize: 'none', width: '100%', overflow: 'hidden', minHeight: '32px', maxHeight: '120px' }}
           />
 
           {isMentionListVisible && filteredUsers.length > 0 && (
@@ -2835,10 +3804,11 @@ const ChatRoom: React.FC = () => {
               ref={mentionListRef}
               className={styles.mentionList}
               style={{
-                position: 'fixed',
-                top: mentionListPosition.top,
-                left: mentionListPosition.left,
+                position: 'absolute',
+                bottom: '100%',
+                left: 0,
                 zIndex: 1000,
+                marginBottom: 4,
               }}
             >
               {filteredUsers.map((user) => (
@@ -2853,7 +3823,7 @@ const ChatRoom: React.FC = () => {
               ))}
             </div>
           )}
-          <span className={styles.inputCounter}>{inputValue.length}/200</span>
+
 
           {/* PC端发送按钮 */}
           <Button
@@ -2895,14 +3865,31 @@ const ChatRoom: React.FC = () => {
                 </div>
                 <div className={styles.mobileToolText}>音乐</div>
               </div>
-              <div className={styles.mobileTool} onClick={() => handleMobileToolClick('calendar')}>
-                <div className={styles.mobileToolIcon}>
-                  <CalendarOutlined />
-                </div>
-                <div className={styles.mobileToolText}>摸鱼日历</div>
-              </div>
             </div>
-            {(currentUser?.userRole === 'admin' || (currentUser?.level && currentUser.level >= 6)) && (
+            <div className={styles.mobileToolRow}>
+              <div className={styles.mobileTool} onClick={() => handleMobileToolClick('pet')}>
+                <div className={styles.mobileToolIcon}>
+                  <BugOutlined />
+                </div>
+                <div className={styles.mobileToolText}>摸鱼宠物</div>
+              </div>
+              <div className={styles.mobileTool} onClick={() => handleMobileToolClick('speedMode')}>
+                <div className={styles.mobileToolIcon}>
+                  <RocketOutlined />
+                </div>
+                <div className={styles.mobileToolText}>
+                  {isSpeedMode ? '关闭极速' : '开启极速'}
+                </div>
+              </div>
+              <div className={styles.mobileTool} onClick={() => setIsCreateVoteModalVisible(true)}>
+                <div className={styles.mobileToolIcon}>
+                  <SoundOutlined />
+                </div>
+                <div className={styles.mobileToolText}>创建投票</div>
+              </div>
+              <div className={styles.mobileTool} style={{ visibility: 'hidden' }}></div>
+            </div>
+            {(currentUser?.userRole === 'admin' || (currentUser?.level && currentUser.level >= 6) || currentUser?.vip) && (
               <div className={styles.mobileToolRow}>
                 <div className={styles.mobileTool} onClick={() => handleMobileToolClick('redPacket')}>
                   <div className={styles.mobileToolIcon}>
@@ -2910,7 +3897,12 @@ const ChatRoom: React.FC = () => {
                   </div>
                   <div className={styles.mobileToolText}>红包</div>
                 </div>
-                <div className={styles.mobileTool} style={{ visibility: 'hidden' }}></div>
+                <div className={styles.mobileTool} onClick={() => handleMobileToolClick('luckyBag')}>
+                  <div className={styles.mobileToolIcon}>
+                    <RedEnvelopeOutlined />
+                  </div>
+                  <div className={styles.mobileToolText}>福袋</div>
+                </div>
                 <div className={styles.mobileTool} style={{ visibility: 'hidden' }}></div>
                 <div className={styles.mobileTool} style={{ visibility: 'hidden' }}></div>
               </div>
@@ -2932,7 +3924,7 @@ const ChatRoom: React.FC = () => {
         okText={isRedPacketSending ? "发送中..." : "发送"}
         cancelText="取消"
         okButtonProps={{ loading: isRedPacketSending }}
-        width={400}
+        width={480}
         className={styles.redPacketModal}
       >
         <div className={styles.redPacketForm}>
@@ -2943,14 +3935,9 @@ const ChatRoom: React.FC = () => {
               onChange={(e) => setRedPacketType(e.target.value)}
               className={styles.redPacketTypeGroup}
             >
-              <Radio.Button value={1}>
-                <span className={styles.typeIcon}>🎲</span>
-                <span>随机红包</span>
-              </Radio.Button>
-              <Radio.Button value={2}>
-                <span className={styles.typeIcon}>📊</span>
-                <span>平均红包</span>
-              </Radio.Button>
+              <Radio.Button value={RED_PACKET_TYPE.RANDOM}>随机</Radio.Button>
+              <Radio.Button value={RED_PACKET_TYPE.AVERAGE}>平均</Radio.Button>
+              <Radio.Button value={RED_PACKET_TYPE.QUIZ}>答题</Radio.Button>
             </Radio.Group>
           </div>
           <div className={styles.formItem}>
@@ -2977,11 +3964,107 @@ const ChatRoom: React.FC = () => {
             />
           </div>
           <div className={styles.formItem}>
-            <span className={styles.label}>祝福语：</span>
+            <span className={styles.label}>{isQuizRedPacket(redPacketType) ? '题目：' : '祝福语：'}</span>
             <Input.TextArea
               value={redPacketMessage}
               onChange={(e) => setRedPacketMessage(e.target.value)}
-              placeholder="恭喜发财，大吉大利！"
+              placeholder={isQuizRedPacket(redPacketType) ? '请输入题目内容' : '恭喜发财，大吉大利！'}
+              maxLength={50}
+              showCount
+              className={styles.messageInput}
+            />
+          </div>
+          {isQuizRedPacket(redPacketType) && (
+            <div className={styles.formItem}>
+              <span className={styles.label}>正确答案：</span>
+              <Input
+                value={redPacketAnswer}
+                onChange={(e) => setRedPacketAnswer(e.target.value)}
+                placeholder="请输入正确答案"
+                maxLength={100}
+                className={styles.messageInput}
+              />
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      <Modal
+        title={
+          <div className={styles.redPacketModalTitle}>
+            <img src={LUCKY_BAG_IMAGE} alt="福袋" className={styles.luckyBagModalTitleIcon} />
+            <span>发送福袋</span>
+          </div>
+        }
+        open={isLuckyBagModalVisible}
+        onOk={handleSendLuckyBag}
+        onCancel={() => setIsLuckyBagModalVisible(false)}
+        okText={isLuckyBagSending ? '发送中...' : '发送'}
+        cancelText="取消"
+        okButtonProps={{ loading: isLuckyBagSending }}
+        width={480}
+        className={styles.luckyBagModal}
+      >
+        <div className={styles.redPacketForm}>
+          <div className={styles.formItem}>
+            <span className={styles.label}>分配类型：</span>
+            <Radio.Group
+              value={luckyBagType}
+              onChange={(e) => setLuckyBagType(e.target.value)}
+              className={styles.redPacketTypeGroup}
+            >
+              <Radio.Button value={1}>
+                <span className={styles.typeIcon}>🎲</span>
+                <span>随机分配</span>
+              </Radio.Button>
+              <Radio.Button value={2}>
+                <span className={styles.typeIcon}>📊</span>
+                <span>平均分配</span>
+              </Radio.Button>
+            </Radio.Group>
+          </div>
+          <div className={styles.formItem}>
+            <span className={styles.label}>总积分：</span>
+            <Input
+              type="number"
+              value={luckyBagAmount}
+              onChange={(e) => setLuckyBagAmount(Number(e.target.value))}
+              min={1}
+              max={100}
+              placeholder="1-100 积分"
+              className={styles.amountInput}
+            />
+          </div>
+          <div className={styles.formItem}>
+            <span className={styles.label}>中奖人数：</span>
+            <Input
+              type="number"
+              value={luckyBagWinnerCount}
+              onChange={(e) => setLuckyBagWinnerCount(Number(e.target.value))}
+              min={1}
+              placeholder="请输入中奖人数"
+              className={styles.countInput}
+            />
+          </div>
+          <div className={styles.formItem}>
+            <span className={styles.label}>持续时间：</span>
+            <Input
+              type="number"
+              value={luckyBagDuration}
+              onChange={(e) => setLuckyBagDuration(Number(e.target.value))}
+              min={60}
+              max={1800}
+              placeholder="60-1800 秒"
+              suffix="秒"
+              className={styles.countInput}
+            />
+          </div>
+          <div className={styles.formItem}>
+            <span className={styles.label}>福袋名称：</span>
+            <Input.TextArea
+              value={luckyBagName}
+              onChange={(e) => setLuckyBagName(e.target.value)}
+              placeholder="快来参与福袋吧"
               maxLength={50}
               showCount
               className={styles.messageInput}
@@ -2991,43 +4074,9 @@ const ChatRoom: React.FC = () => {
       </Modal>
 
       <Modal open={isPreviewVisible} footer={null} onCancel={() => setIsPreviewVisible(false)}>
-        {previewImage && <img alt="预览" style={{ width: '100%' }} src={previewImage} />}
+        {previewImage && <img {...externalImageProps} alt="预览" style={{ width: '100%' }} src={previewImage} />}
       </Modal>
 
-      <Modal
-        title="红包记录"
-        open={isRedPacketRecordsVisible}
-        onCancel={() => setIsRedPacketRecordsVisible(false)}
-        footer={null}
-        width={400}
-      >
-        <div className={styles.redPacketRecords}>
-          <div className={styles.recordsList}>
-            {redPacketRecords.length > 0 ? (
-              redPacketRecords.map((record, index) => (
-                <div key={record.id} className={styles.recordItem}>
-                  <Avatar src={record.userAvatar} size={32} />
-                  <div className={styles.userInfo}>
-                    <div className={styles.userName}>
-                      {record.userName}
-                      {index === 0 && <span className={styles.luckyKing}>👑 手气王</span>}
-                    </div>
-                    <div className={styles.grabTime}>
-                      {new Date(record.grabTime || '').toLocaleString()}
-                    </div>
-                  </div>
-                  <div className={styles.amount}>{record.amount} 积分</div>
-                </div>
-              ))
-            ) : (
-              <div className={styles.emptyRecords}>
-                <GiftOutlined className={styles.emptyIcon} />
-                <span>暂无人抢到红包</span>
-              </div>
-            )}
-          </div>
-        </div>
-      </Modal>
       <Modal
         title="点歌"
         open={isMusicSearchVisible}
@@ -3035,188 +4084,88 @@ const ChatRoom: React.FC = () => {
         footer={null}
         width={600}
       >
-        <Tabs
-          activeKey={activeTab}
-          onChange={setActiveTab}
-          items={[
-            {
-              key: 'search',
-              label: '搜索音乐',
-              children: (
-                <div className={styles.musicSearch}>
-                  <Input.Search
-                    placeholder="输入歌曲名称"
-                    value={searchKey}
-                    onChange={handleSearchKeyChange}
-                    onSearch={handleMusicSearch}
-                    enterButton
-                    loading={isSearchingMusic}
-                    style={{ marginBottom: '10px' }}
-                  />
+        <div className={styles.musicSearch}>
+          <Input.Search
+            placeholder="输入歌曲名称"
+            value={searchKey}
+            onChange={handleSearchKeyChange}
+            onSearch={handleMusicSearch}
+            enterButton
+            loading={isSearchingMusic}
+            style={{ marginBottom: '10px' }}
+          />
 
-                  {musicApiError && (
-                    <Alert
-                      message="API服务提示"
-                      description={musicApiError}
-                      type="warning"
-                      showIcon
-                      style={{ marginBottom: '10px' }}
-                      closable
-                      onClose={() => setMusicApiError(null)}
-                    />
-                  )}
+          {musicApiError && (
+            <Alert
+              message="API服务提示"
+              description={musicApiError}
+              type="warning"
+              showIcon
+              style={{ marginBottom: '10px' }}
+              closable
+              onClose={() => setMusicApiError(null)}
+            />
+          )}
 
-                  {isSearchingMusic ? (
-                    <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}>
-                      <Spin tip="正在搜索音乐..." />
-                    </div>
-                  ) : searchResults.length > 0 ? (
-                    <List
-                      className={styles.musicList}
-                      height={300}
-                      itemCount={searchResults.length}
-                      itemSize={60}
-                      width="100%"
-                    >
-                      {({ index, style }) => {
-                        const item = searchResults[index];
-                        return (
-                          <div
-                            style={{
-                              ...style,
-                              display: 'flex',
-                              alignItems: 'center',
-                              padding: '5px 10px',
-                            }}
-                            className={styles.musicListItem}
-                          >
-                            <div className={styles.musicInfo}>
-                              <div className={styles.musicTitle}>{item.name}</div>
-                              <div className={styles.musicDesc}>
-                                {`${item.artists.map((a: any) => a.name).join(',')} - ${
-                                  item.album.name
-                                }`}
-                              </div>
-                            </div>
-                            <div style={{ display: 'flex', gap: '8px' }}>
-                              <Button
-                                type="primary"
-                                size="small"
-                                onClick={() => handleSelectMusic(item)}
-                                loading={isSelectingMusic}
-                                disabled={isSelectingMusic}
-                              >
-                                {isSelectingMusic ? '处理中' : '发送'}
-                              </Button>
-                              <Button
-                                size="small"
-                                icon={<PlusOutlined />}
-                                onClick={() => addToPlaylist(item)}
-                                loading={addingToPlaylistId === item.id}
-                                disabled={addingToPlaylistId !== null}
-                              >
-                                添加到歌单
-                              </Button>
-                            </div>
-                          </div>
-                        );
-                      }}
-                    </List>
-                  ) : (
-                    <Empty
-                      description={hasSearched ? '未找到相关歌曲' : '请输入关键词并点击搜索'}
-                      image={Empty.PRESENTED_IMAGE_SIMPLE}
-                    />
-                  )}
-                </div>
-              ),
-            },
-            {
-              key: 'playlist',
-              label: '我的歌单',
-              children: (
-                <div className={styles.playlist}>
+          {isSearchingMusic ? (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}>
+              <Spin tip="正在搜索音乐..." />
+            </div>
+          ) : searchResults.length > 0 ? (
+            <List
+              className={styles.musicList}
+              height={300}
+              itemCount={searchResults.length}
+              itemSize={60}
+              width="100%"
+            >
+              {({ index, style }) => {
+                const item = searchResults[index];
+                return (
                   <div
                     style={{
-                      marginBottom: '10px',
+                      ...style,
                       display: 'flex',
-                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '5px 10px',
                     }}
+                    className={styles.musicListItem}
                   >
-                    <div>共 {playlist.length} 首歌曲</div>
-                    {playlist.length > 0 && (
-                      <Button type="primary" size="small" onClick={playEntirePlaylist}>
-                        播放全部
-                      </Button>
-                    )}
-                  </div>
-
-                  {playlist.length === 0 ? (
-                    <Empty description="你的歌单还是空的" image={Empty.PRESENTED_IMAGE_SIMPLE} />
-                  ) : (
-                    <div
-                      className={styles.playlistContainer}
-                      style={{ maxHeight: '250px', overflow: 'auto' }}
-                    >
-                      {playlist.map((song) => (
-                        <div
-                          key={song.id}
-                          className={styles.playlistItem}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            padding: '8px',
-                            borderBottom: '1px solid #f0f0f0',
-                          }}
-                        >
-                          <img
-                            src={song.cover}
-                            alt={song.name}
-                            style={{
-                              width: '40px',
-                              height: '40px',
-                              marginRight: '10px',
-                              borderRadius: '4px',
-                            }}
-                          />
-                          <div className={styles.songInfo} style={{ flex: 1 }}>
-                            <div>{song.name}</div>
-                            <div style={{ fontSize: '12px', color: '#888' }}>{song.artist}</div>
-                          </div>
-                          <div className={styles.songActions}>
-                            <Button
-                              type="text"
-                              size="small"
-                              icon={<PlayCircleOutlined />}
-                              onClick={() => playFromPlaylist(song)}
-                            />
-                            <Button
-                              type="text"
-                              size="small"
-                              icon={<DeleteOutlined />}
-                              onClick={() => removeFromPlaylist(song.id)}
-                              danger
-                            />
-                          </div>
-                        </div>
-                      ))}
+                    <div className={styles.musicInfo}>
+                      <div className={styles.musicTitle}>{item.name}</div>
+                      <div className={styles.musicDesc}>
+                        {`${item.artists.map((a: any) => a.name).join(',')} - ${
+                          item.album.name
+                        }`}
+                      </div>
                     </div>
-                  )}
-
-                  {/* APlayer容器 */}
-                  <div ref={aPlayerContainerRef} style={{ marginTop: '20px' }} />
-                </div>
-              ),
-            },
-          ]}
-        />
+                    <Button
+                      type="primary"
+                      size="small"
+                      onClick={() => handleSelectMusic(item)}
+                      loading={isSelectingMusic}
+                      disabled={isSelectingMusic}
+                    >
+                      {isSelectingMusic ? '处理中' : '发送'}
+                    </Button>
+                  </div>
+                );
+              }}
+            </List>
+          ) : (
+            <Empty
+              description={hasSearched ? '未找到相关歌曲' : '请输入关键词并点击搜索'}
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+            />
+          )}
+        </div>
       </Modal>
       <Modal
-        title="用户详细信息"
+        title={null}
         open={isUserDetailModalVisible}
         onCancel={() => setIsUserDetailModalVisible(false)}
         footer={
-          currentUser?.userRole === 'admin' && (
+          currentUser?.userRole === 'admin' ? (
             <div className={styles.userDetailActions}>
               {userMuteInfo?.isMuted ? (
                 <Button
@@ -3229,7 +4178,7 @@ const ChatRoom: React.FC = () => {
                 <Button
                   type="primary"
                   danger
-                  onClick={() => selectedUser && handleMuteUser(selectedUser.id)}
+                  onClick={() => selectedUser && handleMuteUser()}
                 >
                   禁言用户
                 </Button>
@@ -3245,97 +4194,335 @@ const ChatRoom: React.FC = () => {
                 关闭
               </Button>
             </div>
+          ) : (
+            <div className={styles.userDetailActions}>
+              <Button onClick={() => setIsUserDetailModalVisible(false)}>关闭</Button>
+            </div>
           )
         }
-        width={400}
+        width={selectedUser?.momentsBgUrl ? 680 : 420}
+        styles={{ body: { padding: 0 } }}
       >
         {selectedUser && (
           <div className={styles.userDetailModal}>
-            <div className={styles.userDetailHeader}>
-              <div className={styles.avatarWrapper}>
-                <div className={styles.avatarWithFrame}>
-                  <Avatar src={selectedUser.avatar} size={64} />
-                  {selectedUser.avatarFramerUrl && (
-                    <img
-                      src={selectedUser.avatarFramerUrl}
-                      className={styles.avatarFrame}
-                      alt="avatar-frame"
-                    />
+            <div className={styles.userDetailBody}>
+              {/* 左侧：信息区 */}
+              <div
+                className={styles.userDetailLeft}
+                style={!selectedUser.momentsBgUrl ? { alignItems: 'center' } : undefined}
+              >
+                {/* 头像 + 名字行 */}
+                <div className={styles.userDetailTopRow}>
+                  <div className={styles.avatarWrapper}>
+                    <div className={styles.avatarWithFrame}>
+                      <Avatar src={selectedUser.avatar} size={60} />
+                      {selectedUser.avatarFramerUrl && (
+                        <img
+                          {...externalImageProps}
+                          src={selectedUser.avatarFramerUrl}
+                          className={styles.avatarFrame}
+                          alt="avatar-frame"
+                        />
+                      )}
+                    </div>
+                  </div>
+                  <div className={styles.userNameBlock}>
+                    <div className={styles.userDetailName}>
+                      <span>
+                        {getUserDisplayName(selectedUser)}
+                        {userRemarks[selectedUser.id] && (
+                          <span style={{ fontSize: '11px', color: '#aaa', marginLeft: '4px', fontWeight: 400 }}>
+                            ({selectedUser.name})
+                          </span>
+                        )}
+                      </span>
+                      {(selectedUser.vip || selectedUser.isVip) && (
+                        <span className={styles.vipBadge}>V</span>
+                      )}
+                    </div>
+                    <div className={styles.userDetailActions2}>
+                      <Button
+                        type="link"
+                        size="small"
+                        onClick={() => openRemarkModal(selectedUser)}
+                      >
+                        {userRemarks[selectedUser.id] ? '修改备注' : '设置备注'}
+                      </Button>
+                      {currentUser?.userRole === 'admin' && (
+                        <Button
+                          type="link"
+                          size="small"
+                          icon={<CopyOutlined />}
+                          onClick={() => {
+                            navigator.clipboard.writeText(selectedUser.id);
+                            messageApi.success('已复制用户ID到剪贴板');
+                          }}
+                        >
+                          复制ID
+                        </Button>
+                      )}
+                    </div>
+
+                {/* 关注按钮（不显示自己） */}
+                {currentUser && String(currentUser.id) !== selectedUser.id && (
+                  <Button
+                    size="small"
+                    loading={followLoading}
+                    onClick={handleToggleFollow}
+                    onMouseEnter={() => isFollowing && setIsHoveringFollow(true)}
+                    onMouseLeave={() => setIsHoveringFollow(false)}
+                    className={isFollowing ? styles.followBtnActive : styles.followBtnDefault}
+                  >
+                    {isFollowing ? (isHoveringFollow ? '取消关注' : '✓ 已关注') : '+ 关注'}
+                  </Button>
+                )}                  </div>
+                </div>
+
+                {/* 关注数 / 粉丝数 */}
+                <div className={styles.userFollowStats}>
+                  <div
+                    className={`${styles.followStatItem} ${String(currentUser?.id) === selectedUser.id ? styles.followStatClickable : ''}`}
+                    onClick={() => handleOpenFollowList('following')}
+                  >
+                    <span className={styles.followStatNum}>{selectedUser.followingCount ?? '-'}</span>
+                    <span className={styles.followStatLabel}>关注</span>
+                  </div>
+                  <div className={styles.followStatDivider} />
+                  <div
+                    className={`${styles.followStatItem} ${String(currentUser?.id) === selectedUser.id ? styles.followStatClickable : ''}`}
+                    onClick={() => handleOpenFollowList('followers')}
+                  >
+                    <span className={styles.followStatNum}>{selectedUser.followerCount ?? '-'}</span>
+                    <span className={styles.followStatLabel}>粉丝</span>
+                  </div>
+                </div>
+
+                {/* 称号标签 */}
+                <div className={styles.userDetailTags}>
+                  <div style={{ display: 'inline-flex', transform: 'scale(0.85)', transformOrigin: 'left center' }}>
+                    {getAdminTag(selectedUser.isAdmin, selectedUser.level, selectedUser.titleId)}
+                  </div>
+                  {selectedUser.titleIdList &&
+                    JSON.parse(selectedUser.titleIdList || '[]')
+                      .filter((id: number) => id !== selectedUser.titleId && id !== 0)
+                      .map((titleId: number) => (
+                        <div key={titleId} style={{ display: 'inline-flex', transform: 'scale(0.85)', transformOrigin: 'left center' }}>
+                          {getAdminTag(selectedUser.isAdmin, selectedUser.level, titleId)}
+                        </div>
+                      ))
+                  }
+                </div>
+
+                {/* 信息列表 */}
+                <div
+                  className={styles.userDetailContent}
+                  style={!selectedUser.momentsBgUrl ? { width: '100%' } : undefined}
+                >
+                  <div className={styles.userDetailItem}>
+                    <span className={styles.itemLabel}>等级</span>
+                    <span className={styles.itemValue}>
+                      {getLevelEmoji(selectedUser.level)} {selectedUser.level}
+                    </span>
+                  </div>
+                  <div className={styles.userDetailItem}>
+                    <span className={styles.itemLabel}>积分</span>
+                    {currentUser?.userRole === 'admin' && isEditingPoints ? (
+                      <div className={styles.pointsEditContainer}>
+                        <Input
+                          type="number"
+                          value={pointsInputValue}
+                          onChange={(e) => setPointsInputValue(Number(e.target.value))}
+                          size="small"
+                          style={{ width: 80 }}
+                        />
+                        <Button type="primary" size="small" onClick={handleSavePoints}>保存</Button>
+                        <Button size="small" onClick={() => setIsEditingPoints(false)}>取消</Button>
+                      </div>
+                    ) : (
+                      <div className={styles.pointsContainer}>
+                        <span className={styles.itemValue}>{selectedUser.points || 0}</span>
+                      </div>
+                    )}
+                  </div>
+                  {selectedUser.region && (
+                    <div className={styles.userDetailItem}>
+                      <span className={styles.itemLabel}>地区</span>
+                      <span className={styles.itemValue}>
+                        {selectedUser.country ? `${selectedUser.country} · ${selectedUser.region}` : selectedUser.region}
+                      </span>
+                    </div>
                   )}
+                  {currentUser?.userRole === 'admin' && (
+                    <div className={styles.userDetailItem}>
+                      <span className={styles.itemLabel}>管理员</span>
+                      <span className={styles.itemValue}>{selectedUser.isAdmin ? '是' : '否'}</span>
+                    </div>
+                  )}
+                  <div className={styles.userDetailItem}>
+                    <span className={styles.itemLabel}>上次活跃</span>
+                    <span className={styles.itemValue}>刚刚</span>
+                  </div>
+                  {currentUser?.userRole === 'admin' && userMuteInfo?.isMuted ? (
+                    <div className={styles.userDetailItem}>
+                      <span className={styles.itemLabel}>状态</span>
+                      <span className={styles.itemValue} style={{ color: '#ff4d4f' }}>
+                        已禁言（剩余 {userMuteInfo.remainingTime}）
+                      </span>
+                    </div>
+                  ) : (
+                    <div className={styles.userDetailItem}>
+                      <span className={styles.itemLabel}>状态</span>
+                      <span className={styles.itemValue}>{selectedUser.status || '在线'}</span>
+                    </div>
+                  )}
+                  <div className={styles.userDetailItem}>
+                    <span className={styles.itemLabel}>更多</span>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <Tooltip title="查看宠物">
+                        <Button
+                          size="small"
+                          shape="circle"
+                          icon={<BugOutlined />}
+                          style={{
+                            background: 'linear-gradient(135deg, #f7971e, #ffd200)',
+                            border: 'none',
+                            color: '#fff',
+                          }}
+                          onClick={() => {
+                            if (selectedUser) {
+                              setCurrentPetUserId(selectedUser.id);
+                              setIsUserDetailModalVisible(false);
+                              setIsPetModalVisible(true);
+                            }
+                          }}
+                        />
+                      </Tooltip>
+                      <Tooltip
+                        title={
+                          currentUser && String(currentUser.id) === selectedUser.id
+                            ? '我的农场'
+                            : '查看农场'
+                        }
+                      >
+                        <Button
+                          size="small"
+                          shape="circle"
+                          icon={<EnvironmentOutlined />}
+                          style={{
+                            background: 'linear-gradient(135deg, #73d13d, #389e0d)',
+                            border: 'none',
+                            color: '#fff',
+                          }}
+                          onClick={() => {
+                            if (!selectedUser) return;
+                            const isSelfUser =
+                              currentUser && String(currentUser.id) === selectedUser.id;
+                            navigateToUserFarm(selectedUser.id, {
+                              isSelf: !!isSelfUser,
+                              nickname: getUserDisplayName(selectedUser),
+                              avatar: selectedUser.avatar,
+                              onBeforeNavigate: () => setIsUserDetailModalVisible(false),
+                            });
+                          }}
+                        />
+                      </Tooltip>
+                      <Tooltip title="查看鱼小圈">
+                        <Button
+                          size="small"
+                          shape="circle"
+                          icon={<TeamOutlined />}
+                          style={{
+                            background: 'linear-gradient(135deg, #36d1dc, #5b86e5)',
+                            border: 'none',
+                            color: '#fff',
+                          }}
+                          onClick={() => {
+                            if (selectedUser) {
+                              setIsUserDetailModalVisible(false);
+                              history.push(`/moments/fish-circle?userId=${selectedUser.id}`);
+                            }
+                          }}
+                        />
+                      </Tooltip>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div className={styles.userDetailInfo}>
-                <div className={styles.userDetailName}>{selectedUser.name}</div>
-                <div className={styles.userDetailId}>ID: {generateUniqueShortId(selectedUser.id)}</div>
-                {getAdminTag(selectedUser.isAdmin, selectedUser.level, selectedUser.titleId)}
-              </div>
-            </div>
-            <div className={styles.userDetailContent}>
-              <div className={styles.userDetailItem}>
-                <span className={styles.itemLabel}>用户ID：</span>
-                <span className={styles.itemValue}>{selectedUser.id}</span>
-              </div>
-              <div className={styles.userDetailItem}>
-                <span className={styles.itemLabel}>等级：</span>
-                <span className={styles.itemValue}>
-                  {getLevelEmoji(selectedUser.level)} {selectedUser.level}
-                </span>
-              </div>
-              <div className={styles.userDetailItem}>
-                <span className={styles.itemLabel}>积分：</span>
-                {isEditingPoints ? (
-                  <div className={styles.pointsEditContainer}>
-                    <Input
-                      type="number"
-                      value={pointsInputValue}
-                      onChange={(e) => setPointsInputValue(Number(e.target.value))}
-                      size="small"
-                      style={{ width: 100 }}
-                    />
-                    <Button type="primary" size="small" onClick={handleSavePoints}>
-                      保存
-                    </Button>
-                    <Button
-                      size="small"
-                      onClick={() => setIsEditingPoints(false)}
-                      style={{ marginLeft: 4 }}
-                    >
-                      取消
-                    </Button>
-                  </div>
-                ) : (
-                  <div className={styles.pointsContainer}>
-                    <span className={styles.itemValue}>{selectedUser.points || 0}</span>
-                  </div>
-                )}
-              </div>
-              {selectedUser.region && (
-                <div className={styles.userDetailItem}>
-                  <span className={styles.itemLabel}>地区：</span>
-                  <span className={styles.itemValue}>
-                    {selectedUser.country ? `${selectedUser.country} · ${selectedUser.region}` : selectedUser.region}
-                  </span>
+
+              {/* 右侧：朋友圈背景图（有背景才显示） */}
+              {selectedUser.momentsBgUrl && (
+                <div className={styles.userDetailRight}>
+                  <img
+                    {...externalImageProps}
+                    src={selectedUser.momentsBgUrl}
+                    className={styles.momentsBg}
+                    alt="moments-bg"
+                  />
                 </div>
               )}
-              <div className={styles.userDetailItem}>
-                <span className={styles.itemLabel}>管理员：</span>
-                <span className={styles.itemValue}>{selectedUser.isAdmin ? '是' : '否'}</span>
-              </div>
-              <div className={styles.userDetailItem}>
-                <span className={styles.itemLabel}>上次活跃：</span>
-                <span className={styles.itemValue}>刚刚</span>
-              </div>
-              <div className={styles.userDetailItem}>
-                <span className={styles.itemLabel}>状态：</span>
-                {userMuteInfo?.isMuted ? (
-                  <span className={styles.itemValue} style={{ color: '#ff4d4f' }}>
-                    已禁言（剩余 {userMuteInfo.remainingTime}）
-                  </span>
-                ) : (
-                  <span className={styles.itemValue}>{selectedUser.status || '在线'}</span>
-                )}
-              </div>
             </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* 关注/粉丝列表弹窗 */}
+      <Modal
+        title={followListType === 'following' ? '我的关注' : '我的粉丝'}
+        open={followListVisible}
+        onCancel={() => setFollowListVisible(false)}
+        footer={null}
+        width={360}
+      >
+        {followListLoading ? (
+          <div style={{ textAlign: 'center', padding: '32px 0' }}>
+            <Spin />
+          </div>
+        ) : followListData.length === 0 ? (
+          <Empty description={followListType === 'following' ? '还没有关注任何人' : '还没有粉丝'} />
+        ) : (
+          <div className={styles.followListContainer}>
+            {followListData.map((item) => {
+              const isFollowingItem = isFollowListItemFollowing(item);
+              const isHoveringItem = followListHoverId === item.userId;
+              return (
+                <div key={item.userId} className={styles.followListItem}>
+                  <div className={styles.followListAvatar}>
+                    <Avatar src={item.userAvatar} size={42} />
+                    {item.avatarFramerUrl && (
+                      <img {...externalImageProps} src={item.avatarFramerUrl} className={styles.followListAvatarFrame} alt="" />
+                    )}
+                  </div>
+                  <div className={styles.followListInfo}>
+                    <div className={styles.followListName}>
+                      {item.userName}
+                      {item.isMutual && (
+                        <span className={styles.mutualBadge}>互相关注</span>
+                      )}
+                    </div>
+                    {item.userProfile && (
+                      <div className={styles.followListProfile}>{item.userProfile}</div>
+                    )}
+                  </div>
+                  <Button
+                    size="small"
+                    loading={followListToggleLoadingId === item.userId}
+                    disabled={!!followListToggleLoadingId && followListToggleLoadingId !== item.userId}
+                    onClick={() => handleFollowListToggle(item)}
+                    onMouseEnter={() => isFollowingItem && setFollowListHoverId(item.userId ?? null)}
+                    onMouseLeave={() => setFollowListHoverId(null)}
+                    className={
+                      isFollowingItem ? styles.followListBtnActive : styles.followListBtnDefault
+                    }
+                  >
+                    {isFollowingItem
+                      ? isHoveringItem
+                        ? '取消关注'
+                        : '✓ 已关注'
+                      : '+ 关注'}
+                  </Button>
+                </div>
+              );
+            })}
           </div>
         )}
       </Modal>
@@ -3407,6 +4594,405 @@ const ChatRoom: React.FC = () => {
           </div>
         </div>
       </Modal>
+
+      {/* 添加备注设置弹窗 */}
+      <Modal
+        title="设置备注"
+        open={isRemarkModalVisible}
+        onCancel={() => setIsRemarkModalVisible(false)}
+        onOk={handleSaveRemark}
+        okText="保存"
+        cancelText="取消"
+        width={300}
+      >
+        <div style={{ marginBottom: '16px' }}>
+          <Input
+            placeholder="请输入备注名称"
+            value={remarkValue}
+            onChange={(e) => setRemarkValue(e.target.value)}
+            maxLength={20}
+            allowClear
+          />
+        </div>
+        {remarkValue && (
+          <div style={{ color: '#666', fontSize: '12px' }}>
+            备注后将在聊天中显示为：{remarkValue}
+          </div>
+        )}
+      </Modal>
+
+      {/* 投票弹窗 */}
+      <Modal
+        title={
+          <div>
+            {currentVote?.title || '投票'}
+            <span className={styles.voteModalType}>
+              ({currentVote?.singleChoice ? '单选' : '多选'})
+            </span>
+          </div>
+        }
+        open={isVoteModalVisible}
+        onCancel={() => {
+          setIsVoteModalVisible(false);
+          setSelectedVoteOptions([]);
+        }}
+        footer={
+          !currentVote?.hasVoted ? [
+            <Button key="cancel" onClick={() => {
+              setIsVoteModalVisible(false);
+              setSelectedVoteOptions([]);
+            }}>
+              取消
+            </Button>,
+            <Button
+              key="vote"
+              type="primary"
+              loading={voteLoading}
+              onClick={() => handleVote()}
+              disabled={selectedVoteOptions.length === 0}
+            >
+              提交投票 ({selectedVoteOptions.length})
+            </Button>,
+          ] : [
+            <Button key="close" onClick={() => setIsVoteModalVisible(false)}>
+              关闭
+            </Button>,
+          ]
+        }
+        width={500}
+      >
+        <div className={styles.voteModalContent}>
+          {currentVote?.hasVoted ? (
+            <div className={styles.voteStatus}>
+              ✅ 你已经投过票了
+            </div>
+          ) : null}
+          <div className={styles.voteOptions}>
+            {currentVote?.options?.map((option, index) => (
+              <div
+                key={index}
+                className={[
+                  styles.voteOption,
+                  currentVote?.userVotedOptions?.includes(index) ? styles.voteOptionVoted : '',
+                  selectedVoteOptions.includes(index) ? styles.voteOptionSelected : '',
+                  !currentVote?.hasVoted ? styles.voteOptionClickable : '',
+                ].filter(Boolean).join(' ')}
+                onClick={() => {
+                  if (!currentVote?.hasVoted) {
+                    toggleVoteOption(index);
+                  }
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    {!currentVote?.hasVoted && (
+                      <span onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={selectedVoteOptions.includes(index)}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            toggleVoteOption(index);
+                          }}
+                          style={{ marginRight: '8px' }}
+                        />
+                      </span>
+                    )}
+                    <span className={currentVote?.userVotedOptions?.includes(index) || selectedVoteOptions.includes(index) ? styles.voteOptionTextActive : styles.voteOptionText}>
+                      {option.text}
+                    </span>
+                    {currentVote?.userVotedOptions?.includes(index) && (
+                      <span className={styles.voteChoiceTag}>（你的选择）</span>
+                    )}
+                  </div>
+                </div>
+                <div className={styles.voteOptionResult} style={{ paddingLeft: !currentVote?.hasVoted ? '24px' : '0' }}>
+                  <div className={styles.voteProgressTrack}>
+                    <div
+                      className={currentVote?.userVotedOptions?.includes(index) ? styles.voteProgressBarVoted : styles.voteProgressBar}
+                      style={{
+                        width: `${option.percentage || 0}%`,
+                      }}
+                    />
+                  </div>
+                  <div className={styles.voteOptionMeta}>
+                    {option.count || 0} 票 ({option.percentage?.toFixed(1) || 0}%)
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          {!currentVote?.hasVoted && (
+            <div className={styles.voteSelectedTip}>
+              已选择 {selectedVoteOptions.length} 个选项
+              {currentVote?.singleChoice ? '（单选）' : '（可多选）'}
+            </div>
+          )}
+          <div className={styles.voteSummary}>
+            总票数：{currentVote?.totalCount || 0}
+            {currentVote?.remainingSeconds && currentVote?.remainingSeconds > 0 && (
+              <span style={{ marginLeft: '16px' }}>
+                剩余时间：{Math.ceil(currentVote.remainingSeconds / 60)} 分钟
+              </span>
+            )}
+          </div>
+        </div>
+      </Modal>
+
+      {/* 创建投票弹窗 */}
+      <Modal
+        title="创建投票（扣除100积分）"
+        open={isCreateVoteModalVisible}
+        onCancel={() => {
+          setIsCreateVoteModalVisible(false);
+          // 清空表单
+          setVoteTitle('');
+          setVoteOptions(['', '']);
+          setIsSingleChoice(true);
+        }}
+        footer={[
+          <Button key="cancel" onClick={() => {
+            setIsCreateVoteModalVisible(false);
+            setVoteTitle('');
+            setVoteOptions(['', '']);
+            setIsSingleChoice(true);
+          }}>
+            取消
+          </Button>,
+          <Button
+            key="submit"
+            type="primary"
+            loading={createVoteLoading}
+            onClick={handleCreateVote}
+          >
+            创建投票
+          </Button>,
+        ]}
+        width={500}
+      >
+        <div className={styles.voteCreateContent}>
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+              投票标题：
+            </label>
+            <Input
+              placeholder="请输入投票标题"
+              value={voteTitle}
+              onChange={(e) => setVoteTitle(e.target.value)}
+              maxLength={50}
+              showCount
+            />
+          </div>
+
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+              投票类型：
+            </label>
+            <Radio.Group
+              value={isSingleChoice}
+              onChange={(e) => setIsSingleChoice(e.target.value)}
+            >
+              <Radio value={true}>单选</Radio>
+              <Radio value={false}>多选</Radio>
+            </Radio.Group>
+          </div>
+
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+              投票选项：
+            </label>
+            {voteOptions.map((option, index) => (
+              <div key={index} style={{ display: 'flex', marginBottom: '8px', gap: '8px' }}>
+                <Input
+                  placeholder={`选项 ${index + 1}`}
+                  value={option}
+                  onChange={(e) => updateVoteOption(index, e.target.value)}
+                  maxLength={30}
+                />
+                <Button
+                  type="text"
+                  danger
+                  icon={<CloseOutlined />}
+                  onClick={() => removeVoteOption(index)}
+                  disabled={voteOptions.length <= 2}
+                />
+              </div>
+            ))}
+            <Button
+              type="dashed"
+              onClick={addVoteOption}
+              disabled={voteOptions.length >= 10}
+              style={{ width: '100%', marginTop: '8px' }}
+            >
+              <PlusOutlined /> 添加选项
+            </Button>
+          </div>
+
+          <div style={{ color: '#999', fontSize: '12px', textAlign: 'center' }}>
+            当前可用积分：{(currentUser?.points || 0) - (currentUser?.usedPoints || 0)}，创建投票将扣除 100 积分
+          </div>
+        </div>
+      </Modal>
+
+      {/* 投票列表弹窗 */}
+      <Modal
+        title="活跃投票列表"
+        open={isVoteListModalVisible}
+        onCancel={() => setIsVoteListModalVisible(false)}
+        footer={null}
+        width={500}
+      >
+        <div className={styles.voteListContent}>
+          {activeVoteDetails.length === 0 ? (
+            <Empty description="暂无活跃投票" />
+          ) : (
+            <div>
+              {activeVoteDetails.map((vote, index) => (
+                <div
+                  key={vote.voteId}
+                  className={styles.voteListItem}
+                  onClick={() => {
+                    setCurrentVote(vote);
+                    setIsVoteListModalVisible(false);
+                    setIsVoteModalVisible(true);
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <span style={{ fontWeight: 'bold', fontSize: '14px' }}>
+                        {index + 1}. {vote.title}
+                      </span>
+                      <span className={styles.voteListType}>
+                        ({vote.singleChoice ? '单选' : '多选'})
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <Button type="primary" size="small">
+                        参与投票
+                      </Button>
+                      {currentUser?.userRole === 'admin' && (
+                        <Popconfirm
+                          title="确定要删除这个投票吗？"
+                          onConfirm={(e) => {
+                            e?.stopPropagation();
+                            handleDeleteVote(vote.voteId!);
+                          }}
+                          onCancel={(e) => e?.stopPropagation()}
+                          okText="确定"
+                          cancelText="取消"
+                        >
+                          <Button
+                            type="text"
+                            danger
+                            size="small"
+                            icon={<DeleteOutlined />}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </Popconfirm>
+                      )}
+                    </div>
+                  </div>
+                  <div className={styles.voteListMeta}>
+                    总票数：{vote.totalCount || 0}
+                    {vote.remainingSeconds && vote.remainingSeconds > 0 && (
+                      <span style={{ marginLeft: '16px' }}>
+                        剩余：{Math.ceil(vote.remainingSeconds / 60)} 分钟
+                      </span>
+                    )}
+                    {vote.hasVoted && (
+                      <span className={styles.voteListVoted}>
+                        ✅ 已投票
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      {/* 福袋列表弹窗 */}
+      <Modal
+        title={`进行中的福袋 (${activeLuckyBags.length})`}
+        open={isLuckyBagListModalVisible}
+        onCancel={() => setIsLuckyBagListModalVisible(false)}
+        footer={null}
+        width={420}
+        destroyOnClose
+      >
+        <div className={styles.luckyBagListContent}>
+          {activeLuckyBags.length === 0 ? (
+            <Empty description="暂无进行中的福袋" />
+          ) : (
+            <div className={styles.luckyBagListItems}>
+              {activeLuckyBags.map((bag) => (
+                <div
+                  key={bag.id}
+                  className={styles.luckyBagListItem}
+                  onClick={() => {
+                    if (bag.id) {
+                      setSelectedLuckyBagId(bag.id);
+                      setIsLuckyBagListModalVisible(false);
+                    }
+                  }}
+                >
+                  <img src={LUCKY_BAG_IMAGE} alt="福袋" className={styles.luckyBagListImage} />
+                  <div className={styles.luckyBagListInfo}>
+                    <div className={styles.luckyBagListNameRow}>
+                      <span className={styles.luckyBagListName}>{bag.name || '福袋'}</span>
+                      <span className={bag.joined ? styles.luckyBagJoinedTag : styles.luckyBagNotJoinedTag}>
+                        {bag.joined ? '已参与' : '未参与'}
+                      </span>
+                    </div>
+                    <div className={styles.luckyBagListMeta}>
+                      {bag.creatorName && <span>发起人：{bag.creatorName}</span>}
+                      <span>{bag.totalAmount} 积分 · {bag.participantCount ?? 0} 人参与</span>
+                      {(bag.drawTime || bag.expireTime) && (
+                        <span>
+                          开奖时间：{new Date(bag.drawTime || bag.expireTime || '').toLocaleString()}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      {selectedLuckyBagId && (
+        <LuckyBagModal
+          luckyBagId={selectedLuckyBagId}
+          open={!!selectedLuckyBagId}
+          onClose={() => {
+            setSelectedLuckyBagId(null);
+            fetchActiveLuckyBags();
+          }}
+          onJoined={fetchActiveLuckyBags}
+        />
+      )}
+
+      <ReportModal
+        open={reportModalVisible}
+        reportType={REPORT_TYPE.CHAT}
+        targetId={reportTarget?.id ?? ''}
+        targetUserId={reportTarget?.sender?.id}
+        preview={
+          reportTarget
+            ? `${getUserDisplayName(reportTarget.sender)}：${reportTarget.content}`
+            : undefined
+        }
+        onCancel={() => {
+          setReportModalVisible(false);
+          setReportTarget(null);
+        }}
+        onSuccess={() => {
+          setReportTarget(null);
+        }}
+      />
+    </div>
+    {showFishCircle && fishCirclePosition === 'right' && <MomentsSidebar position="right" />}
     </div>
   );
 };

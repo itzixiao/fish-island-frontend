@@ -6,7 +6,7 @@
 
 
 <p align="center">
-  <a href="https://github.com/lhccong/fish-island-backend"><img src="https://api.oss.cqbo.com/moyu/moyu.png" width="300" height="250" alt="摸鱼岛 logo"></a>
+  <a href="https://github.com/lhccong/fish-island-backend"><img src="./public/img/moyu.png" width="300" height="250" alt="摸鱼岛 logo"></a>
 </p>
 
 
@@ -43,7 +43,6 @@ _✨ 开源🌟一站式摸鱼网 ✨_
 >
 > 在线体验地址🔗
 >
-> 最新版（域名 2025.09 过期）：https://fish.codebug.icu/
 > 稳定版：https://yucoder.cn/
 >
 > 后端地址🌈：https://github.com/lhccong/fish-island-backend
@@ -315,6 +314,14 @@ _✨ 开源🌟一站式摸鱼网 ✨_
 - 修改 src/constants/index.ts 的接口地址。
 - max build  --打包命令。
 - 部署 dist 文件。
+
+### 开发与变更记录
+
+- **log.md**：根目录变更历史，每次实质性代码修改需追加一条记录（时间、修改人、影响文件、变更概要）。
+- **核心前端模块**：
+  - `src/pages/FishCircle/`：鱼小圈（朋友圈动态、他人主页）
+  - `src/pages/Chat/`：摸鱼聊天室（含用户卡片、关注/粉丝列表）
+  - `src/components/UserDetailModal/`：用户详情弹窗（关注按钮、粉丝/关注数）
 
 ## 开源与贡献
 

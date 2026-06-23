@@ -1,0 +1,12 @@
+{
+  "critRate": 0.1,
+  "comboRate": 0.05,
+  "dodgeRate": 0.08,
+  "blockRate": 0.12,
+  "lifesteal": 0.03,
+  "critResistance": 0.06,
+  "comboResistance": 0.04,
+  "dodgeResistance": 0.05,
+  "blockResistance": 0.07,
+  "lifestealResistance": 0.03
+}

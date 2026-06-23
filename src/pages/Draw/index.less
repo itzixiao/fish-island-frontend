@@ -1,0 +1,429 @@
+.room-controls {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  
+  .search-input {
+    height: 40px;
+    border-radius: 6px;
+    
+    .search-icon {
+      color: #bfbfbf;
+    }
+    
+    &:hover, &:focus {
+      border-color: #1890ff;
+    }
+  }
+  
+  .create-button {
+    height: 40px;
+    border-radius: 6px;
+    background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+    border: none;
+    box-shadow: 0 2px 6px rgba(24, 144, 255, 0.2);
+    transition: all 0.3s;
+    
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(24, 144, 255, 0.3);
+    }
+    
+    &:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 6px rgba(24, 144, 255, 0.2);
+    }
+  }
+}
+
+// 响应式设计
+@media (max-width: 576px) {
+  .room-controls {
+    .ant-space {
+      flex-direction: column;
+      align-items: stretch !important;
+      
+      .ant-space-item {
+        margin-right: 0 !important;
+        margin-bottom: 12px;
+        
+        &:last-child {
+          margin-bottom: 0;
+        }
+      }
+    }
+    
+    .search-input {
+      width: 100% !important;
+    }
+    
+    .ant-space-item:last-child {
+      .ant-space {
+        justify-content: space-between;
+      }
+    }
+  }
+}
+
+.room-list-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  margin-bottom: 24px;
+  
+  .ant-card-head {
+    background-color: #fafafa;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  
+  .ant-card-head-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+  }
+  
+  .ant-card-body {
+    padding: 0;
+  }
+  
+  .ant-list {
+    background: #fff;
+    padding: 16px;
+  }
+}
+
+.room-list-item {
+  padding: 16px;
+  transition: all 0.3s;
+  border: 1px solid #f0f0f0;
+  margin-bottom: 12px;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+  
+  &:hover {
+    background-color: #fafafa;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.09);
+    transform: translateY(-2px);
+  }
+  
+  .room-avatar {
+    margin-right: 12px;
+    border: 2px solid #fff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  }
+  
+  .ant-list-item-meta {
+    align-items: center;
+  }
+  
+  .ant-list-item-meta-content {
+    max-width: calc(100% - 60px);
+  }
+  
+  .ant-list-item-action {
+    margin-left: 12px;
+  }
+}
+
+.room-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 2px;
+  flex-wrap: wrap;
+  
+  .room-name {
+    font-size: 14px;
+    color: #262626;
+    font-weight: 500;
+  }
+  
+  .room-lock-icon {
+    color: #f5222d;
+    font-size: 14px;
+  }
+  
+  .room-status {
+    font-size: 12px;
+    font-weight: 500;
+    
+    &.status-waiting {
+      color: #52c41a;
+    }
+    
+    &.status-playing {
+      color: #1890ff;
+    }
+  }
+  
+  .ant-tag {
+    margin-left: auto;
+    font-size: 12px;
+    padding: 0 6px;
+    line-height: 18px;
+    height: 18px;
+  }
+  
+  .user-joined-tag {
+    margin-left: 8px;
+    background-color: #f6ffed;
+    border-color: #b7eb8f;
+    color: #52c41a;
+    font-weight: 500;
+  }
+}
+
+.room-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  color: #595959;
+  font-size: 12px;
+  
+  .room-owner, .room-players, .room-timer {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  
+  .owner-icon, .players-icon {
+    font-size: 12px;
+    color: #8c8c8c;
+  }
+  
+  .room-full {
+    color: #ff4d4f;
+    font-weight: 500;
+  }
+  
+  .word-hint {
+    display: flex;
+    align-items: center;
+    background-color: #f6ffed;
+    padding: 1px 6px;
+    border-radius: 4px;
+    border: 1px solid #b7eb8f;
+    color: #52c41a;
+    font-size: 12px;
+  }
+  
+  .room-timer {
+    color: #1890ff;
+    background-color: #e6f7ff;
+    padding: 2px 8px;
+    border-radius: 4px;
+    border: 1px solid #91d5ff;
+    font-size: 12px;
+  }
+  
+  .room-create-time {
+    color: #8c8c8c;
+    font-size: 12px;
+    margin-top: 4px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+  }
+  
+  .room-participants {
+    margin-top: 4px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    
+    .ant-avatar {
+      width: 20px;
+      height: 20px;
+      line-height: 20px;
+      border: 1px solid #f0f0f0;
+      transition: all 0.3s ease;
+      
+      &:hover {
+        transform: scale(1.2);
+        z-index: 2;
+      }
+    }
+    
+    .ant-avatar-group {
+      .ant-avatar {
+        margin-left: -4px;
+        border: 1px solid #fff;
+        
+        &:hover {
+          border-color: #52c41a;
+        }
+      }
+    }
+    
+    .ant-tag {
+      height: 18px;
+      line-height: 16px;
+      padding: 0 6px;
+      font-size: 12px;
+    }
+  }
+}
+
+.join-button {
+  border-radius: 4px;
+  height: 32px;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.3s;
+  
+  &.join-button-waiting {
+    background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+    border: none;
+    box-shadow: 0 2px 6px rgba(24, 144, 255, 0.2);
+    
+    &:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(24, 144, 255, 0.3);
+    }
+    
+    &:active:not(:disabled) {
+      transform: translateY(0);
+      box-shadow: 0 2px 6px rgba(24, 144, 255, 0.2);
+    }
+  }
+  
+  &.join-button-playing {
+    &:hover:not(:disabled) {
+      color: #1890ff;
+      border-color: #1890ff;
+    }
+  }
+  
+  &.join-button-detail {
+    background: linear-gradient(135deg, #52c41a 0%, #389e0d 100%);
+    border: none;
+    box-shadow: 0 2px 6px rgba(82, 196, 26, 0.2);
+    
+    &:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(82, 196, 26, 0.3);
+    }
+    
+    &:active:not(:disabled) {
+      transform: translateY(0);
+      box-shadow: 0 2px 6px rgba(82, 196, 26, 0.2);
+    }
+  }
+  
+  &:disabled {
+    background-color: #f5f5f5;
+    color: rgba(0, 0, 0, 0.25);
+    border-color: #d9d9d9;
+    box-shadow: none;
+  }
+}
+
+// 修改Modal在Form中checkbox的显示
+.ant-form-item-control-input-content {
+  display: flex;
+  align-items: center;
+  
+  .ant-checkbox-wrapper {
+    margin-right: 8px;
+  }
+}
+
+// 等待状态和游戏中状态的颜色
+.ant-badge-status-success {
+  background-color: #52c41a;
+}
+
+.ant-badge-status-processing {
+  background-color: #1890ff;
+}
+
+// 创建房间模态框样式
+.create-room-modal {
+  .ant-modal-content {
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  }
+  
+  .ant-modal-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid #f0f0f0;
+    background-color: #f7f7f7;
+  }
+  
+  .ant-modal-body {
+    padding: 24px;
+  }
+  
+  .create-room-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+    text-align: center;
+  }
+}
+
+.create-room-form {
+  .form-label {
+    font-weight: 500;
+    color: #333;
+  }
+  
+  .styled-input {
+    height: 40px;
+    border-radius: 6px;
+    
+    &:hover, &:focus {
+      border-color: #1890ff;
+    }
+    
+    .input-prefix-icon {
+      color: #bfbfbf;
+      margin-right: 8px;
+    }
+  }
+  
+  .private-room-checkbox {
+    margin-bottom: 16px;
+    
+    .styled-checkbox {
+      font-size: 14px;
+      
+      .ant-checkbox-inner {
+        border-radius: 4px;
+      }
+    }
+  }
+  
+  .submit-button-container {
+    margin-top: 24px;
+    
+    .create-room-button {
+      height: 44px;
+      font-size: 16px;
+      font-weight: 500;
+      border-radius: 6px;
+      background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+      border: none;
+      box-shadow: 0 2px 6px rgba(24, 144, 255, 0.3);
+      transition: all 0.3s;
+      
+      &:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(24, 144, 255, 0.4);
+      }
+      
+      &:active {
+        transform: translateY(0);
+        box-shadow: 0 2px 6px rgba(24, 144, 255, 0.3);
+      }
+    }
+  }
+}
+

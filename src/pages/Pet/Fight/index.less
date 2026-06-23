@@ -1,0 +1,1947 @@
+// 宠物对战界面样式 - 明亮暖色调主题
+.fightContainer {
+  padding: 20px;
+  min-height: calc(100vh - 64px);
+  background: linear-gradient(180deg, #fff9f5 0%, #fff0e6 30%, #ffe8d6 70%, #ffd4a8 100%);
+  position: relative;
+  overflow: hidden;
+  border-radius: 20px;
+  margin: 10px;
+
+  // 装饰性光晕
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+      radial-gradient(ellipse at 20% 80%, rgba(255, 167, 104, 0.15) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 20%, rgba(255, 200, 150, 0.12) 0%, transparent 40%),
+      radial-gradient(ellipse at 50% 50%, rgba(255, 220, 180, 0.08) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  // 顶部装饰线
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, 
+      transparent 0%,
+      rgba(255, 167, 104, 0.6) 20%,
+      rgba(255, 167, 104, 0.8) 50%,
+      rgba(255, 167, 104, 0.6) 80%,
+      transparent 100%
+    );
+  }
+
+  @media (max-width: 768px) {
+    padding: 12px;
+    border-radius: 16px;
+    margin: 8px;
+  }
+}
+
+// 返回按钮容器
+.backButtonContainer {
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: flex-start;
+
+  @media (max-width: 768px) {
+    margin-bottom: 16px;
+  }
+}
+
+.backButton {
+  background: rgba(255, 167, 104, 0.15);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 167, 104, 0.3);
+  color: #d46b08;
+  font-weight: 500;
+  box-shadow: 0 4px 16px rgba(255, 167, 104, 0.15);
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: rgba(255, 167, 104, 0.25);
+    border-color: rgba(255, 167, 104, 0.5);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 167, 104, 0.25);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+
+  :global(.anticon) {
+    font-size: 16px;
+  }
+}
+
+// 血条区域 - 宝可梦风格：顶部固定，醒目
+.healthBarsContainer {
+  display: flex;
+  align-items: flex-start;
+  gap: 40px;
+  margin-bottom: 20px;
+  padding: 20px;
+  position: relative;
+  z-index: 10;
+
+  @media (max-width: 768px) {
+    flex-direction: row;
+    gap: 12px;
+    padding: 12px;
+  }
+}
+
+// 宝可梦风格血条 - 左侧BOSS（远），右侧宠物（近）
+.petHealthBar, .bossHealthBar {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 250, 245, 0.95) 100%);
+  padding: 16px 20px;
+  border-radius: 16px;
+  border: 2px solid rgba(255, 167, 104, 0.2);
+  box-shadow: 
+    0 4px 20px rgba(0, 0, 0, 0.08),
+    0 2px 8px rgba(255, 167, 104, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.petHealthBar {
+  border-color: rgba(82, 196, 26, 0.4);
+  background: linear-gradient(135deg, rgba(240, 255, 240, 0.95) 0%, rgba(255, 255, 255, 0.9) 100%);
+}
+
+.bossHealthBar {
+  border-color: rgba(245, 34, 45, 0.3);
+  background: linear-gradient(135deg, rgba(255, 245, 245, 0.95) 0%, rgba(255, 255, 255, 0.9) 100%);
+}
+
+.healthBarHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.petHealthBar .healthBarHeader {
+  justify-content: flex-start;
+}
+
+.bossHealthBar .healthBarHeader {
+  justify-content: flex-end;
+}
+
+.healthBarInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.healthBarName {
+  font-size: 16px;
+  font-weight: bold;
+  color: #262626;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-shadow: none;
+}
+
+.healthBarStats {
+  font-size: 12px;
+  color: #595959;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-shadow: none;
+}
+
+.bossExtraStats {
+  font-size: 11px;
+  color: #d46b08;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+  text-shadow: none;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+
+  span {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    white-space: nowrap;
+    background: rgba(255, 167, 104, 0.1);
+    padding: 2px 6px;
+    border-radius: 8px;
+  }
+
+  @media (max-width: 768px) {
+    font-size: 10px;
+    gap: 6px;
+    justify-content: center;
+  }
+}
+
+.petAvatarSmall {
+  background: #fff !important;
+  border: 2px solid #fff !important;
+  border-radius: 16px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+
+  :global(.ant-avatar-string) {
+    font-size: 20px !important;
+  }
+}
+
+.bossAvatarSmall {
+  background: linear-gradient(135deg, #f5222d 0%, #ff4d4f 100%) !important;
+  border: 2px solid #fff !important;
+  border-radius: 16px !important;
+  box-shadow: 0 2px 8px rgba(245, 34, 45, 0.3) !important;
+
+  :global(.ant-avatar-string) {
+    font-size: 20px !important;
+  }
+}
+
+.vsIndicatorSmall {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  min-width: 70px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, rgba(255, 212, 59, 0.15) 0%, rgba(250, 176, 5, 0.1) 100%);
+  border-radius: 16px;
+  border: 2px solid rgba(255, 212, 59, 0.3);
+  box-shadow: 
+    0 0 20px rgba(255, 212, 59, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+
+  @media (max-width: 768px) {
+    order: 2;
+    min-width: 50px;
+    padding: 8px 12px;
+  }
+}
+
+.vsTextSmall {
+  font-size: 24px;
+  font-weight: 900;
+  color: #ffa768;
+  text-shadow: 
+    0 0 15px rgba(255, 167, 104, 0.4),
+    0 2px 4px rgba(0, 0, 0, 0.15);
+  letter-spacing: 2px;
+}
+
+.hpText {
+  font-size: 12px;
+  color: #595959;
+  text-align: center;
+  margin-top: 4px;
+  text-shadow: none;
+}
+
+// 战斗场景 - 宝可梦风格：透视战场
+.battleArena {
+  position: relative;
+  padding: 40px 60px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  min-height: 360px;
+  perspective: 1000px;
+  z-index: 5;
+
+  @media (max-width: 768px) {
+    padding: 20px 24px;
+    min-height: 260px;
+  }
+}
+
+.arenaBackground {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  z-index: 0;
+  // 移除所有卡片样式效果
+}
+
+.arenaDecoration {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 400px;
+  height: 200px;
+  background: radial-gradient(ellipse at center, rgba(255, 167, 104, 0.1) 0%, transparent 70%);
+  border-radius: 50%;
+  animation: arena-pulse 4s ease-in-out infinite;
+}
+
+// 地面效果
+.arenaGround {
+  position: absolute;
+  bottom: 20%;
+  left: 10%;
+  right: 10%;
+  height: 80px;
+  background: linear-gradient(180deg, 
+    transparent 0%,
+    rgba(255, 167, 104, 0.05) 30%,
+    rgba(255, 167, 104, 0.1) 100%
+  );
+  border-radius: 50%;
+  filter: blur(20px);
+  z-index: 0;
+}
+
+@keyframes arena-pulse {
+  0%, 100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.3;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.05);
+    opacity: 0.15;
+  }
+}
+
+// 连接光线效果
+.battleArena::after {
+  content: '';
+  position: absolute;
+  top: 40%;
+  left: 20%;
+  right: 20%;
+  height: 2px;
+  background: linear-gradient(90deg, 
+    transparent 0%,
+    rgba(255, 212, 59, 0.3) 20%,
+    rgba(255, 212, 59, 0.5) 50%,
+    rgba(255, 212, 59, 0.3) 80%,
+    transparent 100%
+  );
+  z-index: 0;
+  animation: connection-glow 3s ease-in-out infinite;
+}
+
+@keyframes connection-glow {
+  0%, 100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+// 战斗者区域 - 宝可梦风格：近大远小，优化对齐
+.petArea {
+  position: relative;
+  z-index: 1;
+  // 宠物在近处（左下）- 更大
+  transform: translateY(10px);
+}
+
+.bossArea {
+  position: relative;
+  z-index: 1;
+  // BOSS在远处（右上）- 更小，轻微向上偏移营造距离感
+  transform: scale(0.85) translateY(-30px);
+  opacity: 0.95;
+  
+  @media (max-width: 768px) {
+    transform: scale(0.9) translateY(-20px);
+  }
+}
+
+@keyframes subtle-glow {
+  0%, 100% {
+    opacity: 0.5;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: translate(-50%, -50%) scale(1.05);
+  }
+}
+
+.combatant {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 30px;
+  transition: all 0.3s ease;
+  position: relative;
+  // 移除卡片背景效果
+
+  &.activeTurn {
+    animation: active-glow 2s ease-in-out infinite;
+  }
+
+  @media (max-width: 768px) {
+    padding: 16px;
+    gap: 12px;
+  }
+}
+
+.combatantLabel {
+  font-size: 16px;
+  font-weight: 600;
+  color: #262626;
+  text-align: center;
+  margin-top: 16px;
+  text-shadow: none;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 6px 16px;
+  border-radius: 20px;
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 167, 104, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  letter-spacing: 0.5px;
+}
+
+// 震动动画
+@keyframes shake-effect {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: translateX(-8px);
+  }
+  20%, 40%, 60%, 80% {
+    transform: translateX(8px);
+  }
+}
+
+@keyframes active-glow {
+  0%, 100% {
+    filter: drop-shadow(0 0 20px rgba(24, 144, 255, 0.6));
+  }
+  50% {
+    filter: drop-shadow(0 0 30px rgba(24, 144, 255, 0.8));
+  }
+}
+
+.combatantAvatar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+// 宠物头像 - 近处：更大更醒目，优化发光
+.petAvatar {
+  background: #fff !important;
+  border: 4px solid #52c41a !important;
+  border-radius: 50% !important;
+  box-shadow: 
+    0 0 0 4px rgba(82, 196, 26, 0.3),
+    0 8px 24px rgba(0, 0, 0, 0.3),
+    0 4px 8px rgba(82, 196, 26, 0.2),
+    inset 0 2px 4px rgba(255, 255, 255, 0.5) !important;
+  font-size: 70px !important;
+  animation: pet-float 3s ease-in-out infinite;
+  transition: all 0.3s ease;
+  width: 140px !important;
+  height: 140px !important;
+
+  :global(.ant-avatar-string) {
+    font-size: 70px !important;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+
+  // 攻击动画
+  &.attacking {
+    animation: pet-attack 0.5s ease-in-out;
+  }
+
+  // 受伤动画
+  &.hurt {
+    animation: avatar-hurt 0.3s ease-in-out;
+  }
+
+  // 悬停效果
+  &:hover {
+    box-shadow: 
+      0 0 0 6px rgba(82, 196, 26, 0.4),
+      0 12px 32px rgba(0, 0, 0, 0.4),
+      0 6px 12px rgba(82, 196, 26, 0.3),
+      inset 0 2px 4px rgba(255, 255, 255, 0.5) !important;
+  }
+
+  // webp 精灵图容器：透明背景，不裁圆形，自然尺寸
+  &.spriteWrapper {
+    background: transparent !important;
+    border-radius: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    width: auto !important;
+    height: auto !important;
+    inset: unset !important;
+    // 保留浮动动画
+    animation: pet-float 3s ease-in-out infinite;
+    &.attacking { animation: pet-attack 0.5s ease-in-out; }
+    &.hurt { animation: avatar-hurt 0.3s ease-in-out; }
+  }
+}
+
+// BOSS头像 - 远处：优化大小和发光
+.bossAvatar {
+  background: linear-gradient(135deg, #f5222d 0%, #ff4d4f 100%) !important;
+  border: 3px solid #ff7875 !important;
+  border-radius: 50% !important;
+  box-shadow: 
+    0 0 0 3px rgba(245, 34, 45, 0.3),
+    0 0 20px rgba(245, 34, 45, 0.2),
+    0 6px 20px rgba(0, 0, 0, 0.3),
+    0 3px 6px rgba(245, 34, 45, 0.2),
+    inset 0 1px 3px rgba(255, 255, 255, 0.3) !important;
+  font-size: 55px !important;
+  animation: boss-float 3s ease-in-out infinite reverse;
+  transition: all 0.3s ease;
+  width: 120px !important;
+  height: 120px !important;
+
+  :global(.ant-avatar-string) {
+    font-size: 55px !important;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+
+  // 攻击动画
+  &.attacking {
+    animation: boss-attack 0.5s ease-in-out;
+  }
+
+  // 受伤动画
+  &.hurt {
+    animation: avatar-hurt 0.3s ease-in-out;
+  }
+
+  // 悬停效果
+  &:hover {
+    box-shadow: 
+      0 0 0 4px rgba(245, 34, 45, 0.4),
+      0 0 30px rgba(245, 34, 45, 0.3),
+      0 8px 24px rgba(0, 0, 0, 0.4),
+      0 4px 8px rgba(245, 34, 45, 0.3),
+      inset 0 1px 3px rgba(255, 255, 255, 0.3) !important;
+  }
+
+  // webp 精灵图容器：透明背景，不裁圆形，自然尺寸
+  &.spriteWrapper {
+    background: transparent !important;
+    border-radius: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    width: auto !important;
+    height: auto !important;
+    animation: boss-float 3s ease-in-out infinite reverse;
+    &.attacking { animation: boss-attack 0.5s ease-in-out; }
+    &.hurt { animation: avatar-hurt 0.3s ease-in-out; }
+  }
+}
+
+@keyframes pet-float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes boss-float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+// 宠物攻击动画
+@keyframes pet-attack {
+  0% {
+    transform: translateX(0) scale(1);
+  }
+  20% {
+    transform: translateX(30px) scale(1.1);
+    box-shadow: 0 12px 24px rgba(82, 196, 26, 0.6) !important;
+  }
+  40% {
+    transform: translateX(25px) scale(1.15);
+    box-shadow: 0 16px 32px rgba(82, 196, 26, 0.8) !important;
+  }
+  60% {
+    transform: translateX(20px) scale(1.1);
+  }
+  100% {
+    transform: translateX(0) scale(1);
+  }
+}
+
+// BOSS攻击动画
+@keyframes boss-attack {
+  0% {
+    transform: translateX(0) scale(1);
+  }
+  20% {
+    transform: translateX(-30px) scale(1.1);
+    box-shadow: 0 12px 24px rgba(245, 34, 45, 0.6) !important;
+  }
+  40% {
+    transform: translateX(-25px) scale(1.15);
+    box-shadow: 0 16px 32px rgba(245, 34, 45, 0.8) !important;
+  }
+  60% {
+    transform: translateX(-20px) scale(1.1);
+  }
+  100% {
+    transform: translateX(0) scale(1);
+  }
+}
+
+// 受伤震动动画
+@keyframes avatar-hurt {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: translateX(-4px);
+  }
+  20%, 40%, 60%, 80% {
+    transform: translateX(4px);
+  }
+}
+
+// 回合指示器 - 优化位置和样式
+.turnIndicator {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: linear-gradient(135deg, #ffd43b 0%, #fab005 100%);
+  color: #333;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  animation: turn-pulse 1.5s ease-in-out infinite;
+  box-shadow: 
+    0 0 0 3px rgba(255, 212, 59, 0.4),
+    0 4px 12px rgba(250, 176, 5, 0.4),
+    0 2px 4px rgba(0, 0, 0, 0.15);
+  border: 2px solid #fff;
+  z-index: 10;
+}
+
+@keyframes turn-pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+}
+
+.combatantInfo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 200px;
+}
+
+.combatantName {
+  font-size: 16px;
+  font-weight: bold;
+  color: #262626;
+  text-align: center;
+
+  :global(.ant-badge) {
+    :global(.ant-badge-count) {
+      font-size: 10px;
+      min-width: 16px;
+      height: 16px;
+      line-height: 16px;
+      padding: 0 4px;
+    }
+  }
+}
+
+.hpBar, .expBar {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hpText, .expText {
+  font-size: 12px;
+  color: #666;
+  text-align: center;
+}
+
+.stats {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.stat {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #666;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(8px);
+  padding: 6px 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+// 宠物装备显示
+.petEquipment {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  padding-left: 4px;
+}
+
+.equipmentItem {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: linear-gradient(135deg, #fff9f5 0%, #ffe8d6 100%);
+  border: 3px solid rgba(158, 158, 158, 0.5);
+  border-radius: 12px;
+  box-shadow: 
+    0 4px 10px rgba(0, 0, 0, 0.15),
+    inset 0 1px 2px rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+
+  &:hover {
+    transform: scale(1.1);
+    box-shadow: 
+      0 6px 16px rgba(0, 0, 0, 0.2),
+      inset 0 1px 2px rgba(255, 255, 255, 0.8);
+  }
+
+  // 品级颜色 - 从绿色开始递增（简化发光效果）
+  &.rarity1 { border-color: #52c41a; } // 优秀(绿)
+  &.rarity2 { border-color: #1890ff; box-shadow: 0 0 6px rgba(24, 144, 255, 0.4); } // 精良(蓝)
+  &.rarity3 { border-color: #722ed1; box-shadow: 0 0 6px rgba(114, 46, 209, 0.4); } // 史诗(紫)
+  &.rarity4 { border-color: #fa8c16; box-shadow: 0 0 8px rgba(250, 140, 22, 0.5); } // 传说(橙)
+  &.rarity5 { border-color: #f5222d; box-shadow: 0 0 10px rgba(245, 34, 45, 0.5); } // 神话(红)
+  &.rarity6 { border-color: #eb2f96; box-shadow: 0 0 10px rgba(235, 47, 150, 0.5); } // 远古(粉)
+  &.rarity7 { border-color: #ffd43b; box-shadow: 0 0 12px rgba(255, 212, 59, 0.6); } // 神器(金)
+  &.rarity8 { border-color: #13c2c2; box-shadow: 0 0 12px rgba(19, 194, 194, 0.6); } // 超神(青)
+
+  // 装备攻击飞出动画（性能优化）
+  &.attacking {
+    will-change: transform, opacity;
+    animation: equip-attack-fly 0.4s ease-out forwards;
+    z-index: 100;
+    pointer-events: none;
+  }
+}
+
+.equipmentImg {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+}
+
+.equipmentFallback {
+  font-size: 24px;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+}
+
+// 装备飞出攻击动画 - 性能优化版
+@keyframes equip-attack-fly {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  30% {
+    transform: translate3d(-10px, -10px, 0) scale(1.2) rotate(-10deg);
+  }
+  100% {
+    transform: translate3d(300px, 20px, 0) scale(0.5) rotate(45deg);
+    opacity: 0;
+  }
+}
+
+// BOSS装备占位符
+.bossEquipment {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  padding-right: 4px;
+}
+
+.equipmentPlaceholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
+  border: 2px dashed rgba(150, 150, 150, 0.4);
+  border-radius: 12px;
+  opacity: 0.6;
+}
+
+.equipmentPlaceholderIcon {
+  font-size: 20px;
+  color: #bfbfbf;
+}
+
+.rewardPreview {
+  text-align: center;
+  padding: 12px;
+  background: rgba(250, 173, 20, 0.15);
+  backdrop-filter: blur(8px);
+  border-radius: 16px;
+  border: 1px solid rgba(250, 173, 20, 0.3);
+  box-shadow: 0 4px 12px rgba(250, 173, 20, 0.2);
+}
+
+.rewardTitle {
+  font-size: 12px;
+  font-weight: bold;
+  color: #fa8c16;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.rewardItems {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  font-size: 10px;
+  color: #fa8c16;
+
+  span {
+    background: rgba(250, 173, 20, 0.2);
+    padding: 4px 8px;
+    border-radius: 12px;
+    border: 1px solid rgba(250, 173, 20, 0.3);
+  }
+}
+
+// VS 指示器
+.vsIndicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 2;
+
+  @media (max-width: 768px) {
+    order: 2;
+  }
+}
+
+.vsText {
+  font-size: 32px;
+  font-weight: bold;
+  color: #1890ff;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+  animation: vs-pulse 2s ease-in-out infinite;
+}
+
+.vsLightning {
+  font-size: 24px;
+  color: #faad14;
+  margin-top: 8px;
+  animation: lightning-flash 1.5s ease-in-out infinite;
+}
+
+@keyframes vs-pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+@keyframes lightning-flash {
+  0%, 50%, 100% {
+    opacity: 1;
+  }
+  25%, 75% {
+    opacity: 0.5;
+  }
+}
+
+// 碰撞特效
+.collisionEffect {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 10;
+}
+
+.collisionRing {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 40px;
+  height: 40px;
+  border: 3px solid #ff6b6b;
+  border-radius: 50%;
+  animation: collision-ring 0.3s ease-out;
+}
+
+.collisionSpark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 16px;
+  height: 16px;
+  background: radial-gradient(circle, #ffeb3b 0%, #ff9800 50%, transparent 100%);
+  border-radius: 50%;
+  animation: collision-spark 0.3s ease-out;
+  
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 30px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #ffeb3b, transparent);
+    animation: spark-flash 0.3s ease-out;
+  }
+  
+  &::before {
+    transform: translate(-50%, -50%) rotate(45deg);
+  }
+  
+  &::after {
+    transform: translate(-50%, -50%) rotate(-45deg);
+  }
+}
+
+@keyframes collision-ring {
+  0% {
+    width: 15px;
+    height: 15px;
+    opacity: 1;
+    border-width: 4px;
+  }
+  100% {
+    width: 80px;
+    height: 80px;
+    opacity: 0;
+    border-width: 1px;
+  }
+}
+
+@keyframes collision-spark {
+  0% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 1;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.5);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(0.5);
+    opacity: 0;
+  }
+}
+
+@keyframes spark-flash {
+  0%, 100% {
+    opacity: 0;
+    width: 10px;
+  }
+  50% {
+    opacity: 1;
+    width: 40px;
+  }
+}
+
+// 控制面板
+.controlPanel {
+  margin-bottom: 20px;
+}
+
+.controlCard {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+
+  :global(.ant-card-body) {
+    padding: 20px;
+    background: transparent;
+  }
+}
+
+.battleControls {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.fightingControls {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  align-items: center;
+}
+
+.skipButton {
+  margin-left: 12px;
+  height: 32px;
+  padding: 0 16px;
+  border-radius: 16px;
+  font-size: 13px;
+  font-weight: 600;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 250, 245, 0.95) 100%);
+  border: 2px solid rgba(255, 167, 104, 0.6);
+  color: #ff7a45;
+  box-shadow:
+    0 2px 8px rgba(255, 122, 69, 0.15),
+    0 1px 2px rgba(0, 0, 0, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  &::before {
+    content: '⏩';
+    font-size: 12px;
+    filter: grayscale(0.3);
+  }
+
+  &:hover:not(:disabled) {
+    background: linear-gradient(135deg, rgba(255, 167, 104, 0.15) 0%, rgba(255, 200, 150, 0.2) 100%);
+    border-color: rgba(255, 122, 69, 0.8);
+    color: #ff5722;
+    transform: translateY(-1px);
+    box-shadow:
+      0 4px 12px rgba(255, 122, 69, 0.25),
+      0 2px 4px rgba(0, 0, 0, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow:
+      0 1px 4px rgba(255, 122, 69, 0.2),
+      inset 0 1px 2px rgba(0, 0, 0, 0.05);
+  }
+
+  &:disabled {
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.03) 0%, rgba(0, 0, 0, 0.05) 100%);
+    color: rgba(0, 0, 0, 0.35);
+    border-color: rgba(0, 0, 0, 0.1);
+    box-shadow: none;
+    cursor: not-allowed;
+
+    &::before {
+      content: '⏳';
+      font-size: 12px;
+    }
+  }
+}
+
+.startButton, .restartButton {
+  background: linear-gradient(135deg, #52c41a 0%, #73d13d 100%);
+  border: none;
+  border-radius: 20px;
+  height: 48px;
+  padding: 0 32px;
+  font-size: 16px;
+  font-weight: bold;
+  box-shadow: 
+    0 4px 12px rgba(82, 196, 26, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(82, 196, 26, 0.4);
+  }
+}
+
+.toggleButton {
+  height: 48px;
+  padding: 0 24px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: bold;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+  &:hover {
+    transform: translateY(-2px);
+  }
+}
+
+.resetButton {
+  height: 48px;
+  padding: 0 24px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: bold;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+  &:hover {
+    transform: translateY(-2px);
+  }
+}
+
+.battleStatus {
+  display: flex;
+  justify-content: center;
+}
+
+.statusIndicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-radius: 24px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 167, 104, 0.3);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+
+  &.idle {
+    background: rgba(255, 255, 255, 0.9);
+    color: #595959;
+    text-shadow: none;
+  }
+
+  &.fighting {
+    background: rgba(64, 169, 255, 0.15);
+    color: #1890ff;
+    text-shadow: none;
+    animation: fighting-pulse 2s ease-in-out infinite;
+    border-color: rgba(24, 144, 255, 0.3);
+  }
+
+  &.paused {
+    background: rgba(250, 173, 20, 0.15);
+    color: #faad14;
+    text-shadow: none;
+    border-color: rgba(250, 173, 20, 0.3);
+  }
+
+  &.victory {
+    background: rgba(82, 196, 26, 0.15);
+    color: #52c41a;
+    text-shadow: none;
+    animation: victory-celebration 1s ease-in-out;
+    border-color: rgba(82, 196, 26, 0.3);
+  }
+
+  &.defeat {
+    background: rgba(255, 120, 117, 0.15);
+    color: #ff7875;
+    text-shadow: none;
+    border-color: rgba(255, 120, 117, 0.3);
+  }
+}
+
+@keyframes fighting-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes victory-celebration {
+  0%, 100% {
+    transform: scale(1);
+  }
+  25%, 75% {
+    transform: scale(1.05);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+// 战斗日志面板
+.battleLogPanel {
+  position: relative;
+}
+
+.logCard {
+  border-radius: 24px;
+  box-shadow: 
+    0 12px 32px rgba(0, 0, 0, 0.15),
+    0 4px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(15px);
+
+  :global(.ant-card-head) {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 24px 24px 0 0;
+
+    :global(.ant-card-head-title) {
+      font-weight: bold;
+      color: #262626;
+    }
+  }
+
+  :global(.ant-card-body) {
+    padding: 16px;
+  }
+}
+
+.logContainer {
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 12px;
+  border-radius: 16px;
+
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.04);
+    border-radius: 8px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.3);
+    }
+  }
+}
+
+.emptyLog {
+  text-align: center;
+  color: #8c8c8c;
+  padding: 40px 20px;
+  font-size: 14px;
+}
+
+.logItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  margin-bottom: 6px;
+  border-radius: 16px;
+  font-size: 13px;
+  animation: log-appear 0.3s ease-out;
+  border-left: 4px solid transparent;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+
+  &.attack {
+    background: rgba(24, 144, 255, 0.05);
+    border-left-color: #1890ff;
+  }
+
+  &.critical {
+    background: rgba(245, 34, 45, 0.05);
+    border-left-color: #f5222d;
+    
+    .logMessage {
+      color: #f5222d;
+      font-weight: bold;
+    }
+  }
+
+  &.miss {
+    background: rgba(140, 140, 140, 0.05);
+    border-left-color: #8c8c8c;
+    
+    .logMessage {
+      color: #8c8c8c;
+      font-style: italic;
+    }
+  }
+
+  &.heal {
+    background: rgba(82, 196, 26, 0.05);
+    border-left-color: #52c41a;
+  }
+}
+
+@keyframes log-appear {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.logMessage {
+  flex: 1;
+  color: #262626;
+  line-height: 1.4;
+}
+
+.logDamage {
+  font-weight: bold;
+  color: #f5222d;
+  font-size: 12px;
+  background: rgba(245, 34, 45, 0.15);
+  padding: 4px 8px;
+  border-radius: 12px;
+  border: 1px solid rgba(245, 34, 45, 0.2);
+  box-shadow: 0 2px 4px rgba(245, 34, 45, 0.1);
+}
+
+// 战斗效果样式 - 伤害数字、闪避、格挡等
+.battleEffect {
+  position: absolute;
+  z-index: 100;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  animation: effect-float 1.5s ease-out forwards;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+
+  // 左侧位置（宠物方）
+  &.left {
+    left: 25%;
+    top: 35%;
+  }
+
+  // 右侧位置（对手方）
+  &.right {
+    right: 25%;
+    top: 30%;
+  }
+}
+
+// 普通伤害
+.damage {
+  .effectValue {
+    font-size: 48px;
+    font-weight: 900;
+    color: #fff;
+    background: linear-gradient(135deg, #ff4d4f 0%, #f5222d 100%);
+    padding: 8px 16px;
+    border-radius: 12px;
+    box-shadow:
+      0 4px 12px rgba(245, 34, 45, 0.4),
+      0 0 20px rgba(245, 34, 45, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    animation: damage-pop 0.5s ease-out, effect-shake 0.3s ease-in-out 0.2s;
+  }
+}
+
+// 暴击伤害
+.critical {
+  .effectValue {
+    font-size: 56px;
+    font-weight: 900;
+    color: #fff;
+    background: linear-gradient(135deg, #ff6b6b 0%, #ff0000 50%, #ff6b6b 100%);
+    padding: 10px 20px;
+    border-radius: 16px;
+    box-shadow:
+      0 6px 20px rgba(255, 0, 0, 0.5),
+      0 0 30px rgba(255, 0, 0, 0.4),
+      0 0 60px rgba(255, 0, 0, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.4);
+    border: 3px solid rgba(255, 255, 255, 0.4);
+    animation: critical-pop 0.6s ease-out, critical-glow 0.6s ease-in-out;
+  }
+
+  .effectText {
+    font-size: 20px;
+    font-weight: 800;
+    color: #ff0000;
+    background: linear-gradient(135deg, #fff 0%, #ffe8e8 100%);
+    padding: 4px 12px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(255, 0, 0, 0.3);
+    animation: text-pop 0.4s ease-out 0.1s both;
+  }
+}
+
+// 连击伤害
+.combo {
+  .effectValue {
+    font-size: 52px;
+    font-weight: 900;
+    color: #fff;
+    background: linear-gradient(135deg, #ffa940 0%, #ff7a45 100%);
+    padding: 8px 18px;
+    border-radius: 14px;
+    box-shadow:
+      0 4px 16px rgba(255, 122, 69, 0.5),
+      0 0 25px rgba(255, 122, 69, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    animation: combo-pop 0.5s ease-out;
+  }
+
+  .effectText {
+    font-size: 18px;
+    font-weight: 700;
+    color: #ff7a45;
+    background: linear-gradient(135deg, #fff 0%, #fff2e8 100%);
+    padding: 4px 10px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(255, 122, 69, 0.3);
+  }
+}
+
+// 闪避
+.miss {
+  .effectText {
+    font-size: 32px;
+    font-weight: 800;
+    color: #1890ff;
+    background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
+    padding: 12px 24px;
+    border-radius: 16px;
+    box-shadow:
+      0 4px 12px rgba(24, 144, 255, 0.3),
+      0 0 20px rgba(24, 144, 255, 0.2);
+    border: 2px solid rgba(24, 144, 255, 0.3);
+    animation: miss-slide 0.8s ease-out;
+  }
+}
+
+// 格挡
+.block {
+  .effectText {
+    font-size: 28px;
+    font-weight: 800;
+    color: #52c41a;
+    background: linear-gradient(135deg, #f6ffed 0%, #d9f7be 100%);
+    padding: 12px 24px;
+    border-radius: 16px;
+    box-shadow:
+      0 4px 12px rgba(82, 196, 26, 0.3),
+      0 0 20px rgba(82, 196, 26, 0.2);
+    border: 2px solid rgba(82, 196, 26, 0.3);
+    animation: block-bounce 0.6s ease-out;
+  }
+}
+
+// 吸血治疗
+.heal {
+  .effectValue {
+    font-size: 32px;
+    font-weight: 800;
+    color: #52c41a;
+  }
+
+  .effectText {
+    font-size: 18px;
+    font-weight: 700;
+    color: #389e0d;
+    background: linear-gradient(135deg, #f6ffed 0%, #d9f7be 100%);
+    padding: 8px 16px;
+    border-radius: 12px;
+    box-shadow:
+      0 4px 12px rgba(82, 196, 26, 0.3),
+      0 0 15px rgba(82, 196, 26, 0.2);
+    border: 2px solid rgba(82, 196, 26, 0.3);
+
+    &::before {
+      content: '+';
+      color: #52c41a;
+      margin-right: 4px;
+    }
+  }
+}
+
+// 伤害数字浮动动画
+@keyframes effect-float {
+  0% {
+    transform: translateY(0) scale(0.5);
+    opacity: 0;
+  }
+  10% {
+    transform: translateY(-10px) scale(1);
+    opacity: 1;
+  }
+  80% {
+    transform: translateY(-50px) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-70px) scale(0.8);
+    opacity: 0;
+  }
+}
+
+// 伤害弹出动画
+@keyframes damage-pop {
+  0% {
+    transform: scale(0.3);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+// 暴击弹出动画
+@keyframes critical-pop {
+  0% {
+    transform: scale(0.3) rotate(-5deg);
+  }
+  50% {
+    transform: scale(1.3) rotate(3deg);
+  }
+  70% {
+    transform: scale(0.9) rotate(-2deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+// 暴击发光动画
+@keyframes critical-glow {
+  0%, 100% {
+    filter: brightness(1) drop-shadow(0 0 10px rgba(255, 0, 0, 0.5));
+  }
+  50% {
+    filter: brightness(1.3) drop-shadow(0 0 30px rgba(255, 0, 0, 0.8));
+  }
+}
+
+// 连击弹出动画
+@keyframes combo-pop {
+  0% {
+    transform: scale(0.3);
+  }
+  60% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+// 文字弹出动画
+@keyframes text-pop {
+  0% {
+    transform: scale(0) translateY(10px);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+// 闪避滑动动画
+@keyframes miss-slide {
+  0% {
+    transform: translateX(0) scale(0.8);
+    opacity: 0;
+  }
+  30% {
+    transform: translateX(-20px) scale(1);
+    opacity: 1;
+  }
+  60% {
+    transform: translateX(20px) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(40px) scale(0.9);
+    opacity: 0;
+  }
+}
+
+// 格挡弹跳动画
+@keyframes block-bounce {
+  0% {
+    transform: scale(0.5) translateY(20px);
+    opacity: 0;
+  }
+  40% {
+    transform: scale(1.1) translateY(-10px);
+    opacity: 1;
+  }
+  60% {
+    transform: scale(0.95) translateY(5px);
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+// 震动效果
+@keyframes effect-shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-3px);
+  }
+  75% {
+    transform: translateX(3px);
+  }
+}
+
+// 移动端适配
+@media (max-width: 768px) {
+  .battleEffect {
+    &.left {
+      left: 15%;
+      top: 40%;
+    }
+
+    &.right {
+      right: 15%;
+      top: 35%;
+    }
+  }
+
+  .damage .effectValue {
+    font-size: 36px;
+    padding: 6px 12px;
+  }
+
+  .critical .effectValue {
+    font-size: 42px;
+    padding: 8px 16px;
+  }
+
+  .critical .effectText {
+    font-size: 16px;
+  }
+
+  .combo .effectValue {
+    font-size: 38px;
+    padding: 6px 14px;
+  }
+
+  .miss .effectText,
+  .block .effectText {
+    font-size: 24px;
+    padding: 8px 16px;
+  }
+}
+
+// 奖励弹窗
+.rewardModal {
+  :global(.ant-modal-content) {
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  :global(.ant-modal-header) {
+    background: linear-gradient(135deg, #52c41a 0%, #73d13d 100%);
+    border-bottom: none;
+    padding: 20px 24px;
+
+    :global(.ant-modal-title) {
+      color: white;
+      font-weight: bold;
+    }
+  }
+
+  :global(.ant-modal-body) {
+    padding: 24px;
+  }
+
+  :global(.ant-modal-footer) {
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+    padding: 16px 24px;
+
+    :global(.ant-btn-primary) {
+      background: linear-gradient(135deg, #52c41a 0%, #73d13d 100%);
+      border: none;
+      border-radius: 16px;
+      height: 44px;
+      font-weight: bold;
+      box-shadow: 0 4px 12px rgba(82, 196, 26, 0.3);
+    }
+  }
+}
+
+.rewardModalTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+}
+
+.rewardContent {
+  text-align: center;
+}
+
+.congratulations {
+  font-size: 18px;
+  font-weight: bold;
+  color: #52c41a;
+  margin-bottom: 24px;
+  padding: 20px;
+  background: rgba(82, 196, 26, 0.15);
+  border-radius: 20px;
+  border: 1px solid rgba(82, 196, 26, 0.3);
+  box-shadow: 0 4px 16px rgba(82, 196, 26, 0.1);
+}
+
+.rewardList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rewardItem {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 16px 20px;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(8px);
+  border-radius: 16px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+
+  &:hover {
+    background: rgba(82, 196, 26, 0.1);
+    border-color: rgba(82, 196, 26, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(82, 196, 26, 0.15);
+  }
+}
+
+.rewardIcon {
+  font-size: 20px;
+}
+
+.rewardText {
+  font-size: 16px;
+  font-weight: 500;
+  color: #262626;
+}
+
+// 移动端适配
+@media (max-width: 768px) {
+  .fightContainer {
+    padding: 12px;
+    border-radius: 16px;
+    margin: 8px;
+  }
+
+  .healthBarsContainer {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .petHealthBar, .bossHealthBar {
+    padding: 12px 14px;
+  }
+
+  .petEquipment {
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .equipmentItem {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    border-width: 2px;
+  }
+
+  .equipmentImg {
+    width: 28px;
+    height: 28px;
+  }
+
+  .equipmentFallback {
+    font-size: 20px;
+  }
+
+  .battleArena {
+    padding: 20px 16px;
+    min-height: 280px;
+    perspective: 600px;
+  }
+
+  // 移动端适配
+  .bossArea {
+    transform: scale(0.9) translateY(-20px);
+  }
+
+  .combatant {
+    padding: 12px;
+    gap: 8px;
+  }
+
+  .petAvatar {
+    width: 90px !important;
+    height: 90px !important;
+    font-size: 45px !important;
+
+    :global(.ant-avatar-string) {
+      font-size: 45px !important;
+    }
+  }
+
+  .bossAvatar {
+    width: 80px !important;
+    height: 80px !important;
+    font-size: 38px !important;
+
+    :global(.ant-avatar-string) {
+      font-size: 38px !important;
+    }
+  }
+
+  .combatantLabel {
+    font-size: 14px;
+    padding: 4px 10px;
+  }
+
+  .vsText {
+    font-size: 24px;
+  }
+
+  .vsLightning {
+    font-size: 18px;
+  }
+
+  .combatantInfo {
+    max-width: 160px;
+  }
+
+  .fightingControls {
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .startButton, .restartButton, .toggleButton, .resetButton {
+    width: 100%;
+    max-width: 200px;
+    border-radius: 16px;
+  }
+
+  .logContainer {
+    max-height: 200px;
+  }
+
+  .rewardItem {
+    flex-direction: column;
+    gap: 8px;
+    text-align: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .fightContainer {
+    border-radius: 12px;
+    margin: 4px;
+  }
+
+  .battleArena {
+    padding: 16px 8px;
+  }
+
+  .combatant {
+    padding: 8px;
+  }
+
+  .combatantInfo {
+    max-width: 140px;
+  }
+
+  .stats {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .stat {
+    border-radius: 12px;
+  }
+
+  .rewardItems {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .logCard {
+    border-radius: 20px;
+  }
+
+  .startButton, .restartButton, .toggleButton, .resetButton {
+    border-radius: 14px;
+  }
+}

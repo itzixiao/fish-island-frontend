@@ -4,6 +4,7 @@ import {
   listEmoticonFavourByPageUsingPost,
 } from '@/services/backend/emoticonFavourController';
 import { parseWebPageUsingGet } from '@/services/backend/webParserController';
+import { externalImageProps } from '@/constants';
 import eventBus from '@/utils/eventBus';
 import {
   BilibiliOutlined,
@@ -14,16 +15,30 @@ import {
   StarOutlined,
   UpOutlined,
   DownOutlined,
+  TeamOutlined,
+  UserAddOutlined,
+  CopyOutlined
 } from '@ant-design/icons';
 import { useModel } from '@umijs/max';
 import { Button, Card, Image, message } from 'antd';
 import DOMPurify from 'dompurify';
 import 'prismjs/themes/prism-tomorrow.css';
-import React, { useEffect, useRef, useState } from 'react';
-import ReactMarkdown, { Components } from 'react-markdown';
+import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import type { Components } from 'react-markdown';
 import rehypePrism from 'rehype-prism-plus';
 import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
+
+const ReactMarkdown = lazy(() => import('react-markdown'));
+
+// 懒加载包装，避免每处都写 Suspense
+const LazyMarkdown: React.FC<React.ComponentProps<typeof ReactMarkdown>> = (props) => (
+  <Suspense fallback={null}>
+    <ReactMarkdown {...props} />
+  </Suspense>
+);
+import LuckyBagMessage, { parseLuckyBagInline } from '@/components/LuckyBagMessage';
+import RedPacketMessage, { extractRedPacketId } from '@/components/RedPacketMessage';
 import styles from './index.less';
 
 // 定义事件名称常量
@@ -36,6 +51,8 @@ const STORAGE_KEY = 'favorite_emoticons';
 interface MessageContentProps {
   content: string;
   onImageLoad?: () => void;
+  /** 默认收起图片（悬浮窗/独立小窗配置） */
+  collapseImages?: boolean;
 }
 
 interface WebPageInfo {
@@ -51,7 +68,11 @@ interface Emoticon {
   isError?: boolean;
 }
 
-const MessageContent: React.FC<MessageContentProps> = ({ content, onImageLoad }) => {
+const MessageContent: React.FC<MessageContentProps> = ({
+  content,
+  onImageLoad,
+  collapseImages = false,
+}) => {
   const { initialState } = useModel('@@initialState');
   const { currentUser } = initialState || {};
   const [webPages, setWebPages] = useState<Record<any, WebPageInfo>>({});
@@ -65,8 +86,15 @@ const MessageContent: React.FC<MessageContentProps> = ({ content, onImageLoad })
   const imgRegex = new RegExp('\\[img\\](.*?)\\[/img\\]', 'g');
   // 文件标签匹配正则表达式
   const fileRegex = new RegExp('\\[file\\](.*?)\\[/file\\]', 'g');
+  // 音频标签匹配正则表达式
+  const audioRegex = new RegExp('\\[audio\\](.*?)\\[/audio\\]', 'g');
+  // 谁是卧底邀请标签匹配正则表达式
+  const undercoverRegex = new RegExp('<undercover>(.*?)</undercover>', 'g');
   // 添加折叠状态管理
   const [collapsedImages, setCollapsedImages] = useState<Set<string>>(new Set());
+  const [expandedImages, setExpandedImages] = useState<Set<string>>(new Set());
+  // 添加状态来判断是否为特殊消息类型
+  const [isSpecialMessage, setIsSpecialMessage] = useState(false);
 
   // 获取收藏的表情包
   const fetchFavoriteEmoticons = async () => {
@@ -121,7 +149,7 @@ const MessageContent: React.FC<MessageContentProps> = ({ content, onImageLoad })
   // 取消收藏
   const removeFavorite = async (id: number) => {
     try {
-      const response = await deleteEmoticonFavourUsingPost({ id });
+      const response = await deleteEmoticonFavourUsingPost({ id: String(id) });
       if (response.code === 0) {
         message.success('取消收藏成功');
         // 刷新收藏列表
@@ -165,6 +193,25 @@ const MessageContent: React.FC<MessageContentProps> = ({ content, onImageLoad })
       eventBus.off(EMOTICON_FAVORITE_CHANGED, handleFavoriteChanged);
     };
   }, [currentUser?.id]); // 添加 currentUser.id 作为依赖
+
+  // 添加 useEffect 来检测特殊消息类型
+  useEffect(() => {
+    // 检查是否为特殊消息类型（只包含图片、文件或邀请）
+    const trimmedContent = content.trim();
+    const isOnlyImg = trimmedContent.startsWith('[img]') && trimmedContent.endsWith('[/img]') && 
+                      trimmedContent.match(/\[img\]/g)?.length === 1;
+    const isOnlyFile = trimmedContent.startsWith('[file]') && trimmedContent.endsWith('[/file]') && 
+                       trimmedContent.match(/\[file\]/g)?.length === 1;
+    const isOnlyAudio = trimmedContent.startsWith('[audio]') && trimmedContent.endsWith('[/audio]') &&
+                        trimmedContent.match(/\[audio\]/gi)?.length === 1;
+    const isOnlyUndercover = trimmedContent.startsWith('<undercover>') && 
+                             trimmedContent.endsWith('</undercover>') && 
+                             trimmedContent.match(/<undercover>/g)?.length === 1;
+    const hasIframe = checkIframeSyntax(content);
+    
+    // 如果是纯图片、纯文件、纯音频、纯邀请消息或包含iframe，设置为特殊消息类型
+    setIsSpecialMessage(isOnlyImg || isOnlyFile || isOnlyAudio || isOnlyUndercover || hasIframe);
+  }, [content]);
 
   // 截断文本到指定长度
   const truncateText = (text: string, maxLength: number = 20) => {
@@ -228,6 +275,12 @@ const MessageContent: React.FC<MessageContentProps> = ({ content, onImageLoad })
     }
   }, []);
 
+  useEffect(() => {
+    if (!collapseImages) {
+      setExpandedImages(new Set());
+    }
+  }, [collapseImages]);
+
   // 修改renderImage函数
   const renderImage = (url: string, key: string) => {
     const isHidden = imageDisplayMode === 'hide' && !shownImages.has(url);
@@ -235,8 +288,8 @@ const MessageContent: React.FC<MessageContentProps> = ({ content, onImageLoad })
 
     if (isHidden) {
       return (
-        <div 
-          key={key} 
+        <div
+          key={key}
           className={styles.imageText}
           onClick={() => {
             setShownImages(prev => new Set([...prev, url]));
@@ -247,10 +300,24 @@ const MessageContent: React.FC<MessageContentProps> = ({ content, onImageLoad })
       );
     }
 
+    if (collapseImages && !expandedImages.has(url)) {
+      return (
+        <div
+          key={key}
+          className={styles.imageText}
+          onClick={() => {
+            setExpandedImages((prev) => new Set([...prev, url]));
+          }}
+        >
+          图片已折叠（点击展开）
+        </div>
+      );
+    }
+
     if (isCollapsed) {
       return (
-        <div 
-          key={key} 
+        <div
+          key={key}
           className={styles.imageText}
           onClick={() => {
             setCollapsedImages(prev => {
@@ -268,6 +335,7 @@ const MessageContent: React.FC<MessageContentProps> = ({ content, onImageLoad })
     return (
       <div key={key} className={styles.imageContainer}>
         <Image
+          {...externalImageProps}
           src={url}
           alt="图片"
           className={styles.messageImage}
@@ -325,6 +393,13 @@ const MessageContent: React.FC<MessageContentProps> = ({ content, onImageLoad })
       </div>
     );
   };
+
+  // 渲染音频
+  const renderAudio = (url: string, key: string) => (
+    <div key={key} className={styles.audioContainer}>
+      <audio controls src={url} className={styles.audioPlayer} preload="metadata" />
+    </div>
+  );
 
   // 渲染文件
   const renderFile = (url: string, key: string) => {
@@ -507,6 +582,7 @@ const MessageContent: React.FC<MessageContentProps> = ({ content, onImageLoad })
         <div className={styles.linkContent}>
           {webPages[url]?.favicon ? (
             <img
+              {...externalImageProps}
               src={webPages[url].favicon}
               alt="网站图标"
               className={styles.linkIcon}
@@ -539,9 +615,70 @@ const MessageContent: React.FC<MessageContentProps> = ({ content, onImageLoad })
     );
   };
 
+  // 渲染谁是卧底邀请
+  const renderUndercoverInvite = (content: string, key: string) => {
+    // 提取房间ID但不在UI中显示
+    const roomIdMatch = content.match(/房间ID: ([a-zA-Z0-9]+)/);
+    const roomId = roomIdMatch ? roomIdMatch[1] : '';
+
+    // 提取邀请文本，去掉房间ID部分
+    const inviteText = content.replace(/房间ID: [a-zA-Z0-9]+/, '').trim();
+
+    return (
+      <Card key={key} className={styles.inviteCard} size="small" hoverable>
+        <div className={styles.inviteContent}>
+          <TeamOutlined className={styles.inviteIcon} />
+          <div className={styles.inviteInfo}>
+            <div className={styles.inviteTitle}>谁是卧底游戏</div>
+            <div className={styles.inviteDescription}>{inviteText}</div>
+            <Button
+              type="primary"
+              size="small"
+              icon={<UserAddOutlined />}
+              onClick={() => {
+                if (roomId) {
+                  // 添加日志，帮助调试
+                  console.log('触发加入谁是卧底房间事件，房间ID:', roomId);
+                  // 确保roomId是字符串类型
+                  eventBus.emit('join_undercover_room', String(roomId));
+                } else {
+                  message.error('无效的邀请');
+                }
+              }}
+              className={styles.joinButton}
+            >
+              加入游戏
+            </Button>
+          </div>
+        </div>
+      </Card>
+    );
+  };
+
+  // 添加复制消息到剪贴板的函数
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text)
+      .then(() => {
+        message.success('复制成功');
+      })
+      .catch((err) => {
+        console.error('复制失败:', err);
+        message.error('复制失败');
+      });
+  };
+
   // 添加安全的 HTML 渲染函数
   const sanitizeHtml = (html: string) => {
-    return DOMPurify.sanitize(html, {
+    // 添加钩子，移除标题标签的 class 属性
+    DOMPurify.addHook('afterSanitizeAttributes', function (node) {
+      // 检查节点是否为标题标签
+      if (node.tagName && ['H1', 'H2', 'H3', 'H4', 'H5', 'H6'].includes(node.tagName)) {
+        // 移除 class 属性
+        node.removeAttribute('class');
+      }
+    });
+
+    const sanitized = DOMPurify.sanitize(html, {
       ALLOWED_TAGS: [
         'p',
         'br',
@@ -709,6 +846,11 @@ const MessageContent: React.FC<MessageContentProps> = ({ content, onImageLoad })
         'ondrop',
       ],
     });
+
+    // 及时移除钩子，避免影响其他地方的 DOMPurify 使用
+    DOMPurify.removeHook('afterSanitizeAttributes');
+
+    return sanitized;
   };
 
   // 修改检测 iframe 语法的函数
@@ -733,7 +875,7 @@ const MessageContent: React.FC<MessageContentProps> = ({ content, onImageLoad })
       if (src.match(/^https?:\/\//)) {
         return renderImage(src, `img-${Date.now()}`);
       }
-      return <img {...props} alt={props.alt || '图片'} />;
+      return <img {...props} alt={props.alt || '图片'} {...externalImageProps} />;
     },
     // 自定义 iframe 渲染，直接返回 null
     iframe: () => null,
@@ -750,98 +892,185 @@ const MessageContent: React.FC<MessageContentProps> = ({ content, onImageLoad })
       return <div className={styles.messageContent}>消息包含不安全的 iframe 标签，已被过滤</div>;
     }
 
+    const redPacketId = extractRedPacketId(content);
+    if (redPacketId) {
+      return <RedPacketMessage redPacketId={redPacketId} />;
+    }
+
+    const luckyBagInline = parseLuckyBagInline(content);
+    if (luckyBagInline) {
+      return (
+        <LuckyBagMessage luckyBagId={luckyBagInline.luckyBagId} prefix={luckyBagInline.prefix || undefined} />
+      );
+    }
+
     let parts: React.ReactNode[] = [];
     let lastIndex = 0;
     let match: RegExpExecArray | null;
 
-    // 处理图片标签
-    while ((match = imgRegex.exec(content)) !== null) {
-      // 添加图片前的文本
+    // 处理谁是卧底邀请标签
+    while ((match = undercoverRegex.exec(content)) !== null) {
+      // 添加邀请前的文本
       if (match.index > lastIndex) {
-        const textBeforeImg = content.slice(lastIndex, match.index);
-        // 处理文本中的URL
-        const urlParts = textBeforeImg.split(urlRegex);
-        urlParts.forEach((urlPart, urlIndex) => {
-          if (urlPart.match(urlRegex)) {
-            parts.push(renderUrl(urlPart, `url-${match!.index}-${urlIndex}`));
-          } else if (urlPart) {
-            parts.push(
-              <ReactMarkdown
-                key={`markdown-${match!.index}-${urlIndex}`}
-                remarkPlugins={[remarkGfm]}
-                rehypePlugins={[rehypeRaw, rehypePrism]}
-                components={markdownComponents}
-              >
-                {sanitizeHtml(urlPart)}
-              </ReactMarkdown>,
-            );
-          }
-        });
+        const textBeforeInvite = content.slice(lastIndex, match.index);
+        parts.push(
+          <LazyMarkdown
+            key={`markdown-before-invite-${match.index}`}
+            remarkPlugins={[remarkGfm]}
+            rehypePlugins={[rehypeRaw, rehypePrism]}
+            components={markdownComponents}
+          >
+            {sanitizeHtml(textBeforeInvite)}
+          </LazyMarkdown>
+        );
       }
-      // 添加图片组件,传入 onImageLoad 回调
-      parts.push(renderImage(match[1], `img-${match.index}`));
+      // 添加谁是卧底邀请组件
+      parts.push(renderUndercoverInvite(match[1], `undercover-${match.index}`));
       lastIndex = match.index + match[0].length;
     }
 
-    // 处理文件标签
-    const remainingContent = content.slice(lastIndex);
-    let fileLastIndex = 0;
-    let fileMatch: RegExpExecArray | null;
+    // 如果没有谁是卧底邀请标签，或者处理完邀请标签后还有剩余内容，继续处理其他标签
+    if (lastIndex === 0 || lastIndex < content.length) {
+      const remainingContent = content.slice(lastIndex);
 
-    while ((fileMatch = fileRegex.exec(remainingContent)) !== null) {
-      // 处理文件前的文本（包括URL解析）
-      if (fileMatch.index > fileLastIndex) {
-        const textBeforeFile = remainingContent.slice(fileLastIndex, fileMatch.index);
-        // 处理文本中的URL
-        const urlParts = textBeforeFile.split(urlRegex);
+      // 重置lastIndex用于处理图片标签
+      lastIndex = 0;
+
+      // 处理图片标签
+      while ((match = imgRegex.exec(remainingContent)) !== null) {
+        // 添加图片前的文本
+        if (match.index > lastIndex) {
+          const textBeforeImg = remainingContent.slice(lastIndex, match.index);
+          // 处理文本中的URL
+          const urlParts = textBeforeImg.split(urlRegex);
+          urlParts.forEach((urlPart, urlIndex) => {
+            if (urlPart.match(urlRegex)) {
+              parts.push(renderUrl(urlPart, `url-${match!.index}-${urlIndex}`));
+            } else if (urlPart) {
+              parts.push(
+                <LazyMarkdown
+                  key={`markdown-${match!.index}-${urlIndex}`}
+                  remarkPlugins={[remarkGfm]}
+                  rehypePlugins={[rehypeRaw, rehypePrism]}
+                  components={markdownComponents}
+                >
+                  {sanitizeHtml(urlPart)}
+                </LazyMarkdown>,
+              );
+            }
+          });
+        }
+        // 添加图片组件,传入 onImageLoad 回调
+        parts.push(renderImage(match[1], `img-${match.index}`));
+        lastIndex = match.index + match[0].length;
+      }
+
+      // 处理文件标签
+      const imgProcessedContent = remainingContent.slice(lastIndex);
+      let fileLastIndex = 0;
+      let fileMatch: RegExpExecArray | null;
+
+      while ((fileMatch = fileRegex.exec(imgProcessedContent)) !== null) {
+        // 处理文件前的文本（包括URL解析）
+        if (fileMatch.index > fileLastIndex) {
+          const textBeforeFile = imgProcessedContent.slice(fileLastIndex, fileMatch.index);
+          // 处理文本中的URL
+          const urlParts = textBeforeFile.split(urlRegex);
+          urlParts.forEach((urlPart, urlIndex) => {
+            if (urlPart.match(urlRegex)) {
+              parts.push(renderUrl(urlPart, `url-file-${fileMatch!.index}-${urlIndex}`));
+            } else if (urlPart) {
+              parts.push(
+                <LazyMarkdown
+                  key={`markdown-file-${fileMatch!.index}-${urlIndex}`}
+                  remarkPlugins={[remarkGfm]}
+                  rehypePlugins={[rehypeRaw, rehypePrism]}
+                  components={markdownComponents}
+                >
+                  {sanitizeHtml(urlPart)}
+                </LazyMarkdown>,
+              );
+            }
+          });
+        }
+        // 添加文件组件
+        parts.push(renderFile(fileMatch[1], `file-${fileMatch.index}`));
+        fileLastIndex = fileMatch.index + fileMatch[0].length;
+      }
+
+      // 处理音频标签
+      const fileProcessedContent = imgProcessedContent.slice(fileLastIndex);
+      let audioLastIndex = 0;
+      let audioMatch: RegExpExecArray | null;
+
+      while ((audioMatch = audioRegex.exec(fileProcessedContent)) !== null) {
+        if (audioMatch.index > audioLastIndex) {
+          const textBeforeAudio = fileProcessedContent.slice(audioLastIndex, audioMatch.index);
+          const urlParts = textBeforeAudio.split(urlRegex);
+          urlParts.forEach((urlPart, urlIndex) => {
+            if (urlPart.match(urlRegex)) {
+              parts.push(renderUrl(urlPart, `url-audio-${audioMatch!.index}-${urlIndex}`));
+            } else if (urlPart) {
+              parts.push(
+                <LazyMarkdown
+                  key={`markdown-audio-${audioMatch!.index}-${urlIndex}`}
+                  remarkPlugins={[remarkGfm]}
+                  rehypePlugins={[rehypeRaw, rehypePrism]}
+                  components={markdownComponents}
+                >
+                  {sanitizeHtml(urlPart)}
+                </LazyMarkdown>,
+              );
+            }
+          });
+        }
+        parts.push(renderAudio(audioMatch[1].trim(), `audio-${audioMatch.index}`));
+        audioLastIndex = audioMatch.index + audioMatch[0].length;
+      }
+
+      // 处理剩余文本中的URL
+      if (audioLastIndex < fileProcessedContent.length) {
+        const finalText = fileProcessedContent.slice(audioLastIndex);
+        const urlParts = finalText.split(urlRegex);
         urlParts.forEach((urlPart, urlIndex) => {
           if (urlPart.match(urlRegex)) {
-            parts.push(renderUrl(urlPart, `url-file-${fileMatch!.index}-${urlIndex}`));
+            parts.push(renderUrl(urlPart, `url-final-${urlIndex}`));
           } else if (urlPart) {
             parts.push(
-              <ReactMarkdown
-                key={`markdown-file-${fileMatch!.index}-${urlIndex}`}
+              <LazyMarkdown
+                key={`markdown-final-${urlIndex}`}
                 remarkPlugins={[remarkGfm]}
                 rehypePlugins={[rehypeRaw, rehypePrism]}
                 components={markdownComponents}
               >
                 {sanitizeHtml(urlPart)}
-              </ReactMarkdown>,
+              </LazyMarkdown>,
             );
           }
         });
       }
-      // 添加文件组件
-      parts.push(renderFile(fileMatch[1], `file-${fileMatch.index}`));
-      fileLastIndex = fileMatch.index + fileMatch[0].length;
-    }
-
-    // 处理剩余文本中的URL
-    if (fileLastIndex < remainingContent.length) {
-      const finalText = remainingContent.slice(fileLastIndex);
-      const urlParts = finalText.split(urlRegex);
-      urlParts.forEach((urlPart, urlIndex) => {
-        if (urlPart.match(urlRegex)) {
-          parts.push(renderUrl(urlPart, `url-final-${urlIndex}`));
-        } else if (urlPart) {
-          parts.push(
-            <ReactMarkdown
-              key={`markdown-final-${urlIndex}`}
-              remarkPlugins={[remarkGfm]}
-              rehypePlugins={[rehypeRaw, rehypePrism]}
-              components={markdownComponents}
-            >
-              {sanitizeHtml(urlPart)}
-            </ReactMarkdown>,
-          );
-        }
-      });
     }
 
     return parts;
   };
 
-  return <div className={styles.messageContent}>{parseContent()}</div>;
+  return <div className={styles.messageContent}>
+    {!isSpecialMessage && (
+      <div className={styles.copyButton}>
+        <Button
+          type="text"
+          size="small"
+          icon={<CopyOutlined />}
+          onClick={(e) => {
+            e.stopPropagation();
+            copyToClipboard(content);
+          }}
+          title="复制消息"
+        />
+      </div>
+    )}
+    {parseContent()}
+  </div>;
 };
 
 export default MessageContent;

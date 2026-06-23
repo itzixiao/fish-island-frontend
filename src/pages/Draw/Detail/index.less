@@ -1,0 +1,293 @@
+.draw-game-container {
+  width: 100%;
+  padding: 20px;
+}
+
+/* 移除不再使用的 Alert 样式 */
+
+.draw-game-content {
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
+
+  @media screen and (max-width: 992px) {
+    flex-direction: column;
+  }
+}
+
+.draw-canvas-section {
+  flex: 3;
+}
+
+.chat-section {
+  flex: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.draw-canvas-card {
+  width: 100%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.canvas-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  width: 100%;
+
+  > span:first-child {
+    font-weight: bold;
+    white-space: nowrap;
+  }
+
+  .timer {
+    margin-left: 8px;
+    font-weight: bold;
+    color: #ff4d4f;
+    transition: all 0.3s ease;
+    
+    &.timer-warning {
+      color: #ff4d4f;
+      font-size: 18px;
+      animation: pulse 1s infinite;
+    }
+  }
+
+  .game-controls {
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
+    white-space: nowrap;
+    
+    @media screen and (max-width: 768px) {
+      order: 2;
+      margin-left: auto;
+    }
+  }
+  
+  /* 添加提示词显示样式 */
+  .word-hint-display {
+    display: flex;
+    align-items: center;
+    background-color: #f5f5f5;
+    padding: 4px 12px;
+    border-radius: 4px;
+    margin: 0 auto 0 12px;
+    flex-grow: 1;
+    max-width: 50%;
+    overflow: hidden;
+    
+    @media screen and (max-width: 768px) {
+      order: 3;
+      width: 100%;
+      max-width: 100%;
+      margin: 8px 0 0;
+      justify-content: center;
+    }
+    
+    .word-hint-label {
+      font-size: 14px;
+      margin-right: 8px;
+      white-space: nowrap;
+    }
+    
+    .word-hint-text {
+      font-size: 16px;
+      font-weight: bold;
+      color: #1890ff;
+      margin-right: 8px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.word-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #f5f5f5;
+  padding: 4px 10px;
+  border-radius: 4px;
+}
+
+.canvas-container {
+  position: relative;
+  margin: 0 auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  overflow: hidden;
+  background-color: #fff;
+  cursor: crosshair;
+  width: 100%;
+  height: auto;
+  box-sizing: border-box;
+}
+
+.draw-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  touch-action: none; /* 防止触摸设备的默认行为 */
+}
+
+.canvas-toolbar {
+  margin-top: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  padding: 12px;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+}
+
+.tool-selector {
+  display: flex;
+  gap: 8px;
+
+  .tool-button {
+    min-width: 80px;
+  }
+}
+
+// 添加颜色选择器相关样式
+.color-palette {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+
+  .color-option {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    margin-right: 8px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.2s;
+
+    &.selected {
+      border-color: #1890ff;
+      transform: scale(1.1);
+    }
+
+    &:hover {
+      transform: scale(1.1);
+    }
+  }
+
+  .color-picker-toggle {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    background: linear-gradient(45deg, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff);
+    transition: all 0.2s;
+    
+    &:hover {
+      transform: scale(1.1);
+    }
+    
+    .anticon {
+      color: white;
+      text-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+    }
+  }
+}
+
+.custom-color-picker {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+  
+  input[type="color"] {
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-right: 10px;
+  }
+  
+  .current-color-preview {
+    height: 24px;
+    padding: 0 8px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: white;
+    text-shadow: 0 0 2px rgba(0, 0, 0, 0.7);
+  }
+}
+
+.brush-size-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  input[type="range"] {
+    width: 100px;
+  }
+}
+
+.canvas-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+
+.chat-card, .users-card {
+  width: 100%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.chat-list {
+  height: 300px;
+  overflow-y: auto;
+  padding-right: 6px;
+  margin-bottom: 16px;
+}
+
+.chat-input {
+  margin-top: auto;
+}
+
+.drawing-hint {
+  margin-top: 8px;
+  color: #ff4d4f;
+  font-style: italic;
+}
+
+:global {
+  .ant-list-item-meta-title {
+    margin-bottom: 0 !important;
+  }
+
+  .ant-list-item {
+    padding: 8px 0 !important;
+  }
+}

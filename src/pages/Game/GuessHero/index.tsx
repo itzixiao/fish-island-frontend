@@ -15,7 +15,8 @@ import {
   getGuessCountUsingGet, getGuessRankingUsingGet, getHeroByIdUsingGet,
   getNewHeroUsingGet,
   getRandomHeroUsingGet,
-  listSimpleHeroUsingGet, recordGuessSuccessUsingPost
+  listSimpleHeroUsingGet, recordGuessSuccessUsingPost,
+  getCurrentUserGuessDataUsingGet
 } from "@/services/backend/heroController";
 
 const GuessHero: React.FC = () => {
@@ -38,6 +39,9 @@ const GuessHero: React.FC = () => {
   const [rankingList, setRankingList] = useState<API.HeroRankingVO[]>([]);
   const [loadingRanking, setLoadingRanking] = useState(false);
 
+  // 我的排行信息
+  const [currentUserRanking, setCurrentUserRanking] = useState<API.HeroRankingVO | null>(null);
+  const [loadingCurrentUserRanking, setLoadingCurrentUserRanking] = useState(false);
 
   // 加载英雄列表
   useEffect(() => {
@@ -183,17 +187,31 @@ const GuessHero: React.FC = () => {
   // 获取排行榜数据
   const fetchRanking = async () => {
     setLoadingRanking(true);
+    setLoadingCurrentUserRanking(true);
     try {
       const response = await getGuessRankingUsingGet();
       if (response.code === 0) {
         setRankingList(response.data || []);
       }
+
+      // 获取当前用户排名信息
+      try {
+        const currentUserResponse = await getCurrentUserGuessDataUsingGet();
+        if (currentUserResponse.code === 0) {
+          setCurrentUserRanking(currentUserResponse.data || null);
+        }
+      } catch (error) {
+        // 用户未登录或无数据时清空状态
+        setCurrentUserRanking(null);
+      }
     } catch (error) {
       message.error('获取排行榜失败');
     } finally {
       setLoadingRanking(false);
+      setLoadingCurrentUserRanking(false);
     }
   };
+
   // 排行榜模态框
   const rankingModal = (
     <Modal
@@ -201,10 +219,10 @@ const GuessHero: React.FC = () => {
         <div>
           <span>排行榜</span>
           <span style={{paddingLeft: 8}}>
-          <Tooltip title="仅展示猜中次数最高的前10名玩家">
-            <QuestionCircleOutlined style={{color: '#888', cursor: 'pointer'}}/>
-          </Tooltip>
-        </span>
+        <Tooltip title="仅展示猜中次数最高的前10名玩家">
+          <QuestionCircleOutlined style={{color: '#888', cursor: 'pointer'}}/>
+        </Tooltip>
+      </span>
         </div>
       }
       visible={isRankingModalVisible}
@@ -212,6 +230,14 @@ const GuessHero: React.FC = () => {
       onCancel={() => setIsRankingModalVisible(false)}
       className="ranking-modal"
       width={600}
+      footer={[
+        <Button key="close" type="primary" onClick={(e) => {
+          e.stopPropagation(); // 阻止事件冒泡
+          setIsRankingModalVisible(false);
+        }}>
+          我知道了
+        </Button>
+      ]}
     >
       {loadingRanking ? (
         <div className="ranking-loading">
@@ -267,23 +293,74 @@ const GuessHero: React.FC = () => {
             </div>
           </div>
 
-          {/* 其他排名列表 */}
+          {/* 排名列表（包含前3名之外的排行榜数据和当前用户信息） */}
           <List
             className="ranking-list"
-            dataSource={rankingList.slice(3)}
-            renderItem={(item, index) => (
-              <List.Item className="ranking-list-item">
-                <div className="list-item-content">
-                  <span className="ranking-position">{index + 4}</span>
-                  <img
-                    src={item.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor'}
-                    className="ranking-avatar"
-                  />
-                  <span className="ranking-name">{item.userName || '游客'}</span>
-                  <span className="ranking-score">{item.score}次</span>
-                </div>
-              </List.Item>
-            )}
+            dataSource={[
+              ...rankingList.slice(3),
+              // 添加当前用户信息作为列表的最后一项（如果用户已登录）
+              ...(currentUserRanking ? [{
+                isCurrentUser: true,
+                rank: currentUserRanking.rank,
+                userAvatar: currentUserRanking.userAvatar,
+                userName: currentUserRanking.userName,
+                score: currentUserRanking.score
+              }] : [])
+            ]}
+            renderItem={(item: any, index) => {
+              // 处理当前用户信息的显示
+              if (item.isCurrentUser) {
+                return (
+                  <List.Item
+                    className={`ranking-list-item ${item.rank && item.rank <= 10 ? 'current-user-highlight' : ''}`}
+                  >
+                    <div className="list-item-content">
+                      {loadingCurrentUserRanking ? (
+                        <div style={{ textAlign: 'center', width: '100%' }}>
+                          <RocketOutlined spin style={{ color: '#597ef7' }} />
+                          <span style={{ marginLeft: 8 }}>加载中...</span>
+                        </div>
+                      ) : item.rank && item.rank <= 10 ? (
+                        <>
+                          <span className="ranking-position">{"我"}</span>
+                          <img
+                            src={item.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor'}
+                            className="ranking-avatar"
+                          />
+                          <span className="ranking-name">{item.userName || '游客'}</span>
+                          <span className="ranking-score">{item.score}次</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="ranking-position">-</span>
+                          <img
+                            src={item.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor'}
+                            className="ranking-avatar"
+                          />
+                          <span className="ranking-name">{item.userName || '游客'}</span>
+                          <span className="ranking-score">未上榜</span>
+                        </>
+                      )}
+                    </div>
+                  </List.Item>
+                );
+              }
+
+              // 处理普通排行榜项的显示
+              return (
+                <List.Item className="ranking-list-item">
+                  <div className="list-item-content">
+                    <span className="ranking-position">{index + 4}</span>
+                    <img
+                      src={item.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor'}
+                      className="ranking-avatar"
+                    />
+                    <span className="ranking-name">{item.userName || '游客'}</span>
+                    <span className="ranking-score">{item.score}次</span>
+                  </div>
+                </List.Item>
+              );
+            }}
           />
         </div>
       ) : (
@@ -294,13 +371,20 @@ const GuessHero: React.FC = () => {
     </Modal>
   );
 
-
   const gameRules = (
     <Modal
       title="游戏规则"
       visible={isRuleModalVisible}
       onOk={() => setIsRuleModalVisible(false)}
       onCancel={() => setIsRuleModalVisible(false)}
+      footer={[
+        <Button key="close" type="primary" onClick={(e) => {
+          e.stopPropagation(); // 阻止事件冒泡
+          setIsRuleModalVisible(false);
+        }}>
+          我知道了
+        </Button>
+      ]}
     >
       <div style={{padding: '0 12px'}}>
         <ol>
@@ -333,11 +417,14 @@ const GuessHero: React.FC = () => {
               <img
                 src={`https://game.gtimg.cn/images/yxzj/img201606/heroimg/${newHero.ename}/${newHero.ename}.jpg`}
                 alt="最新英雄"
-                style={{width: 40, height: 40, borderRadius: 4}}
+                style={{width: 80, height: 80, borderRadius: 4}}
               />
               <div>
                 <div>名称：<strong>{newHero.cname}</strong></div>
-                <div>上线时间：<strong>{newHero.releaseDate}</strong></div>
+                <div>定位：<strong>{typeMap[newHero.primaryType as keyof typeof typeMap] || newHero.primaryType}</strong>
+                </div>
+                <div>种族：<strong>{newHero.race || '无'}</strong></div>
+                <div>首发：<strong>{newHero.releaseDate}</strong></div>
               </div>
             </Space>
           ) : (

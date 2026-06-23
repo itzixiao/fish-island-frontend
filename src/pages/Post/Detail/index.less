@@ -1,0 +1,664 @@
+.post-detail-container {
+  padding: 12px;
+  max-width: 1400px;
+  margin: 0 auto;
+  overflow-x: hidden; /* 添加这一行防止溢出 */
+  width: 100%; /* 确保容器占满可用宽度 */
+  box-sizing: border-box; /* 确保padding不会导致宽度溢出 */
+  overflow: initial;
+
+  .post-detail-summary {
+    margin-bottom: 20px;
+
+    .summary-header {
+      display: flex;
+      align-items: center;
+      font-weight: 500;
+      color: #FFA768;
+
+      .anticon {
+        margin-right: 8px;
+        color: #FFA768;
+      }
+    }
+
+    .ant-alert-description {
+      color: #333;
+      font-size: 14px;
+      line-height: 1.6;
+      white-space: pre-line;
+    }
+
+    .ant-alert-message {
+      color: #FFA768;
+    }
+  }
+}
+
+.post-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap; /* 添加这一行允许在小屏幕上换行 */
+  gap: 10px; /* 添加间距 */
+}
+
+.back-button {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  color: #1890ff;
+
+  span {
+    margin-left: 8px;
+  }
+}
+
+.post-detail-layout {
+  display: flex;
+  gap: 16px;
+  position: relative;
+  min-width: 0;
+  /* 删除 overflow-x: auto; 这会导致横向滚动条 */
+  max-width: 100%;
+  width: 100%; /* 确保宽度不超过容器 */
+  box-sizing: border-box; /* 确保padding和边框不会增加元素宽度 */
+}
+
+.post-detail-main {
+  flex: 1 1 auto;
+  min-width: 0; /* 修改这里，不要设置固定的最小宽度 */
+  width: 100%;
+  transition: flex 0.3s ease;
+  max-width: 100%;
+  overflow-x: hidden; /* 防止内容溢出 */
+}
+
+@media (max-width: 992px) {
+  .post-detail-main {
+    min-width: 0; /* 修改这里，不要设置固定的最小宽度 */
+  }
+}
+
+@media (max-width: 768px) {
+  .post-detail-container {
+    padding: 8px;
+  }
+
+  .post-detail-layout {
+    flex-direction: column;
+    overflow-x: hidden;
+  }
+
+  .post-detail-main {
+    min-width: 0; /* 修改这里，不要设置固定的最小宽度 */
+    width: 100%;
+  }
+}
+
+.post-detail-sidebar {
+  width: 350px;
+  flex: 0 0 auto;
+  position: relative;
+  transition: all 0.3s ease;
+  overflow: hidden;
+
+  &.sticky {
+    position: sticky;
+    top: 24px;
+    align-self: flex-start;
+    max-height: calc(100vh - 48px);
+  }
+
+  &.collapsed {
+    width: 30px;
+    flex: 0 0 30px;
+    overflow: visible;
+    padding: 0;
+    margin-left: 0;
+    margin-right: 0;
+
+    .post-detail-comments {
+      width: 350px;
+      transform: translateX(-350px);
+      opacity: 0;
+      visibility: hidden;
+      border: none;
+      background-color: transparent;
+      box-shadow: none;
+
+      .ant-card-head, .ant-card-body {
+        display: none;
+      }
+    }
+
+    .comment-collapse-button {
+      left: 0;
+      z-index: 100;
+      background-color: #f0f7ff;
+      border-color: #1890ff;
+      color: #1890ff;
+    }
+  }
+}
+
+.comment-collapse-button {
+  position: absolute;
+  left: -15px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 30px;
+  height: 30px;
+  background-color: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  z-index: 10;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: left 0.3s ease, background-color 0.2s ease, color 0.2s ease;
+
+  &:hover {
+    color: #1890ff;
+    background-color: #f0f7ff;
+
+    &::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: -30px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 4px 8px;
+      background-color: rgba(0, 0, 0, 0.75);
+      color: white;
+      border-radius: 4px;
+      font-size: 12px;
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 1;
+    }
+  }
+}
+
+.post-detail-card {
+  margin-bottom: 16px;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  padding: 16px;
+}
+
+.post-detail-title {
+  margin-bottom: 16px;
+
+  h3 {
+    margin-bottom: 8px;
+  }
+}
+
+.post-detail-meta {
+  display: flex;
+  align-items: center;
+  color: #8c8c8c;
+}
+
+.post-detail-comments {
+  height: calc(100vh - 120px);
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.3s ease, opacity 0.3s ease, visibility 0.3s ease;
+  overflow: hidden;
+  width: 100%;
+  max-width: 100%;
+}
+
+.comments-header {
+  display: flex;
+  align-items: center;
+
+  .comment-count {
+    margin-left: 8px;
+    color: #8c8c8c;
+  }
+}
+
+.post-actions {
+  display: flex;
+  align-items: center;
+
+  .action-button {
+    margin-left: 8px;
+
+    &.active {
+      color: #1890ff;
+    }
+  }
+}
+
+.comment-fixed-top {
+  padding: 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.comment-editor {
+  display: flex;
+  gap: 12px;
+}
+
+.comment-avatar {
+  flex-shrink: 0;
+}
+
+.comment-input {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+
+  .comment-textarea {
+    margin-bottom: 8px;
+  }
+
+  button {
+    align-self: flex-end;
+  }
+}
+
+.comment-scrollable-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 16px;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.comment-list {
+  padding: 16px 0;
+  width: 100%;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  max-width: 100%;
+}
+
+.comment-item {
+  display: flex;
+  margin-bottom: 16px;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+
+  &.child-comment {
+    margin-left: 24px;
+    margin-bottom: 12px;
+    width: calc(100% - 24px);
+    max-width: calc(100% - 24px); /* 添加这一行确保子评论不会溢出 */
+  }
+}
+
+.comment-item-avatar {
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.comment-item-content {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.comment-item-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.comment-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  .delete-button {
+    padding: 0 4px;
+    height: 22px;
+    line-height: 22px;
+  }
+}
+
+.comment-item-body {
+  margin-bottom: 8px;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
+  max-width: 100%;
+  white-space: normal;
+  overflow: hidden;
+}
+
+.reply-info {
+  color: #8c8c8c;
+  margin-bottom: 4px;
+}
+
+.comment-item-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 4px;
+
+  .reply-button {
+    margin-right: 16px;
+  }
+
+  .like-button {
+    &.active {
+      color: #1890ff;
+    }
+  }
+
+  .delete-button {
+    margin-left: 16px;
+  }
+}
+
+.reply-box {
+  margin-top: 8px;
+  width: 100%;
+
+  .reply-textarea {
+    margin-bottom: 8px;
+    width: 100%;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+  }
+
+  .reply-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+}
+
+.child-comments-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 8px 0;
+  color: #8c8c8c;
+}
+
+.child-comments {
+  margin-top: 8px;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.load-more-comments {
+  margin-top: 8px;
+  text-align: center;
+}
+
+.comment-pagination {
+  margin-top: 16px;
+  display: flex;
+  justify-content: center;
+}
+
+.no-comments {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: #8c8c8c;
+}
+
+.comments-loading {
+  display: flex;
+  justify-content: center;
+  padding: 24px 0;
+}
+
+.post-detail-loading, .post-detail-not-found {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 400px;
+}
+
+// 添加响应式样式
+@media (max-width: 768px) {
+  .post-detail-layout {
+    flex-direction: column;
+  }
+
+  .post-detail-sidebar {
+    width: 100%;
+    margin-top: 16px;
+
+    &.collapsed {
+      width: 100%;
+      height: 30px;
+      padding: 0;
+      margin: 0;
+      overflow: visible;
+
+      .post-detail-comments {
+        width: 100%;
+        transform: translateY(-100%);
+        opacity: 0;
+        visibility: hidden;
+        border: none;
+        background-color: transparent;
+        box-shadow: none;
+
+        .ant-card-head, .ant-card-body {
+          display: none;
+        }
+      }
+
+      .comment-collapse-button {
+        left: 50%;
+        top: 0;
+        transform: translateX(-50%) rotate(180deg);
+        z-index: 100;
+        background-color: #f0f7ff;
+        border-color: #1890ff;
+        color: #1890ff;
+      }
+    }
+  }
+
+  .comment-collapse-button {
+    left: 50%;
+    top: -15px;
+    transform: translateX(-50%) rotate(90deg);
+    transition: top 0.3s ease, transform 0.3s ease;
+  }
+}
+
+.vditor-reset {
+  max-width: 100%;
+  overflow-x: hidden;
+  word-wrap: break-word; /* 确保长文本可以换行 */
+
+  img {
+    max-width: 100%; /* 确保图片不会溢出容器 */
+    height: auto;
+  }
+
+  pre, code {
+    white-space: pre-wrap; /* 允许代码块自动换行 */
+    word-break: break-all; /* 允许在任何字符间断行 */
+    overflow-wrap: break-word; /* 允许长单词换行 */
+    max-width: 100%;
+    overflow-x: auto; /* 对于特别长的代码行，允许在代码块内滚动而不影响整体布局 */
+  }
+
+  table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    width: fit-content; /* 使表格宽度适应内容 */
+    margin: 0 auto; /* 居中表格 */
+  }
+
+  /* 确保所有内容元素都不会溢出 */
+  p, h1, h2, h3, h4, h5, h6, blockquote, ul, ol {
+    max-width: 100%;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+  }
+
+  /* 处理可能的溢出元素 */
+  iframe, video, embed, object {
+    max-width: 100%;
+  }
+}
+
+// 添加表情包相关样式
+.comment-content-with-emoticon {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+}
+
+.comment-emoticon {
+  display: inline-block;
+  vertical-align: middle;
+  max-height: 100px;
+  margin: 2px 0;
+  border-radius: 4px;
+}
+
+.emoticon-button {
+  margin-right: 8px;
+}
+
+.emoji-button {
+  margin-right: 8px;
+}
+
+.comment-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.emoticon-popover {
+  max-width: 350px;
+}
+
+.emoji-popover {
+  :global {
+    .ant-popover-inner {
+      padding: 0;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      overflow: hidden;
+    }
+
+    .ant-popover-arrow {
+      display: none;
+    }
+
+    .ant-popover-inner-content {
+      padding: 0;
+    }
+  }
+}
+
+.emoji-picker {
+  width: 320px;
+  height: 350px;
+}
+
+// 修改评论输入框样式
+.comment-input {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+// 修改回复框样式
+.reply-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: 8px;
+  gap: 8px;
+}
+
+.pasted-images-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+.uploading-indicator {
+  display: flex;
+  align-items: center;
+  color: #1890ff;
+  margin: 8px 0;
+  font-size: 14px;
+
+  .anticon {
+    margin-right: 8px;
+  }
+}
+
+.pasted-image-item {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  border-radius: 5px;
+  overflow: hidden;
+
+  .pasted-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .remove-image-btn {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 50%;
+    padding: 2px;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.9);
+    }
+  }
+}
+
+.comment-textarea {
+  border-radius: 4px;
+  resize: none;
+}
+
+.reply-textarea {
+  border-radius: 4px;
+  resize: none;
+}
