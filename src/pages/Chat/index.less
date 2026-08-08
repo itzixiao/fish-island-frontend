@@ -122,16 +122,14 @@
   }
 
   .messageContainer {
+    --message-horizontal-inset: 40px;
     grid-area: messages;
     padding: 20px;
-    overflow-y: auto;
     overflow-x: hidden;
     padding-bottom: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
     background: rgba(255, 255, 255, 0.8);
-    backdrop-filter: blur(10px);
+    // 滚动层自身不做实时模糊，保留外层卡片的玻璃效果，避免滚动时持续重绘。
+    backdrop-filter: none;
     margin: 10px;
     border-radius: 12px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
@@ -142,9 +140,9 @@
     scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
 
     @media screen and (max-width: 768px) {
+      --message-horizontal-inset: 20px;
       margin: 8px;
       padding: 10px;
-      gap: 10px;
       height: calc(100% - 70px);
     }
 
@@ -163,14 +161,22 @@
     }
 
     .loadingWrapper {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      flex: 0 0 0;
+      height: 0;
       display: flex;
       justify-content: center;
       align-items: center;
-      padding: 16px;
-      width: 100%;
-      background: rgba(255, 255, 255, 0.8);
-      border-radius: 8px;
-      margin-bottom: 8px;
+      overflow: visible;
+
+      :global(.ant-spin) {
+        padding: 10px;
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 50%;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      }
     }
 
     .messageItem {
@@ -410,6 +416,15 @@
         margin: -8px;
       }
     }
+  }
+
+  .virtualMessageItem {
+    display: flex;
+    flex-direction: column;
+    width: calc(100% - var(--message-horizontal-inset));
+    min-width: 0;
+    box-sizing: border-box;
+    padding-bottom: 12px;
   }
 
   .userList {
@@ -2865,6 +2880,15 @@
     .avatarWrapper {
       display: none;
     }
+  }
+
+  .titleSweepLight,
+  .titleFish,
+  .titleStar1,
+  .titleStar2,
+  .vipBadge,
+  .vipBadge::after {
+    animation: none !important;
   }
 }
 
