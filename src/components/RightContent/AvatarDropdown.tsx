@@ -1,6 +1,7 @@
 import { resetFloatingChatPosition } from '@/components/FloatingChat/storage';
 import {
   getLoginUserUsingGet,
+  getUserVoByIdUsingGet,
   signInUsingPost,
   updateMyUserUsingPost,
   userEmailBindToAccountUsingPost,
@@ -52,6 +53,7 @@ import {history, useModel} from '@umijs/max';
 import {
   Avatar,
   Button,
+  Empty,
   Form,
   FormProps,
   Input,
@@ -61,6 +63,7 @@ import {
   Select,
   Slider,
   Space,
+  Spin,
   Switch,
   TimePicker,
   Tooltip,
@@ -89,6 +92,12 @@ import MessageNotification, { MessageNotificationRef } from '@/components/Messag
 import UserDetailModal from '@/components/UserDetailModal';
 import MoneyButton from '../MoneyButton';
 import { startSiteTour } from '@/components/SiteTour';
+import {
+  BlacklistedUserProfile,
+  loadBlacklistedUserIds,
+  loadBlacklistedUserProfiles,
+  removeBlacklistedUser,
+} from '@/utils/blacklist';
 
 export type GlobalHeaderRightProps = {
   menu?: boolean;
@@ -288,6 +297,40 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
   const [isRedeemCodeOpen, setIsRedeemCodeOpen] = useState(false);
   const [redeemCode, setRedeemCode] = useState('');
   const [redeemLoading, setRedeemLoading] = useState(false);
+  const [isBlacklistOpen, setIsBlacklistOpen] = useState(false);
+  const [blacklistUsers, setBlacklistUsers] = useState<BlacklistedUserProfile[]>([]);
+  const [blacklistLoading, setBlacklistLoading] = useState(false);
+
+  const loadBlacklistUsers = useCallback(async () => {
+    const ids = Array.from(loadBlacklistedUserIds());
+    const cachedProfiles = loadBlacklistedUserProfiles();
+    setBlacklistLoading(true);
+
+    try {
+      const users = await Promise.all(
+        ids.map(async (id) => {
+          const cached = cachedProfiles[id];
+          try {
+            const res = await getUserVoByIdUsingGet({ id } as any);
+            const data = (res as any)?.data;
+            if (data) {
+              return {
+                id,
+                name: data.userName || cached?.name || '未知用户',
+                avatar: data.userAvatar || cached?.avatar,
+              };
+            }
+          } catch {
+            // 普通用户可能无权查询详情，优先使用本地缓存。
+          }
+          return cached || { id, name: '未知用户' };
+        }),
+      );
+      setBlacklistUsers(users);
+    } finally {
+      setBlacklistLoading(false);
+    }
+  }, []);
 
   // 获取可用称号列表
   const fetchAvailableTitles = async () => {
@@ -953,6 +996,11 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
       label: '我的卡片',
     },
     {
+      key: 'blacklist',
+      icon: <DeleteOutlined/>,
+      label: '我的黑名单',
+    },
+    {
       key: 'resetPassword',
       icon: <LockOutlined/>,
       label: '找回密码',
@@ -1037,6 +1085,15 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
         setIsMyCardOpen(true);
         return;
       }
+      if (key === 'blacklist') {
+        if (!currentUser?.id) {
+          message.warning('请先登录');
+          return;
+        }
+        setIsBlacklistOpen(true);
+        loadBlacklistUsers();
+        return;
+      }
       if (key === 'resetPassword') {
         setIsResetPasswordOpen(true);
         return;
@@ -1096,7 +1153,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
       }
       history.push(`/account/${key}`);
     },
-    [setInitialState, currentUser?.userAvatar, isMoneyVisible, toggleTheme],
+    [setInitialState, currentUser?.userAvatar, isMoneyVisible, toggleTheme, loadBlacklistUsers],
   );
 
   // 发送邮箱验证码
@@ -3044,6 +3101,65 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
             </Button>
           </div>
         </div>
+      </Modal>
+
+      <Modal
+        title="我的黑名单"
+        open={isBlacklistOpen}
+        onCancel={() => setIsBlacklistOpen(false)}
+        footer={null}
+        width={420}
+        destroyOnClose
+      >
+        {blacklistLoading ? (
+          <div style={{ padding: '32px 0', textAlign: 'center' }}>
+            <Spin />
+          </div>
+        ) : blacklistUsers.length === 0 ? (
+          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无黑名单用户" />
+        ) : (
+          <div>
+            {blacklistUsers.map((user) => (
+              <div
+                key={user.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  padding: '10px 0',
+                  borderBottom: '1px solid #f0f0f0',
+                }}
+              >
+                <Avatar src={user.avatar} icon={<UserOutlined />} size={40} />
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div
+                    style={{
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      fontWeight: 500,
+                    }}
+                  >
+                    {user.name}
+                  </div>
+                  <div style={{ color: '#999', fontSize: 12, marginTop: 3 }}>ID：{user.id}</div>
+                </div>
+                <Popconfirm
+                  title="确定移出黑名单吗？"
+                  okText="移除"
+                  cancelText="取消"
+                  onConfirm={() => {
+                    removeBlacklistedUser(user.id);
+                    setBlacklistUsers((prev) => prev.filter((item) => item.id !== user.id));
+                    message.success('已移出黑名单');
+                  }}
+                >
+                  <Button size="small">移除</Button>
+                </Popconfirm>
+              </div>
+            ))}
+          </div>
+        )}
       </Modal>
 
       <UserDetailModal

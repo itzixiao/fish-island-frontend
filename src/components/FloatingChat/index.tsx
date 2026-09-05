@@ -24,6 +24,10 @@ import {
 } from './storage';
 import ExcelLayout from './ExcelLayout';
 import { getExcelWorkbookTitle, getExcelWindowCaption } from './excelUtils';
+import {
+  BLACKLIST_EVENT,
+  loadBlacklistedUserIds,
+} from '@/utils/blacklist';
 import styles from './index.less';
 
 interface ChatMessage {
@@ -73,6 +77,7 @@ const FloatingChat: React.FC<FloatingChatProps> = ({ fullscreen = false }) => {
   const location = useLocation();
   const [settings, setSettings] = useState<FloatingChatSettings>(() => loadFloatingChatSettings());
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [blacklistedUserIds, setBlacklistedUserIds] = useState<Set<string>>(() => loadBlacklistedUserIds());
   const [inputValue, setInputValue] = useState('');
   const [loading, setLoading] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -85,6 +90,26 @@ const FloatingChat: React.FC<FloatingChatProps> = ({ fullscreen = false }) => {
   const mountedRef = useRef(true);
   const lastSendRef = useRef(0);
   const dragMovedRef = useRef(false);
+
+  useEffect(() => {
+    const syncBlacklist = () => {
+      const next = loadBlacklistedUserIds();
+      setBlacklistedUserIds(next);
+      setMessages((prev) => {
+        const filtered = prev.filter(
+          (msg) => !next.has(String(msg.sender.id)) || String(msg.sender.id) === String(currentUser?.id),
+        );
+        return filtered.length === prev.length ? prev : filtered;
+      });
+    };
+
+    window.addEventListener(BLACKLIST_EVENT, syncBlacklist);
+    window.addEventListener('storage', syncBlacklist);
+    return () => {
+      window.removeEventListener(BLACKLIST_EVENT, syncBlacklist);
+      window.removeEventListener('storage', syncBlacklist);
+    };
+  }, [currentUser?.id]);
 
   const isLoggedIn = Boolean(currentUser?.id);
   const mode = settings.mode;
@@ -161,7 +186,12 @@ const FloatingChat: React.FC<FloatingChatProps> = ({ fullscreen = false }) => {
       });
       const list = (res.data?.records || [])
         .map(mapRecordToMessage)
-        .filter(Boolean) as ChatMessage[];
+        .filter(Boolean)
+        .filter(
+          (msg) =>
+            !blacklistedUserIds.has(String(msg!.sender.id)) ||
+            String(msg!.sender.id) === String(currentUser?.id),
+        ) as ChatMessage[];
       if (mountedRef.current) {
         setMessages(list.reverse());
         requestAnimationFrame(() => scrollToBottom(false));
@@ -171,7 +201,7 @@ const FloatingChat: React.FC<FloatingChatProps> = ({ fullscreen = false }) => {
     } finally {
       if (mountedRef.current) setLoading(false);
     }
-  }, [isLoggedIn, scrollToBottom]);
+  }, [blacklistedUserIds, currentUser?.id, isLoggedIn, scrollToBottom]);
 
   const handleWsMessage = useCallback(
     (data: { data?: { message?: ChatMessage } }) => {
@@ -179,6 +209,7 @@ const FloatingChat: React.FC<FloatingChatProps> = ({ fullscreen = false }) => {
       if (!raw?.id) return;
       const incoming = normalizeChatMessage(raw);
       const isSelf = String(incoming.sender?.id) === String(currentUser?.id);
+      if (!isSelf && blacklistedUserIds.has(String(incoming.sender.id))) return;
 
       setMessages((prev) => {
         if (prev.some((m) => m.id === incoming.id)) return prev;
@@ -206,7 +237,7 @@ const FloatingChat: React.FC<FloatingChatProps> = ({ fullscreen = false }) => {
         setUnreadCount((c) => c + 1);
       }
     },
-    [currentUser?.id, isAtBottom, isWindowOpen, mode, scrollToBottom],
+    [blacklistedUserIds, currentUser?.id, isAtBottom, isWindowOpen, mode, scrollToBottom],
   );
 
   useEffect(() => {

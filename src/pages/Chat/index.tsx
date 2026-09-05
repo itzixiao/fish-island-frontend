@@ -91,6 +91,13 @@ import { joinRoomUsingPost } from '@/services/backend/drawGameController';
 import { getLevelEmoji, generateUniqueShortId, getTitleTagProperties } from '@/utils/titleUtils';
 import { navigateToUserFarm } from '@/utils/farmNavigate';
 import { activateFloatingChat } from '@/components/FloatingChat';
+import {
+  addBlacklistedUser,
+  BLACKLIST_EVENT,
+  isUserBlacklisted,
+  loadBlacklistedUserIds,
+  removeBlacklistedUser,
+} from '@/utils/blacklist';
 
 // 添加样式定义
 const additionalStyles = {};
@@ -476,6 +483,7 @@ const ChatRoom: React.FC = () => {
   const [onlineUsers, setOnlineUsers] = useState<User[]>([]);
   const isNearBottomRef = useRef(true);
   const isManuallyClosedRef = useRef(false);
+  const imageScrollSyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [expandedImages, setExpandedImages] = useState<Set<string>>(new Set()); // 添加展开图片的状态
 
   // 读取布局模式，top 模式下需要额外减去 header 高度避免出现滚动条
@@ -689,6 +697,7 @@ const ChatRoom: React.FC = () => {
 
   const [isUserDetailModalVisible, setIsUserDetailModalVisible] = useState<boolean>(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [blacklistedUserIds, setBlacklistedUserIds] = useState<Set<string>>(() => loadBlacklistedUserIds());
   const [isFollowing, setIsFollowing] = useState<boolean>(false);
   const [followLoading, setFollowLoading] = useState<boolean>(false);
   const [isHoveringFollow, setIsHoveringFollow] = useState<boolean>(false);
@@ -704,6 +713,26 @@ const ChatRoom: React.FC = () => {
   const [undercoverNotification, setUndercoverNotification] = useState<string>(UNDERCOVER_NOTIFICATION.NONE);
 
   const [isSpeedMode, setIsSpeedMode] = useState<boolean>(false);
+
+  useEffect(() => {
+    const syncBlacklist = () => {
+      const next = loadBlacklistedUserIds();
+      setBlacklistedUserIds(next);
+      setMessages((prev) => {
+        const filtered = prev.filter(
+          (msg) => !next.has(String(msg.sender.id)) || String(msg.sender.id) === String(currentUser?.id),
+        );
+        return filtered.length === prev.length ? prev : filtered;
+      });
+    };
+
+    window.addEventListener(BLACKLIST_EVENT, syncBlacklist);
+    window.addEventListener('storage', syncBlacklist);
+    return () => {
+      window.removeEventListener(BLACKLIST_EVENT, syncBlacklist);
+      window.removeEventListener('storage', syncBlacklist);
+    };
+  }, [currentUser?.id]);
 
   // 添加搜索音乐的函数
   const handleMusicSearch = async () => {
@@ -875,6 +904,31 @@ const ChatRoom: React.FC = () => {
     });
     isNearBottomRef.current = true;
   }, [firstItemIndex]);
+
+  // 图片加载后会触发 Virtuoso 重新测量行高，需要在布局稳定前多次校正底部位置。
+  const syncBottomAfterImageLoad = useCallback((force = false) => {
+    if (!force && !isNearBottomRef.current) return;
+
+    const sync = () => {
+      if (force || isNearBottomRef.current) {
+        messageListRef.current?.autoscrollToBottom();
+      }
+    };
+
+    sync();
+    requestAnimationFrame(() => {
+      sync();
+      requestAnimationFrame(sync);
+    });
+
+    if (imageScrollSyncTimerRef.current) {
+      clearTimeout(imageScrollSyncTimerRef.current);
+    }
+    imageScrollSyncTimerRef.current = setTimeout(() => {
+      imageScrollSyncTimerRef.current = null;
+      sync();
+    }, 300);
+  }, []);
 
   // 修改计算高度的函数
   const updateListHeight = useCallback(() => {
@@ -1210,7 +1264,12 @@ const ChatRoom: React.FC = () => {
             currentRequestMessageIds.add(messageId);
 
             // 使用工具函数创建消息对象
-            return createMessageFromRecord(record);
+            const message = createMessageFromRecord(record);
+            return message &&
+              (!isUserBlacklisted(message.sender.id) ||
+                message.sender.id === String(currentUser?.id))
+              ? message
+              : null;
           })
           .filter(Boolean) as Message[]; // 使用类型断言
 
@@ -1458,6 +1517,14 @@ const ChatRoom: React.FC = () => {
   // 修改 handleChatMessage 函数
   const handleChatMessage = (data: any) => {
     const incomingMessage = data.data.message;
+    if (
+      incomingMessage?.sender?.id !== undefined &&
+      incomingMessage?.sender?.id !== null &&
+      String(incomingMessage.sender.id) !== String(currentUser?.id) &&
+      isUserBlacklisted(incomingMessage.sender.id)
+    ) {
+      return;
+    }
     const messageTimestamp = new Date(incomingMessage.timestamp).getTime();
     const isSelf = incomingMessage.sender.id === String(currentUser?.id);
     // 判断是否是真正的新消息（时间戳大于当前最新消息的时间戳）
@@ -2332,7 +2399,7 @@ const ChatRoom: React.FC = () => {
           <MessageContent
             content={content}
             onImageLoad={() => {
-              // 图片加载完成后,如果是最新消息则滚动到底部
+              // 图片加载会改变动态行高，最新消息仍在底部附近时继续贴住底部。
               const currentMessages = messagesRef.current;
               const lastMessage = currentMessages[currentMessages.length - 1];
               const isLatestMessage = lastMessage?.content === content;
@@ -2340,8 +2407,7 @@ const ChatRoom: React.FC = () => {
                 isLatestMessage &&
                 (isNearBottomRef.current || lastMessage?.sender.id === String(currentUser?.id))
               ) {
-                // 图片会改变动态行高，让 Virtuoso 在测量后继续贴住底部。
-                setTimeout(() => messageListRef.current?.autoscrollToBottom(), 200);
+                syncBottomAfterImageLoad(lastMessage?.sender.id === String(currentUser?.id));
               }
             }}
           />
@@ -2358,11 +2424,14 @@ const ChatRoom: React.FC = () => {
     }
     return <MessageContent content={content} />;
   }, [handleInviteClick, isSpeedMode, expandedImages, currentUser?.id,
-      scrollToBottom]);
+      scrollToBottom, syncBottomAfterImageLoad]);
 
   // 在组件卸载时清理定时器
   useEffect(() => {
     return () => {
+      if (imageScrollSyncTimerRef.current) {
+        clearTimeout(imageScrollSyncTimerRef.current);
+      }
       // 清理红包防抖定时器
       if (redPacketDebounceRef.current) {
         clearTimeout(redPacketDebounceRef.current);
@@ -2435,6 +2504,31 @@ const ChatRoom: React.FC = () => {
       }
     }
   }, [currentUser]);
+
+  const handleToggleBlacklist = useCallback(() => {
+    if (!selectedUser || !currentUser || String(selectedUser.id) === String(currentUser.id)) return;
+
+    const blacklisted = blacklistedUserIds.has(String(selectedUser.id));
+    Modal.confirm({
+      title: blacklisted ? '移出黑名单？' : '加入黑名单？',
+      content: blacklisted
+        ? '移出后，该用户的新消息将重新显示。'
+        : '加入后，该用户发送的消息将不再显示，也不会触发聊天提醒。',
+      okText: blacklisted ? '移出' : '加入',
+      cancelText: '取消',
+      okButtonProps: blacklisted ? undefined : { danger: true },
+      onOk: () => {
+        const next = blacklisted
+          ? removeBlacklistedUser(selectedUser.id)
+          : addBlacklistedUser(selectedUser.id, {
+              name: selectedUser.name,
+              avatar: selectedUser.avatar,
+            });
+        setBlacklistedUserIds(new Set(next));
+        messageApi.success(blacklisted ? '已移出黑名单' : '已加入黑名单');
+      },
+    });
+  }, [blacklistedUserIds, currentUser, messageApi, selectedUser]);
 
   // 关注/取消关注
   const handleToggleFollow = async () => {
@@ -4074,12 +4168,28 @@ const ChatRoom: React.FC = () => {
               >
                 封禁账号
               </Button>
+              {selectedUser && currentUser && String(selectedUser.id) !== String(currentUser.id) && (
+                <Button
+                  danger={!blacklistedUserIds.has(String(selectedUser.id))}
+                  onClick={handleToggleBlacklist}
+                >
+                  {blacklistedUserIds.has(String(selectedUser.id)) ? '移出黑名单' : '加入黑名单'}
+                </Button>
+              )}
               <Button onClick={() => setIsUserDetailModalVisible(false)}>
                 关闭
               </Button>
             </div>
           ) : (
             <div className={styles.userDetailActions}>
+              {selectedUser && currentUser && String(selectedUser.id) !== String(currentUser.id) && (
+                <Button
+                  danger={!blacklistedUserIds.has(String(selectedUser.id))}
+                  onClick={handleToggleBlacklist}
+                >
+                  {blacklistedUserIds.has(String(selectedUser.id)) ? '移出黑名单' : '加入黑名单'}
+                </Button>
+              )}
               <Button onClick={() => setIsUserDetailModalVisible(false)}>关闭</Button>
             </div>
           )

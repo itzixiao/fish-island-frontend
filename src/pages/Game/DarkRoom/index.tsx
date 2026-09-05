@@ -27,7 +27,7 @@ const GbaEmulator: React.FC = () => {
     <div className={styles.container}>
       <iframe
         ref={iframeRef}
-        src="https://adarkroom.tool.nuomiphp.com/?lang=zh_cn"
+        src="https://adarkroom.yucoder.cn/?lang=zh_cn"
         className={styles.iframe}
         title="小黑屋模拟器"
       />

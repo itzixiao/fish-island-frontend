@@ -1651,14 +1651,14 @@ declare namespace API {
   };
 
   type ForgeDetailRequest = {
-    /** 装备位置：1-武器 2-手套 3-鞋子 4-头盔 5-项链 6-翅膀 */
+    /** 装备位置：1-武器 2-手套 3-鞋子 4-头盔 7-项链 8-翅膀 */
     equipSlot: number;
     /** 宠物ID */
     petId: number;
   };
 
   type ForgeLockRequest = {
-    /** 装备位置：1-武器 2-手套 3-鞋子 4-头盔 5-项链 6-翅膀 */
+    /** 装备位置：1-武器 2-手套 3-鞋子 4-头盔 7-项链 8-翅膀 */
     equipSlot: number;
     /** 需要锁定的词条序号列表（1~4），不在列表中的词条将被解锁，传空列表表示解锁全部 */
     lockedEntries?: number[];
@@ -1667,14 +1667,14 @@ declare namespace API {
   };
 
   type ForgeRefreshRequest = {
-    /** 装备位置：1-武器 2-手套 3-鞋子 4-头盔 5-项链 6-翅膀 */
+    /** 装备位置：1-武器 2-手套 3-鞋子 4-头盔 7-项链 8-翅膀 */
     equipSlot: number;
     /** 宠物ID */
     petId: number;
   };
 
   type ForgeUpgradeRequest = {
-    /** 装备位置：1-武器 2-手套 3-鞋子 4-头盔 5-项链 6-翅膀 */
+    /** 装备位置：1-武器 2-手套 3-鞋子 4-头盔 7-项链 8-翅膀 */
     equipSlot: number;
     /** 宠物ID */
     petId: number;
@@ -3566,7 +3566,7 @@ declare namespace API {
     entry4?: EquipEntry;
     /** 装备等级，武器为 null */
     equipLevel?: number;
-    /** 装备位置：1-武器 2-手套 3-鞋子 4-头盔 5-项链 6-翅膀 */
+    /** 装备位置：1-武器 2-手套 3-鞋子 4-头盔 7-项链 8-翅膀 */
     equipSlot?: number;
     /** 装备位置名称，如：武器、手套、鞋子等 */
     equipSlotName?: string;
@@ -3589,7 +3589,7 @@ declare namespace API {
     entry4?: EquipEntry;
     /** 装备等级，武器为 null */
     equipLevel?: number;
-    /** 装备位置：1-武器 2-手套 3-鞋子 4-头盔 5-项链 6-翅膀 */
+    /** 装备位置：1-武器 2-手套 3-鞋子 4-头盔 7-项链 8-翅膀 */
     equipSlot?: number;
     /** 装备位置名称，如：武器、手套、鞋子等 */
     equipSlotName?: string;

@@ -1,6 +1,7 @@
 import {BACKEND_HOST_WS} from "@/constants";
 import {message} from "antd";
 import {startNotification, stopNotification} from "@/utils/notification";
+import {isUserBlacklisted} from "@/utils/blacklist";
 
 class WebSocketService {
   private static instance: WebSocketService;
@@ -101,6 +102,15 @@ class WebSocketService {
         const data = JSON.parse(event.data);
 
         // console.log('[WebSocket] 收到消息 type:', data.type, 'data:', JSON.stringify(data));
+
+        if (
+          data.type === 'chat' &&
+          data.data?.message?.sender?.id !== undefined &&
+          data.data?.message?.sender?.id !== null &&
+          isUserBlacklisted(data.data.message.sender.id)
+        ) {
+          return;
+        }
 
         // 如果消息处理被暂停，直接丢弃聊天消息
         if (this.isMessageProcessingPaused) {

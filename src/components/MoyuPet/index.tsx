@@ -516,6 +516,22 @@ const IS_PERCENT_ATTR = (attr: string) =>
    'blockRate','blockResistance','antiBlock',
    'lifesteal','lifestealResistance','antiLifesteal'].includes(attr);
 
+/** 装备槽位编号，与后端 EquipSlot 枚举一致：WEAPON=1 HAND=2 FOOT=3 HEAD=4 NECKLACE=7 WINGS=8 */
+const EQUIP_SLOT_NUM: Record<string, number> = {
+  weapon: 1,
+  hand: 2,
+  foot: 3,
+  head: 4,
+  necklace: 7,
+  wing: 8,
+  wings: 8,
+};
+
+const EQUIP_SLOT_NAME: Record<string, string> = {
+  weapon: '武器', hand: '手套', foot: '鞋子', head: '头盔', necklace: '项链', wing: '翅膀', wings: '翅膀',
+  armor: '护甲', shield: '盾牌', ring: '戒指', gloves: '手套', boots: '靴子',
+};
+
 interface ForgeModalProps {
   visible: boolean;
   slotName: string;
@@ -793,7 +809,7 @@ const MoyuPet: React.FC<MoyuPetProps> = ({ visible, onClose, otherUserId, otherU
   const [lockedEntries, setLockedEntries] = useState<number[]>([]); // 锁定的词条序号
   const [forgeLockLoading, setForgeLockLoading] = useState(false);
   // 装备格右键菜单
-  const [equipSlotContextMenu, setEquipSlotContextMenu] = useState<{ slot: string; slotNum: number; x: number; y: number } | null>(null);
+  const [equipSlotContextMenu, setEquipSlotContextMenu] = useState<{ slot: string; x: number; y: number } | null>(null);
   // 查看他人装备词条弹窗
   const [viewForgeModalVisible, setViewForgeModalVisible] = useState(false);
   const [viewForgeDetail, setViewForgeDetail] = useState<API.PetEquipForgeDetailVO | null>(null);
@@ -1281,26 +1297,13 @@ const MoyuPet: React.FC<MoyuPetProps> = ({ visible, onClose, otherUserId, otherU
     }
   };
 
-  // 装备槽位名称 -> 槽位编号映射
-  const equipSlotNameToNum: Record<string, number> = {
-    weapon: 1,
-    hand: 2,
-    foot: 3,
-    head: 4,
-    necklace: 5,
-    wing: 6,
-  };
-
-  const slotDisplayNames: Record<string, string> = {
-    weapon: '武器', hand: '手套', foot: '鞋子', head: '头盔', necklace: '项链', wing: '翅膀',
-    armor: '护甲', shield: '盾牌', ring: '戒指', gloves: '手套', boots: '靴子',
-  };
+  const slotDisplayNames = EQUIP_SLOT_NAME;
 
   // 查看他人装备词条（只读）
   const openViewForgeModal = async (slot: string, petId: number) => {
-    const slotNum = equipSlotNameToNum[slot];
+    const slotNum = EQUIP_SLOT_NUM[slot];
     if (!slotNum) return;
-    setViewForgeSlotName(slotDisplayNames[slot] || slot);
+    setViewForgeSlotName(EQUIP_SLOT_NAME[slot] || slot);
     setViewForgeDetail(null);
     setViewForgeModalVisible(true);
     setViewForgeLoading(true);
@@ -1319,10 +1322,15 @@ const MoyuPet: React.FC<MoyuPetProps> = ({ visible, onClose, otherUserId, otherU
   };
 
   // 打开装备强化弹窗
-  const openForgeModal = async (slotKey: string, slotNum: number, slotDisplayName: string) => {
+  const openForgeModal = async (slotKey: string) => {
     if (!pet?.petId) return;
+    const slotNum = EQUIP_SLOT_NUM[slotKey];
+    if (!slotNum) {
+      message.error('未知装备槽位');
+      return;
+    }
     setForgeSlot(slotNum);
-    setForgeSlotName(slotDisplayName);
+    setForgeSlotName(EQUIP_SLOT_NAME[slotKey] || slotKey);
     setLockedEntries([]);
     setForgeModalVisible(true);
     setForgeDetailLoading(true);
@@ -1930,7 +1938,7 @@ const MoyuPet: React.FC<MoyuPetProps> = ({ visible, onClose, otherUserId, otherU
                               if (isOtherUser) return;
                               e.preventDefault();
                               e.stopPropagation();
-                              setEquipSlotContextMenu({ slot: 'weapon', slotNum: 1, x: e.clientX, y: e.clientY });
+                              setEquipSlotContextMenu({ slot: 'weapon', x: e.clientX, y: e.clientY });
                             }}
                             style={{ cursor: isOtherUser ? 'default' : 'pointer' }}
                           >
@@ -1980,7 +1988,7 @@ const MoyuPet: React.FC<MoyuPetProps> = ({ visible, onClose, otherUserId, otherU
                               if (isOtherUser) return;
                               e.preventDefault();
                               e.stopPropagation();
-                              setEquipSlotContextMenu({ slot: 'hand', slotNum: 2, x: e.clientX, y: e.clientY });
+                              setEquipSlotContextMenu({ slot: 'hand', x: e.clientX, y: e.clientY });
                             }}
                             style={{ cursor: isOtherUser ? 'default' : 'pointer' }}
                           >
@@ -2030,7 +2038,7 @@ const MoyuPet: React.FC<MoyuPetProps> = ({ visible, onClose, otherUserId, otherU
                               if (isOtherUser) return;
                               e.preventDefault();
                               e.stopPropagation();
-                              setEquipSlotContextMenu({ slot: 'foot', slotNum: 3, x: e.clientX, y: e.clientY });
+                              setEquipSlotContextMenu({ slot: 'foot', x: e.clientX, y: e.clientY });
                             }}
                             style={{ cursor: isOtherUser ? 'default' : 'pointer' }}
                           >
@@ -2127,7 +2135,7 @@ const MoyuPet: React.FC<MoyuPetProps> = ({ visible, onClose, otherUserId, otherU
                               if (isOtherUser) return;
                               e.preventDefault();
                               e.stopPropagation();
-                              setEquipSlotContextMenu({ slot: 'head', slotNum: 4, x: e.clientX, y: e.clientY });
+                              setEquipSlotContextMenu({ slot: 'head', x: e.clientX, y: e.clientY });
                             }}
                             style={{ cursor: isOtherUser ? 'default' : 'pointer' }}
                           >
@@ -2177,7 +2185,7 @@ const MoyuPet: React.FC<MoyuPetProps> = ({ visible, onClose, otherUserId, otherU
                               if (isOtherUser) return;
                               e.preventDefault();
                               e.stopPropagation();
-                              setEquipSlotContextMenu({ slot: 'necklace', slotNum: 5, x: e.clientX, y: e.clientY });
+                              setEquipSlotContextMenu({ slot: 'necklace', x: e.clientX, y: e.clientY });
                             }}
                             style={{ cursor: isOtherUser ? 'default' : 'pointer' }}
                           >
@@ -2227,7 +2235,7 @@ const MoyuPet: React.FC<MoyuPetProps> = ({ visible, onClose, otherUserId, otherU
                               if (isOtherUser) return;
                               e.preventDefault();
                               e.stopPropagation();
-                              setEquipSlotContextMenu({ slot: 'wing', slotNum: 6, x: e.clientX, y: e.clientY });
+                              setEquipSlotContextMenu({ slot: 'wing', x: e.clientX, y: e.clientY });
                             }}
                             style={{ cursor: isOtherUser ? 'default' : 'pointer' }}
                           >
@@ -2281,8 +2289,7 @@ const MoyuPet: React.FC<MoyuPetProps> = ({ visible, onClose, otherUserId, otherU
                       size="small"
                       icon={<ToolOutlined />}
                       onClick={() => {
-                        const slotDisplayNames: Record<string, string> = { weapon: '武器', hand: '手套', foot: '鞋子', head: '头盔', necklace: '项链', wing: '翅膀' };
-                        openForgeModal(equipSlotContextMenu.slot, equipSlotContextMenu.slotNum, slotDisplayNames[equipSlotContextMenu.slot] || equipSlotContextMenu.slot);
+                        openForgeModal(equipSlotContextMenu.slot);
                         setEquipSlotContextMenu(null);
                       }}
                       style={{ width: '100%' }}

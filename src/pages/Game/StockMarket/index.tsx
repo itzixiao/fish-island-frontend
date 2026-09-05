@@ -695,13 +695,14 @@ const StockMarket: React.FC = () => {
                 label="买入金额（积分）"
                 name="amount"
                 rules={[{ required: true, message: '请输入买入金额' }]}
-                extra={`最小买入金额为100积分，剩余积分：${availablePoints}`}
+                extra={`单笔买入范围：100 - 100,000积分；每日累计上限500,000积分；剩余积分：${availablePoints}`}
               >
                 <InputNumber
                   placeholder="请输入买入金额"
                   style={{ width: '100%' }}
                   min={100}
-                  precision={2}
+                  max={100000}
+                  precision={0}
                   prefix={<DollarOutlined />}
                 />
               </Form.Item>
