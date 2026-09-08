@@ -120,6 +120,9 @@ export const createActionResultHandler = (
         highestRobScore: data.highestScore ?? prev.highestRobScore,
         landlordId: data.landlordId ?? prev.landlordId,
         landlordName: data.landlordName ?? prev.landlordName,
+        // 更新上家出的牌
+        lastPlayedCards: playedCards || (shouldClearPlayedCards ? [] : prev.lastPlayedCards),
+        lastPlayedPlayerId: playedCards ? actionPlayerId : (shouldClearPlayedCards ? null : prev.lastPlayedPlayerId),
         players: prev.players.map((player) => {
           const isActionPlayer =
             actionPlayerId !== null && String(player.userId) === actionPlayerId;

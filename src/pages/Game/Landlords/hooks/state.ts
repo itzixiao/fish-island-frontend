@@ -134,7 +134,11 @@ export const mergeGameState = (
     currentRobPlayerId: data?.currentRobPlayerId || prev.currentRobPlayerId,
     highestRobScore: data?.highestRobScore ?? data?.highestScore ?? prev.highestRobScore,
     landlordId: data?.landlordId || prev.landlordId,
-    lastPlayedCards: data?.lastPlayedCards || data?.pokers || prev.lastPlayedCards,
+    lastPlayedCards: (() => {
+      const raw = data?.lastPlayedCards ?? data?.pokers;
+      if (Array.isArray(raw)) return extractCardIds(raw);
+      return prev.lastPlayedCards;
+    })(),
     lastPlayedPlayerId:
       data?.lastPlayerId || data?.lastPlayedPlayerId || prev.lastPlayedPlayerId,
     lastPatternDesc: data?.lastPatternDesc || data?.pattern || prev.lastPatternDesc,

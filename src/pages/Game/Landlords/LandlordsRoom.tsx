@@ -75,6 +75,11 @@ const LandlordsRoom: React.FC = () => {
     cancelRobot,
     setRobot,
     tempLeaveInfo,
+    handleHint,
+    resetHintState,
+    hintCombinations,
+    hintCurrentIndex,
+    isFirstPlay,
   } = useGameState(roomId);
 
   const currentUser = getMyPlayer();
@@ -147,13 +152,42 @@ const LandlordsRoom: React.FC = () => {
       ? 'right'
       : 'bottom';
 
-  // 选牌
+  // 轮到自己出牌时重置提示状态
+  useEffect(() => {
+    if (canPlay) {
+      resetHintState();
+    }
+  }, [canPlay, resetHintState]);
+
+    // 选牌逻辑：单击牌时触发
   const handleSelectCard = useCallback((cardId: string, index: number) => {
     const cardKey = `${cardId}:${index}`;
-    setSelectedCards((prev) =>
-      prev.includes(cardKey) ? prev.filter((id) => id !== cardKey) : [...prev, cardKey],
-    );
-  }, [setSelectedCards]);
+    if (selectedCards.includes(cardKey)) {
+      // 已选中 → 取消选中
+      setSelectedCards(selectedCards.filter(k => k !== cardKey));
+    } else {
+      // 未选中 → 加入选中列表
+      setSelectedCards([...selectedCards, cardKey]);
+    }
+  }, [handCards, selectedCards, setSelectedCards]);
+
+  // 点击提示按钮
+  const handleHintClick = useCallback(() => {
+    const lastPlayed = gameState.lastPlayedCards || null;
+    const currentPlayerId = gameState.currentPlayerId ?? null;
+    const combo = handleHint(handCards, lastPlayed, currentPlayerId);
+
+    if (combo && combo.cardIndices) {
+      const newSelected = combo.cardIndices.map(i => `${handCards[i]}:${i}`);
+      setSelectedCards(newSelected);
+    }
+  }, [handleHint, handCards, gameState.lastPlayedCards, gameState.currentPlayerId, setSelectedCards]);
+
+  // 重选时也需要重置提示状态
+  const handleClearSelected = useCallback(() => {
+    clearSelected();
+    resetHintState();
+  }, [clearSelected, resetHintState]);
 
   // 出牌
   const handlePlay = useCallback(() => {
@@ -576,7 +610,8 @@ const LandlordsRoom: React.FC = () => {
               onStart={startGame}
               onPlay={handlePlay}
               onPass={pass}
-              onReselect={clearSelected}
+              onReselect={handleClearSelected}
+              onHint={canPlay ? handleHintClick : undefined}
               onSkipRob={skipRob}
               onRobLandlord={(score) => {
                 robLandlord(score);

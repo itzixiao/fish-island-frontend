@@ -29,6 +29,7 @@ export interface ActionBarProps {
   onPlay?: () => void;
   onPass?: () => void;
   onReselect?: () => void;
+  onHint?: () => void;
 
   // 叫分
   isMyTurnToRob?: boolean;
@@ -70,6 +71,7 @@ const ActionBar: React.FC<ActionBarProps> = ({
   onPlay,
   onPass,
   onReselect,
+  onHint,
   isMyTurnToRob = false,
   onSkipRob,
   onRobLandlord,
@@ -177,6 +179,11 @@ const ActionBar: React.FC<ActionBarProps> = ({
     if (canPlay) {
       return (
         <Space style={{ width: '100%', justifyContent: 'center' }} size="middle">
+          {onHint && (
+            <Button onClick={onHint} style={{ backgroundColor: '#1890ff', borderColor: '#1890ff', color: '#fff' }}>
+              💡提示
+            </Button>
+          )}
           {selectedCount > 0 && (
             <Button onClick={onReselect}>重选</Button>
           )}
