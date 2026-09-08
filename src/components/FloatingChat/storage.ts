@@ -1,4 +1,5 @@
 export type FloatingChatMode = 'minimized' | 'small' | 'normal';
+export type FloatingChatContent = 'chat' | 'music';
 
 /** 悬浮窗标题最大长度 */
 export const FLOATING_CHAT_TITLE_MAX_LENGTH = 20;
@@ -10,6 +11,8 @@ export const FLOATING_CHAT_DEFAULT_TITLE = '鱼窝';
 
 export interface FloatingChatSettings {
   mode: FloatingChatMode;
+  /** 悬浮窗当前展示的内容 */
+  content: FloatingChatContent;
   title: string;
   pos: { x: number; y: number };
   /** 窗口不透明度 30–100，100 为完全不透明 */
@@ -91,6 +94,7 @@ export const FLOATING_CHAT_RESET_POSITION_EVENT = 'resetFloatingChatPosition';
 
 const DEFAULT_SETTINGS: FloatingChatSettings = {
   mode: 'minimized',
+  content: 'chat',
   title: FLOATING_CHAT_DEFAULT_TITLE,
   pos: { ...FLOATING_CHAT_DEFAULT_POS },
   opacity: MAX_OPACITY,
@@ -113,6 +117,7 @@ export function loadFloatingChatSettings(): FloatingChatSettings {
         parsed.mode === 'minimized' || parsed.mode === 'small' || parsed.mode === 'normal'
           ? parsed.mode
           : DEFAULT_SETTINGS.mode,
+      content: parsed.content === 'music' ? 'music' : DEFAULT_SETTINGS.content,
       title: rawTitle !== undefined ? normalizeFloatingChatTitle(rawTitle) : DEFAULT_SETTINGS.title,
       pos: {
         x: typeof parsed.pos?.x === 'number' ? parsed.pos.x : 0,

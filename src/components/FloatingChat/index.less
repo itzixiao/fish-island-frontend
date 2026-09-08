@@ -60,6 +60,13 @@
     flex: 1;
     min-height: 0;
   }
+
+  .chatContent,
+  .musicPanel {
+    flex: 1;
+    min-height: 0;
+    height: auto;
+  }
 }
 
 .chatMinBar {
@@ -126,6 +133,10 @@
 
   .chatBody {
     height: 280px;
+  }
+
+  .musicPanel {
+    height: 337px;
   }
 
   .chatMessage .nickname {
@@ -347,6 +358,72 @@
   overflow-y: auto;
   scroll-behavior: smooth;
   background: #fff;
+}
+
+.chatContent {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.musicPanel {
+  width: 100%;
+  height: 477px;
+  min-height: 0;
+  background: #111827;
+}
+
+.musicFrame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #111827;
+}
+
+.contentHidden {
+  display: none !important;
+}
+
+.musicLauncher {
+  position: fixed;
+  right: 116px;
+  bottom: 24px;
+  z-index: 999999;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  color: #24292f;
+  font-weight: 700;
+  font-size: 25px;
+  line-height: 1;
+  background: #f0d463;
+  border: 1px solid rgba(36, 41, 47, 0.08);
+  border-radius: 50%;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    background: #e5c856;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+    transform: translateY(-2px);
+  }
+
+  &:focus-visible {
+    outline: 3px solid rgba(240, 212, 99, 0.4);
+    outline-offset: 3px;
+  }
+}
+
+@media (max-width: 768px) {
+  .musicLauncher {
+    right: 20px;
+    bottom: 84px;
+  }
 }
 
 .chatBody::-webkit-scrollbar {
