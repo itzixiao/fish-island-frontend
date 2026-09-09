@@ -38,6 +38,11 @@ import {
   createReadyHandler,
   createLeaveRoomHandler,
 } from './handlers/room';
+import {
+  PlayableCombination,
+  getPlayableCombinations,
+  sortCombinations,
+} from '../utils/pokerHint';
 
 const TIMER_INTERVAL = 100; // ms
 
@@ -70,6 +75,15 @@ export function useGameState(roomId: string | undefined) {
     currentPlayerId: null as number | string | null,
     action: '',
   });
+
+  // 提示状态管理
+  const [hintCombinations, setHintCombinations] = useState<PlayableCombination[]>([]);
+  const [hintCurrentIndex, setHintCurrentIndex] = useState(0);
+  const hintCombinationsRef = useRef<PlayableCombination[]>([]);
+  const hintCurrentIndexRef = useRef(0);
+
+  useEffect(() => { hintCombinationsRef.current = hintCombinations; }, [hintCombinations]);
+  useEffect(() => { hintCurrentIndexRef.current = hintCurrentIndex; }, [hintCurrentIndex]);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<number | null>(null);
@@ -345,6 +359,63 @@ export function useGameState(roomId: string | undefined) {
     if (currentRoomId) sendGameMessage(MSG_TYPE.GAME_SET_ROBOT, { roomId: currentRoomId });
   };
 
+  // ===== 提示功能 =====
+  // 判断是否是首出牌（没人出过牌 = lastPlayed 为空）
+  // 注意：lastPlayed 为空表示这一轮还没人出过牌，是首出
+  const isFirstPlay = useCallback((lastPlayed: string[] | null): boolean => {
+    // 如果上家没出过牌（或者就是自己），则是首出
+    return !lastPlayed || lastPlayed.length === 0;
+  }, []);
+
+  // 更新提示组合列表（同步版本，返回计算结果）
+  const calculateHintCombinations = useCallback((
+    handCards: string[],
+    lastPlayed: string[] | null,
+    isFirst: boolean
+  ): PlayableCombination[] => {
+    // 关键修复：
+    //   - 首出牌：仍然不包含"单/对/三"这种基础牌型（一般不会这样首出）
+    //   - 压牌：必须包含基础牌型，否则上家出单/对/三时永远提示不出牌
+    const includeBasic = isFirst ? false : true;
+    const combos = getPlayableCombinations(handCards, lastPlayed, isFirst, includeBasic);
+    const sorted = sortCombinations(combos, isFirst);
+    // 同步更新 ref 和 state
+    hintCombinationsRef.current = sorted;
+    setHintCombinations(sorted);
+    setHintCurrentIndex(0);
+    return sorted;
+  }, []);
+
+  // 点击提示按钮：切换到下一个可出的组合
+  const handleHint = useCallback((
+    handCards: string[],
+    lastPlayed: string[] | null,
+    currentPlayerId: string | number | null
+  ): PlayableCombination | null => {
+    const isFirst = isFirstPlay(lastPlayed);
+
+    // 同步计算组合（使用同步版本）
+    let combos = calculateHintCombinations(handCards, lastPlayed, isFirst);
+
+    if (combos.length === 0) {
+      antMessage.warning('没有可出的牌');
+      return null;
+    }
+
+    // 切换到下一个组合（从索引1开始，第一次点击显示第一个组合）
+    const nextIndex = (hintCurrentIndexRef.current + 1) % combos.length;
+    setHintCurrentIndex(nextIndex);
+
+    return combos[nextIndex];
+  }, [isFirstPlay, calculateHintCombinations]);
+
+  // 重置提示状态（在新回合开始时调用）
+  const resetHintState = useCallback(() => {
+    hintCombinationsRef.current = [];
+    setHintCombinations([]);
+    setHintCurrentIndex(0);
+  }, []);
+
   // ===== 派生查询 =====
   const {
     getMyPlayer,
@@ -402,5 +473,12 @@ export function useGameState(roomId: string | undefined) {
     sendGameMessage,
     cancelRobot,
     setRobot,
+
+    // 提示功能
+    handleHint,
+    resetHintState,
+    hintCombinations,
+    hintCurrentIndex,
+    isFirstPlay,
   };
 }

@@ -1,10 +1,15 @@
 /**
  * 游戏结束弹窗组件
+ *
+ * 仅展示结算信息，由用户手动选择「继续游戏」或「离开房间」。
+ * 自动退出由上层「准备阶段 30 秒倒计时」负责：
+ *   游戏结束后后端立即把房间重置为 WAITING 阶段并广播 readyPhaseStartTime，
+ *   若 30 秒内用户未点「继续游戏」（相当于点准备），
+ *   会被前端的准备超时逻辑自动踢出房间。
  */
 import React from 'react';
-import { Modal, Button, Tag, Space } from 'antd';
-import { Trophy } from 'lucide-react';
-import { GameResult, PlayerResult } from '../types';
+import { Modal, Button, Tag } from 'antd';
+import { GameResult } from '../types';
 
 interface GameOverModalProps {
   visible: boolean;
@@ -121,6 +126,18 @@ const GameOverModal: React.FC<GameOverModalProps> = ({
             </div>
           </div>
         )}
+      </div>
+
+      {/* 提示：30秒后会自动踢出 */}
+      <div
+        style={{
+          textAlign: 'center',
+          color: '#9ca3af',
+          fontSize: 12,
+          marginBottom: 12,
+        }}
+      >
+        30 秒内未点击「继续游戏」将自动退出房间
       </div>
 
       {/* 操作按钮 */}

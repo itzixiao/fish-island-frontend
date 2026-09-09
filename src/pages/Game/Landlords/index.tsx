@@ -20,6 +20,8 @@ const MSG_TYPE = {
   GAME_CREATE_ROOM: 'gameCreateRoom',
   // 加入房间请求（后端返回 gameRoomState）
   GAME_JOIN_ROOM: 'gameJoinRoom',
+  // 游戏状态更新（监听其中的 PLAYER_STATUS_CHANGE 事件以更新房间列表头像）
+  GAME_STATE_UPDATE: 'gameStateUpdate',
 };
 
 const codeToGameTypeName = (code: string) => {
@@ -164,11 +166,16 @@ const LandlordsIndex: React.FC = () => {
     }
   }, []);
 
-  // 房间超时解散：如果是自己受限的房间，立即解除限制（这样能直接进其它房间）
+  // 房间超时解散：如果是自己受限的房间，立即解除限制，并从列表移除房间
   const handleGameRoomClosed = useCallback((payload: any) => {
     const data = payload?.data ?? payload;
     if (data?.roomId) {
+      // 解除限制
       setRestriction((prev) => (prev?.roomId === data.roomId ? null : prev));
+      // 从列表移除房间
+      setRoomList((prev) =>
+        prev.filter((room) => String(room.roomId) !== String(data.roomId))
+      );
     }
   }, []);
 
@@ -179,8 +186,73 @@ const LandlordsIndex: React.FC = () => {
       // 跳转前先刷新房间列表，确保其他用户能看到新房间
       refreshRoomList();
       history.push(`/game/landlords/${data.roomId}`);
+      return;
+    }
+
+    // PLAYER_LEAVE: 有玩家离开房间，更新房间列表中的玩家数量
+    if (data?.action === 'PLAYER_LEAVE' && data?.roomId) {
+      setRoomList((prev) =>
+        prev.map((room) => {
+          if (String(room.roomId) === String(data.roomId)) {
+            return {
+              ...room,
+              playerCount: room.playerCount > 0 ? room.playerCount - 1 : 0,
+            };
+          }
+          return room;
+        })
+      );
+    }
+
+    // PLAYER_STATUS_CHANGE: 玩家状态变更（离线/上线），更新房间列表中玩家的在线状态
+    if (data?.event === 'PLAYER_STATUS_CHANGE' && data?.userId && data?.status) {
+      const targetUserId = String(data.userId);
+      const isOffline = data.status === 'offline';
+
+      setRoomList((prev) =>
+        prev.map((room) => {
+          if (room.players) {
+            const updatedPlayers = room.players.map((player: any) => {
+              if (String(player.userId || player.id) === targetUserId) {
+                return { ...player, isOnline: !isOffline };
+              }
+              return player;
+            });
+            return { ...room, players: updatedPlayers };
+          }
+          return room;
+        })
+      );
     }
   }, [refreshRoomList]);
+
+  // 监听 gameStateUpdate 消息中的玩家状态变更
+  // （房间页退出时，inGame 分支会通过 STATE_UPDATE 通道广播 PLAYER_STATUS_CHANGE 事件，
+  //  这里需要同步更新房间列表中玩家头像的在线/离线状态）
+  const handleGameStateUpdateInList = useCallback((payload: any) => {
+    const data = payload?.data ?? payload;
+    if (!data) return;
+
+    if (data?.event === 'PLAYER_STATUS_CHANGE' && data?.userId && data?.status) {
+      const targetUserId = String(data.userId);
+      const isOffline = data.status === 'offline';
+
+      setRoomList((prev) =>
+        prev.map((room) => {
+          if (room.players) {
+            const updatedPlayers = room.players.map((player: any) => {
+              if (String(player.userId || player.id) === targetUserId) {
+                return { ...player, isOnline: !isOffline };
+              }
+              return player;
+            });
+            return { ...room, players: updatedPlayers };
+          }
+          return room;
+        })
+      );
+    }
+  }, []);
 
   const handleError = useCallback((payload: any) => {
     antMessage.error(payload?.data || '发生错误');
@@ -195,6 +267,7 @@ const LandlordsIndex: React.FC = () => {
       [MSG_TYPE.GAME_ROOM_REMOVED]: handleGameRoomRemoved,
       [MSG_TYPE.GAME_ROOM_CLOSED]: handleGameRoomClosed,
       [MSG_TYPE.GAME_ROOM_STATE]: handleGameRoomState,
+      [MSG_TYPE.GAME_STATE_UPDATE]: handleGameStateUpdateInList,
       error: handleError,
     };
 
@@ -203,7 +276,7 @@ const LandlordsIndex: React.FC = () => {
       wsService.addMessageHandler(type, handler);
     });
 
-    // 监听其他页面离开房间的事件
+    // 监听其他页面离开房间的事件和玩家离线状态变化
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'landlords_left_room' && e.newValue) {
         try {
@@ -223,6 +296,30 @@ const LandlordsIndex: React.FC = () => {
         // 清除标记
         localStorage.removeItem('landlords_left_room');
       }
+
+      // 监听玩家离线状态变化，更新房间列表
+      if (e.key === 'landlords_offline_users' && e.newValue) {
+        try {
+          const offlineUsers = JSON.parse(e.newValue);
+          setRoomList((prev) =>
+            prev.map((room) => {
+              if (room.players) {
+                const updatedPlayers = room.players.map((player: any) => {
+                  const playerId = String(player.userId || player.id);
+                  return {
+                    ...player,
+                    isOnline: !offlineUsers[playerId],
+                  };
+                });
+                return { ...room, players: updatedPlayers };
+              }
+              return room;
+            })
+          );
+        } catch (err) {
+          console.error('[landlords] 解析离线用户数据失败', err);
+        }
+      }
     };
 
     window.addEventListener('storage', handleStorageChange);
@@ -240,6 +337,7 @@ const LandlordsIndex: React.FC = () => {
     handleGameRoomRemoved,
     handleGameRoomClosed,
     handleGameRoomState,
+    handleGameStateUpdateInList,
     handleError,
   ]);
 

@@ -5,6 +5,7 @@
  * - handleGameOver
  */
 import { message as antMessage } from 'antd';
+import { history } from '@@/core/history';
 import { GameState, GameEvent, PlayerStatus, GameResult, ChatMessage } from '../../types';
 import { GamePhase } from '../../types/enums/game';
 import { RoomStateBackend } from '../../types/enums/room';
@@ -20,6 +21,27 @@ import {
 // roomState 来自后端 RoomStateEnum 永远是大写 —— 故两个白名单不能合并
 const VALID_GAME_PHASES: readonly string[] = Object.values(GamePhase) as readonly string[];
 const VALID_ROOM_STATES: readonly string[] = Object.values(RoomStateBackend) as readonly string[];
+
+/**
+ * 同步玩家离线/上线状态到 localStorage，供房间列表页面更新头像
+ */
+const syncOfflineUserToStorage = (userId: string, isOffline: boolean) => {
+  try {
+    const offlineUsers = JSON.parse(localStorage.getItem('landlords_offline_users') || '{}');
+    if (isOffline) {
+      offlineUsers[userId] = { timestamp: Date.now() };
+    } else {
+      delete offlineUsers[userId];
+    }
+    localStorage.setItem('landlords_offline_users', JSON.stringify(offlineUsers));
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: 'landlords_offline_users',
+      newValue: JSON.stringify(offlineUsers)
+    }));
+  } catch (e) {
+    console.error('[landlords] 同步离线状态失败:', e);
+  }
+};
 
 /**
  * 创建 GAME_STATE_UPDATE 处理器
@@ -65,9 +87,33 @@ export const createGameStateUpdateHandler = (
     const isPlayerStatusChangeEvent =
       data?.event === GameEvent.PLAYER_STATUS_CHANGE || data?.status;
     const isPlayerReconnectEvent = data?.event === GameEvent.PLAYER_RECONNECT;
+    const isPlayerLeaveEvent = data?.event === GameEvent.PLAYER_LEAVE;
     const hasReadyPhaseTimer = data?.readyPhaseStartTime != null;
-    if (!hasValidPhase && !hasValidRoomState && !isPlayerJoinEvent && !isPlayerStatusChangeEvent && !isPlayerReconnectEvent && !hasReadyPhaseTimer) {
+    if (!hasValidPhase && !hasValidRoomState && !isPlayerJoinEvent && !isPlayerStatusChangeEvent && !isPlayerReconnectEvent && !isPlayerLeaveEvent && !hasReadyPhaseTimer) {
       console.debug('[landlords] 忽略无效状态更新消息:', data?.event || 'no event');
+      return;
+    }
+
+    // 处理玩家离开事件 - 从玩家列表中移除
+    if (isPlayerLeaveEvent && data?.userId) {
+      const leaveUserId = String(data.userId);
+      console.debug('[landlords] 玩家离开事件:', leaveUserId);
+
+      // 如果是自己离开，跳转到房间列表
+      if (String(userId) === leaveUserId) {
+        antMessage.warning('你已离开房间');
+        history.push('/game/landlords');
+        return;
+      }
+
+      // 如果是其他玩家离开，从列表中移除
+      setGameState((prev) => ({
+        ...prev,
+        players: (prev.players || []).filter(
+          (p) => String(p.userId) !== leaveUserId
+        ),
+      }));
+      antMessage.info(`${data.playerName || '有玩家'}离开了房间`);
       return;
     }
 
@@ -111,23 +157,20 @@ export const createGameStateUpdateHandler = (
       return;
     }
 
-    // 处理玩家状态变更事件 - 直接更新，不走 mergePlayers
+    // 处理玩家状态变更事件
     if (isPlayerStatusChangeEvent && data?.userId && data?.status) {
       const targetUserId = String(data.userId);
-      const newStatus = data.status;
-      console.debug('[landlords] 玩家状态变更:', targetUserId, newStatus);
+      const isOnline = data.status === PlayerStatus.ONLINE;
+      console.debug('[landlords] 玩家状态变更:', targetUserId, data.status);
+
+      // 同步离线状态到 localStorage，供房间列表页面使用
+      syncOfflineUserToStorage(targetUserId, !isOnline);
+
       setGameState((prev) => ({
         ...prev,
-        players: (prev.players || []).map((player) => {
-          if (String(player.userId) === targetUserId) {
-            if (newStatus === PlayerStatus.OFFLINE) {
-              return { ...player, isOnline: false };
-            } else if (newStatus === PlayerStatus.ONLINE) {
-              return { ...player, isOnline: true };
-            }
-          }
-          return player;
-        }),
+        players: (prev.players || []).map((player) =>
+          String(player.userId) === targetUserId ? { ...player, isOnline } : player,
+        ),
       }));
       return;
     }

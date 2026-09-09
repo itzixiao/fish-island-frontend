@@ -10,7 +10,7 @@ import type { RoomStateResp, PlayerInfo } from '../../types/protocol';
 
 /**
  * 创建统一房间状态处理器
- * 处理: CREATE, JOIN, RECONNECT 等消息
+ * 处理: CREATE, JOIN, RECONNECT, PLAYER_LEAVE 等消息
  */
 export const createRoomStateHandler = (
   userId: string | number | undefined,
@@ -36,6 +36,29 @@ export const createRoomStateHandler = (
 
     // 根据 action 类型决定处理逻辑
     const action = data.action;
+
+    // 0. PLAYER_LEAVE: 玩家离开
+    if (action === 'PLAYER_LEAVE' && data.userId) {
+      console.debug('[landlords] 玩家离开:', data.userId);
+      const leaveUserId = String(data.userId);
+
+      // 如果是自己离开，提示并跳转
+      if (String(userId) === leaveUserId) {
+        antMessage.warning('你已离开房间');
+        history.push('/game/landlords');
+        return;
+      }
+
+      // 如果是其他玩家离开，更新玩家列表
+      setGameState((prev) => ({
+        ...prev,
+        players: (prev.players || []).filter(
+          (p) => String(p.userId) !== leaveUserId
+        ),
+      }));
+      antMessage.info(`${data.message || '有玩家离开了房间'}`);
+      return;
+    }
 
     // 1. CREATE: 创建房间成功，跳转到房间页
     if (action === 'CREATE') {

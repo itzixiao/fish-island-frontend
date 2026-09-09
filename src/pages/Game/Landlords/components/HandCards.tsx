@@ -2,6 +2,8 @@
  * 手牌组件 - 从左到右按从小到大排序，支持选中效果
  * 支持多副牌场景：每张牌用 (cardId, index) 复合 key 唯一标识
  * 响应式设计：根据视口宽度和可用空间自动调整牌面大小
+ *
+ * 选牌交互：单击牌切换选中状态
  */
 import React, { useState, useEffect, useRef } from 'react';
 import { parsePokerId } from '../utils/pokerUtils';
@@ -17,34 +19,37 @@ interface PokerCardComponentProps {
   id: string;
   selected: boolean;
   disabled: boolean;
-  onClick: () => void;
   style?: React.CSSProperties;
   cardWidth: number;
   cardHeight: number;
+  onClick?: () => void;
 }
 
 // 手牌之间的重叠比例（marginLeft 偏移与尺寸计算共用，保证总宽度一致）
 const CARD_OVERLAP_RATIO = 0.48;
 
-const PokerCardComponent: React.FC<PokerCardComponentProps> = ({
+/**
+ * 单张牌组件
+ */
+const PokerCardComponent = React.forwardRef<HTMLDivElement, PokerCardComponentProps>(({
   id,
   selected,
   disabled,
-  onClick,
   style,
   cardWidth,
   cardHeight,
-}) => {
+  onClick,
+}, ref) => {
   const parsed = parsePokerId(id);
   const displayValue = parsed.displayValue;
-  // 左上角角标：放大 50%（相对于 cardWidth）
   const cornerFontSize = cardWidth * 0.32;
-  // 中间图案：缩小 25%
   const symbolSize = cardWidth * 0.28;
   const cornerPadding = cardWidth * 0.06;
 
   return (
     <div
+      ref={ref}
+      data-card-element="true"
       onClick={onClick}
       style={{
         position: 'relative',
@@ -54,18 +59,22 @@ const PokerCardComponent: React.FC<PokerCardComponentProps> = ({
         justifyContent: 'center',
         borderRadius: cardWidth * 0.14,
         cursor: disabled ? 'not-allowed' : 'pointer',
-        transition: 'all 0.2s',
+        transition: 'transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease',
         userSelect: 'none',
+        WebkitUserSelect: 'none',
         width: cardWidth,
         height: cardHeight,
         backgroundColor: parsed.bgColor,
         border: selected ? `3px solid #f97316` : '2px solid #d9d9d9',
         color: parsed.color,
+        // 始终保持紧凑重叠排列（不论是否选中）
         marginLeft: -cardWidth * CARD_OVERLAP_RATIO,
-        zIndex: selected ? 1000 : undefined,
-        transform: selected ? `translateY(-${cardHeight * 0.2}px)` : undefined,
+        // 选中牌：垂直向上偏移 30%，从牌堆中"抽出"
+        transform: selected
+          ? `translateY(-${cardHeight * 0.3}px)`
+          : undefined,
         boxShadow: selected
-          ? `0 ${cardHeight * 0.1}px ${cardHeight * 0.2}px rgba(249,115,22,0.3)`
+          ? `0 ${cardHeight * 0.1}px ${cardHeight * 0.2}px rgba(249,115,22,0.35)`
           : `0 ${cardHeight * 0.03}px ${cardHeight * 0.08}px rgba(0,0,0,0.1)`,
         opacity: disabled ? 0.7 : 1,
         ...style,
@@ -128,7 +137,8 @@ const PokerCardComponent: React.FC<PokerCardComponentProps> = ({
       )}
     </div>
   );
-};
+});
+PokerCardComponent.displayName = 'PokerCardComponent';
 
 const HandCards: React.FC<HandCardsProps> = ({
   cards = [],
@@ -140,45 +150,32 @@ const HandCards: React.FC<HandCardsProps> = ({
   // 这里直接使用后端返回的顺序，避免前后端排序逻辑不一致导致顺序错乱。
   const sortedCards = cards;
   const containerRef = useRef<HTMLDivElement>(null);
+  const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
 
-  // 响应式牌面大小计算 - 根据容器实际可用空间计算
+  // 响应式牌面大小计算
   const [cardSize, setCardSize] = useState({ width: 60, height: 84 });
 
   useEffect(() => {
     const calculateCardSize = () => {
-      // 获取手牌区域的可用空间
       const container = containerRef.current;
       if (!container) return;
 
-      // 读取实际渲染尺寸（包含 padding/border 后的真实可用区）
       const rect = container.getBoundingClientRect();
       const containerWidth = rect.width || container.clientWidth;
       const containerHeight = rect.height || container.clientHeight;
 
       if (containerWidth <= 0 || containerHeight <= 0) return;
 
-      // 牌数（斗地主最多20张牌，癞子可能增加）
       const cardCount = cards.length || 17;
-
-      // 重叠比例与外层卡片一致
       const overlapRatio = CARD_OVERLAP_RATIO;
-      // 有效宽度占比 = 第一张完整宽 + 后续每张露出 (1 - overlap) 的宽度
       const effectiveWidthRatio = overlapRatio + cardCount * (1 - overlapRatio);
-
-      // 横向限制：根据容器宽度算出的最大单张牌宽
       const widthFromWidth = containerWidth / effectiveWidthRatio;
-
-      // 纵向限制：留 25% 给选中上移，按牌面比例 1:1.4 反推宽度
       const widthFromHeight = (containerHeight * 0.75) / 1.4;
 
-      // 取两者中较小值，保证不溢出容器
       let cardWidth = Math.min(widthFromWidth, widthFromHeight);
-
-      // 设置尺寸上下限，保证极端情况下仍可读
       const minWidth = 28;
       const maxWidth = 72;
       cardWidth = Math.max(minWidth, Math.min(maxWidth, cardWidth));
-
       const cardHeight = cardWidth * 1.4;
 
       setCardSize((prev) =>
@@ -191,13 +188,10 @@ const HandCards: React.FC<HandCardsProps> = ({
     calculateCardSize();
     window.addEventListener('resize', calculateCardSize);
 
-    // 使用 ResizeObserver 监听容器大小变化（包括布局调整导致的尺寸变化）
     const container = containerRef.current;
     let resizeObserver: ResizeObserver | null = null;
     if (container && 'ResizeObserver' in window) {
-      resizeObserver = new ResizeObserver(() => {
-        calculateCardSize();
-      });
+      resizeObserver = new ResizeObserver(() => calculateCardSize());
       resizeObserver.observe(container);
     }
 
@@ -207,9 +201,23 @@ const HandCards: React.FC<HandCardsProps> = ({
     };
   }, [cards.length]);
 
+  // 单击牌：切换该牌的选中状态
+  const handleCardClick = (index: number) => {
+    if (disabled) return;
+    if (index < 0 || index >= cards.length) return;
+    onSelectCard(cards[index], index);
+  };
+
   if (cards.length === 0) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '100%',
+        }}
+      >
         <div style={{ color: '#9ca3af' }}>暂无手牌</div>
       </div>
     );
@@ -219,12 +227,15 @@ const HandCards: React.FC<HandCardsProps> = ({
     <div
       ref={containerRef}
       style={{
+        position: 'relative',
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
         width: '100%',
         height: '100%',
         overflow: 'visible',
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
       }}
     >
       <div
@@ -234,20 +245,24 @@ const HandCards: React.FC<HandCardsProps> = ({
           justifyContent: 'center',
           maxWidth: '100%',
           overflow: 'visible',
+          position: 'relative',
         }}
       >
         {sortedCards.map((cardId, index) => {
-          // 用 cardId:index 作为唯一 key，支持多副牌场景下区分同 ID 的不同实例
           const cardKey = `${cardId}:${index}`;
           return (
             <PokerCardComponent
               key={cardKey}
               id={cardId}
+              ref={(el) => {
+                cardRefs.current[index] = el;
+              }}
               selected={selectedCards.includes(cardKey)}
               disabled={disabled}
-              onClick={() => onSelectCard(cardId, index)}
               cardWidth={cardSize.width}
               cardHeight={cardSize.height}
+              onClick={() => handleCardClick(index)}
+              style={{ cursor: disabled ? 'not-allowed' : 'pointer' }}
             />
           );
         })}
