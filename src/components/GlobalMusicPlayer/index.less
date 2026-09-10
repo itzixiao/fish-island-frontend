@@ -1,0 +1,273 @@
+.player {
+  z-index: 99990;
+}
+
+.playerFull {
+  position: fixed;
+  top: 56px;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  padding: 16px 24px 24px;
+  background: #f5f5f5;
+}
+
+.playerSuspended {
+  position: fixed;
+  top: -2px;
+  left: -2px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.musicHeader {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 48px;
+  padding: 0 16px;
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-bottom: 0;
+  border-radius: 12px 12px 0 0;
+}
+
+.musicTitle,
+.headerActions,
+.suspendButton,
+.openLink {
+  display: inline-flex;
+  align-items: center;
+}
+
+.musicTitle {
+  gap: 8px;
+  color: #262626;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.keepAliveHint {
+  color: #8c8c8c;
+  font-weight: 400;
+  font-size: 12px;
+}
+
+.headerActions {
+  gap: 14px;
+}
+
+.suspendButton {
+  gap: 6px;
+  padding: 6px 12px;
+  color: #595959;
+  font-size: 13px;
+  background: #fff7e6;
+  border: 1px solid #ffd591;
+  border-radius: 16px;
+  cursor: pointer;
+
+  &:hover {
+    color: #d46b08;
+    background: #fff1b8;
+  }
+}
+
+.openLink {
+  gap: 6px;
+  color: #8c8c8c;
+  font-size: 13px;
+
+  &:hover {
+    color: #f4ac70;
+  }
+}
+
+.frameWrap {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background: #111827;
+  border: 1px solid #e8e8e8;
+  border-radius: 0 0 12px 12px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.06);
+}
+
+.musicFrame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: #111827;
+  border: 0;
+}
+
+.restoreButton {
+  position: fixed;
+  right: 112px;
+  bottom: 24px;
+  z-index: 999991;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  cursor: grab;
+  filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.3));
+  transition: filter 0.2s ease, transform 0.2s ease;
+  user-select: none;
+  touch-action: none;
+
+  &:hover {
+    transform: scale(1.06);
+    filter: drop-shadow(0 10px 15px rgba(0, 0, 0, 0.38));
+  }
+
+  &:focus-visible {
+    outline: 3px solid rgba(244, 172, 112, 0.55);
+    outline-offset: 3px;
+  }
+}
+
+.restoreButtonDragging,
+.restoreButtonDragging:hover {
+  transform: scale(1.03);
+  cursor: grabbing;
+}
+
+.vinylRecord {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 68px;
+  height: 68px;
+  background: radial-gradient(
+      circle at center,
+      transparent 0 29%,
+      rgba(255, 255, 255, 0.14) 30%,
+      transparent 31%
+    ),
+    repeating-radial-gradient(circle at center, #222 0 2px, #0c0c0c 3px 5px, #191919 6px 7px);
+  border: 2px solid #080808;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), inset 0 0 12px rgba(0, 0, 0, 0.8);
+  animation: vinyl-spin 8s linear infinite;
+
+  &::before {
+    position: absolute;
+    top: 7px;
+    left: 14px;
+    width: 18px;
+    height: 49px;
+    background: linear-gradient(110deg, rgba(255, 255, 255, 0.22), transparent 64%);
+    border-radius: 50%;
+    transform: rotate(28deg);
+    content: '';
+  }
+}
+
+.vinylLabel {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 25px;
+  height: 25px;
+  color: #fff8df;
+  font-weight: 700;
+  font-size: 16px;
+  line-height: 1;
+  background: linear-gradient(145deg, #ff9c5a, #df4e77);
+  border: 2px solid #f6c75c;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px #111;
+
+  &::after {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    background: #171717;
+    border-radius: 50%;
+    content: '';
+  }
+}
+
+@keyframes vinyl-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+:global(body.music-page-no-scroll) {
+  overflow: hidden !important;
+}
+
+:global(body.dark-mode) {
+  .playerFull {
+    background: #121212;
+  }
+
+  .musicHeader {
+    background: #1e1e1e;
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .musicTitle {
+    color: rgba(255, 255, 255, 0.88);
+  }
+
+  .frameWrap {
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+}
+
+@media (max-width: 768px) {
+  .playerFull {
+    top: 48px;
+    padding: 8px;
+  }
+
+  .musicHeader {
+    min-height: 44px;
+    padding: 0 10px;
+  }
+
+  .keepAliveHint,
+  .openLink {
+    display: none;
+  }
+
+  .suspendButton {
+    padding: 6px 10px;
+  }
+
+  .restoreButton {
+    right: 20px;
+    bottom: 84px;
+    width: 66px;
+    height: 66px;
+  }
+
+  .vinylRecord {
+    width: 62px;
+    height: 62px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vinylRecord {
+    animation: none;
+  }
+}

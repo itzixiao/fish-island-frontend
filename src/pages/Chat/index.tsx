@@ -567,13 +567,20 @@ const ChatRoom: React.FC = () => {
   const messagesRef = useRef<Message[]>([]);
 
   const [announcement, setAnnouncement] = useState<string>(
-    '欢迎来到摸鱼聊天室！🎉 这里是一个充满快乐的地方~。致谢服务商：<a href="https://crash.work/" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; text-decoration: none; margin-left: 4px;"><img src="/img/posuiyun.png" alt="破碎工坊云" style="height: 20px; vertical-align: middle; margin-right: 4px;" /></a>',
+    '欢迎来到摸鱼聊天室！🎉 这里是一个充满快乐的地方~。🎵 <a href="https://music.yucoder.cn/" target="_blank" rel="noopener noreferrer" style="color: #1890ff; font-weight: 500; text-decoration: none;">摸鱼音乐吧上线啦，点击立即畅听！</a>',
   );
-  const [showAnnouncement, setShowAnnouncement] = useState<boolean>(true);
+  const [showAnnouncement, setShowAnnouncement] = useState<boolean>(() => {
+    const saved = localStorage.getItem('chat_announcement_visible');
+    return saved !== null ? JSON.parse(saved) : true;
+  });
   const [isAnnouncementModalVisible, setIsAnnouncementModalVisible] = useState(false);
   const [isAnnualReportModalVisible, setIsAnnualReportModalVisible] = useState(false);
   const [annualReportHtml, setAnnualReportHtml] = useState<string>('');
   const [isLoadingAnnualReport, setIsLoadingAnnualReport] = useState(false);
+
+  useEffect(() => {
+    localStorage.setItem('chat_announcement_visible', JSON.stringify(showAnnouncement));
+  }, [showAnnouncement]);
 
   const pageHiddenTimeRef = useRef<number | null>(null);
   const visibilityTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -2129,7 +2136,8 @@ const ChatRoom: React.FC = () => {
 
             messageApi.success('红包发送成功！');
             setIsRedPacketModalVisible(false);
-            setRedPacketAmount(0);
+            // 发送成功后保留默认红包金额，方便连续发送
+            setRedPacketAmount(100);
             setRedPacketCount(1);
             setRedPacketMessage('恭喜发财，大吉大利！');
             setRedPacketType(RED_PACKET_TYPE.RANDOM);

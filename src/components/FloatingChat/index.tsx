@@ -30,7 +30,7 @@ import {
 } from '@/utils/blacklist';
 import styles from './index.less';
 
-const MUSIC_SITE_URL = 'http://localhost:5173';
+const MUSIC_SITE_URL = 'https://music.yucoder.cn';
 
 interface ChatMessage {
   id: string;
