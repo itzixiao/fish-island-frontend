@@ -19,6 +19,7 @@ export default [
       {path: '/moments', redirect: '/moments/post', requireAuth: true},
       {path: '/moments/post', icon: 'InstagramOutlined', component: './Post', name: '摸鱼论坛', requireAuth: true},
       {path: '/moments/fish-circle', icon: 'CameraOutlined', component: './FishCircle', name: '鱼小圈', requireAuth: true},
+      {path: '/moments/music', icon: 'CustomerServiceOutlined', component: './Music', name: '摸鱼音乐', requireAuth: true},
     ]
   },
   {path: '/post/create', layout: false, icon: 'EditOutlined', component: './Post/Create', requireAuth: true},

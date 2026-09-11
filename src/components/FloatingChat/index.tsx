@@ -30,6 +30,8 @@ import {
 } from '@/utils/blacklist';
 import styles from './index.less';
 
+const MUSIC_SITE_URL = 'https://music.yucoder.cn';
+
 interface ChatMessage {
   id: string;
   content: string;
@@ -84,6 +86,7 @@ const FloatingChat: React.FC<FloatingChatProps> = ({ fullscreen = false }) => {
   const [dragging, setDragging] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [titleDraft, setTitleDraft] = useState(() => settings.title);
+  const [musicLoaded, setMusicLoaded] = useState(() => settings.content === 'music');
   const bodyRef = useRef<HTMLDivElement>(null);
   const settingsRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -158,6 +161,7 @@ const FloatingChat: React.FC<FloatingChatProps> = ({ fullscreen = false }) => {
   const displayTitle = getFloatingChatDisplayTitle(settings.title);
   const workbookTitle = getExcelWorkbookTitle(displayTitle);
   const excelMode = settings.excelMode;
+  const isMusicView = settings.content === 'music' && !excelMode;
   const excelViewportFullscreen = settings.excelViewportFullscreen && excelMode && !fullscreen;
 
   const isAtBottom = useCallback(() => {
@@ -287,6 +291,10 @@ const FloatingChat: React.FC<FloatingChatProps> = ({ fullscreen = false }) => {
     if (!fullscreen) return;
     document.title = excelMode ? getExcelWindowCaption(workbookTitle) : displayTitle;
   }, [fullscreen, displayTitle, excelMode, workbookTitle]);
+
+  useEffect(() => {
+    if (isMusicView) setMusicLoaded(true);
+  }, [isMusicView]);
 
   useEffect(() => {
     if (!fullscreen) return;
@@ -495,8 +503,28 @@ const FloatingChat: React.FC<FloatingChatProps> = ({ fullscreen = false }) => {
   // 独立小窗页由页面内嵌实例渲染，避免重复挂载
   if (onMiniPage && !fullscreen) return null;
 
-  // 完整聊天室页面始终只显示主聊天视图。
-  if (onChatPage && !fullscreen) return null;
+  // 完整聊天室页面不重复显示聊天窗；音乐未打开时保留一个悬浮入口。
+  if (onChatPage && !fullscreen && !isMusicView) {
+    return createPortal(
+      <button
+        type="button"
+        className={styles.musicLauncher}
+        title="打开鱼窝音乐"
+        aria-label="打开鱼窝音乐"
+        onClick={() =>
+          updateSettings({
+            content: 'music',
+            excelMode: false,
+            excelViewportFullscreen: false,
+            mode: mode === 'minimized' ? 'small' : mode,
+          })
+        }
+      >
+        <span aria-hidden>♫</span>
+      </button>,
+      document.body,
+    );
+  }
 
   const showMinBar = mode === 'minimized' && !fullscreen && !excelViewportFullscreen;
   const showWindow = isWindowOpen || fullscreen || excelViewportFullscreen;
@@ -504,6 +532,22 @@ const FloatingChat: React.FC<FloatingChatProps> = ({ fullscreen = false }) => {
 
   const renderHeaderActions = () => (
     <span className={styles.headerActions} onMouseDown={(e) => e.stopPropagation()}>
+      <button
+        type="button"
+        className={`${styles.popupCrBtn} ${isMusicView ? styles.active : ''}`}
+        title={isMusicView ? '切换到鱼窝聊天' : '切换到鱼窝音乐'}
+        aria-label={isMusicView ? '切换到鱼窝聊天' : '切换到鱼窝音乐'}
+        aria-pressed={isMusicView}
+        onClick={() =>
+          updateSettings(
+            isMusicView
+              ? { content: 'chat' }
+              : { content: 'music', excelMode: false, excelViewportFullscreen: false },
+          )
+        }
+      >
+        ♫
+      </button>
       <div ref={settingsRef} className={styles.settingsWrap}>
         <button
           type="button"
@@ -620,6 +664,7 @@ const FloatingChat: React.FC<FloatingChatProps> = ({ fullscreen = false }) => {
         onClick={() =>
           updateSettings({
             excelMode: !settings.excelMode,
+            content: 'chat',
             ...(!settings.excelMode ? {} : { excelViewportFullscreen: false }),
           })
         }
@@ -769,72 +814,87 @@ const FloatingChat: React.FC<FloatingChatProps> = ({ fullscreen = false }) => {
                 {renderHeaderActions()}
               </div>
 
-              <div
-                className={styles.chatBody}
-                ref={bodyRef}
-                onScroll={() => {
-                  if (isAtBottom()) setUnreadCount(0);
-                }}
-              >
-                {loading && <div className={styles.loadingHint}>加载中...</div>}
-                <Image.PreviewGroup
-                  preview={{
-                    getContainer: () => document.body,
-                    zIndex: 1000002,
+              <div className={`${styles.chatContent} ${isMusicView ? styles.contentHidden : ''}`}>
+                <div
+                  className={styles.chatBody}
+                  ref={bodyRef}
+                  onScroll={() => {
+                    if (isAtBottom()) setUnreadCount(0);
                   }}
                 >
-                  {!loading &&
-                    messages.map((msg) => {
-                      const isMe = msg.sender.id === String(currentUser?.id);
-                      return (
-                        <div
-                          key={msg.id}
-                          className={`${styles.chatMessage} ${isMe ? styles.isMe : ''} ${
-                            settings.hideAvatar ? styles.hideAvatar : ''
-                          }`}
-                        >
-                          {!settings.hideAvatar && (
-                            <img {...externalImageProps} className={styles.avatar} src={msg.sender.avatar} alt="" />
-                          )}
-                          <div className={styles.messageMain}>
-                            <span className={styles.nickname}>{msg.sender.name}</span>
-                            <div className={styles.messageBubble}>
-                              <MessageContent
-                                content={msg.content}
-                                collapseImages={settings.collapseImages}
-                              />
+                  {loading && <div className={styles.loadingHint}>加载中...</div>}
+                  <Image.PreviewGroup
+                    preview={{
+                      getContainer: () => document.body,
+                      zIndex: 1000002,
+                    }}
+                  >
+                    {!loading &&
+                      messages.map((msg) => {
+                        const isMe = msg.sender.id === String(currentUser?.id);
+                        return (
+                          <div
+                            key={msg.id}
+                            className={`${styles.chatMessage} ${isMe ? styles.isMe : ''} ${
+                              settings.hideAvatar ? styles.hideAvatar : ''
+                            }`}
+                          >
+                            {!settings.hideAvatar && (
+                              <img {...externalImageProps} className={styles.avatar} src={msg.sender.avatar} alt="" />
+                            )}
+                            <div className={styles.messageMain}>
+                              <span className={styles.nickname}>{msg.sender.name}</span>
+                              <div className={styles.messageBubble}>
+                                <MessageContent
+                                  content={msg.content}
+                                  collapseImages={settings.collapseImages}
+                                />
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                </Image.PreviewGroup>
+                        );
+                      })}
+                  </Image.PreviewGroup>
+                </div>
+
+                {unreadCount > 0 && (
+                  <button type="button" className={styles.newMessageNotice} onClick={() => scrollToBottom()}>
+                    {unreadCount} 条新消息 ↓
+                  </button>
+                )}
+
+                <div className={styles.chatInputArea}>
+                  <input
+                    className={styles.chatInput}
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    placeholder="说点什么"
+                    maxLength={200}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+                        e.preventDefault();
+                        handleSend();
+                      }
+                    }}
+                  />
+                  <button type="button" className={styles.sendBtn} onClick={handleSend}>
+                    发送
+                  </button>
+                </div>
               </div>
 
-              {unreadCount > 0 && (
-                <button type="button" className={styles.newMessageNotice} onClick={() => scrollToBottom()}>
-                  {unreadCount} 条新消息 ↓
-                </button>
+              {musicLoaded && (
+                <div className={`${styles.musicPanel} ${!isMusicView ? styles.contentHidden : ''}`}>
+                  <iframe
+                    className={styles.musicFrame}
+                    src={MUSIC_SITE_URL}
+                    title="鱼窝音乐播放器"
+                    allow="autoplay; encrypted-media; picture-in-picture"
+                    allowFullScreen
+                    referrerPolicy="strict-origin-when-cross-origin"
+                  />
+                </div>
               )}
-
-              <div className={styles.chatInputArea}>
-                <input
-                  className={styles.chatInput}
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  placeholder="说点什么"
-                  maxLength={200}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
-                      e.preventDefault();
-                      handleSend();
-                    }
-                  }}
-                />
-                <button type="button" className={styles.sendBtn} onClick={handleSend}>
-                  发送
-                </button>
-              </div>
             </>
           )}
         </div>

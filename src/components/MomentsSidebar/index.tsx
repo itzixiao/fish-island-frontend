@@ -26,10 +26,23 @@ const MomentsSidebar: React.FC<{ position?: 'left' | 'right' }> = ({ position = 
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [hasMore, setHasMore] = useState(true);
-  const [collapsed, setCollapsed] = useState(false);
+  const collapsedStorageKey = `fish_circle_collapsed_${position}`;
+  const [collapsed, setCollapsed] = useState(() => {
+    const saved = localStorage.getItem(collapsedStorageKey);
+    if (saved === null) return false;
+    try {
+      return JSON.parse(saved) === true;
+    } catch {
+      return false;
+    }
+  });
   const currentPageRef = useRef(1);
   const loadingRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    localStorage.setItem(collapsedStorageKey, JSON.stringify(collapsed));
+  }, [collapsed, collapsedStorageKey]);
 
   // 位置设置（本地维护，保存到 siteConfig）
   const [settingPosition, setSettingPosition] = useState<'left' | 'right'>(position);

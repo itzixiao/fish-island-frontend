@@ -11,6 +11,7 @@ import BossKeySettings from '@/components/BossKeySettings';
 import SideAnnouncement from '@/components/SideAnnouncement';
 import GlobalReader from '@/components/GlobalFloatingReader';
 import FloatingChat from '@/components/FloatingChat';
+import GlobalMusicPlayer from '@/components/GlobalMusicPlayer';
 import routes from '../config/routes';
 import GlobalTitle from '@/components/GlobalTitle';
 import SiteTour from '@/components/SiteTour';
@@ -421,7 +422,7 @@ export const layout: RunTimeLayoutConfig = ({initialState}) => {
     footerRender: () => {
       const path =
         typeof window !== 'undefined' ? window.location.pathname : '';
-      if (path.startsWith('/point/farm')) {
+      if (path.startsWith('/point/farm') || path === '/moments/music') {
         return null;
       }
       return <Footer />;
@@ -464,6 +465,7 @@ export const layout: RunTimeLayoutConfig = ({initialState}) => {
             onClose={hideReader}
           />
           <FloatingChat />
+          <GlobalMusicPlayer />
           <SiteTour />
         </ConfigProvider>
       );
