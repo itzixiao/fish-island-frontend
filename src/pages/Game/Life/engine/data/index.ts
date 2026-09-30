@@ -1,0 +1,10 @@
+export * from './achievement.types';
+export * from './age.types';
+export * from './character.types';
+export * from './event.types';
+export * from './talent.types';
+export { default as achievements } from './achievement';
+export { default as ages } from './age';
+export { default as events } from './event';
+export { default as characters } from './character';
+export { default as talents } from './talent';
